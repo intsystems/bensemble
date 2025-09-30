@@ -1,0 +1,232 @@
+\documentclass[10pt]{beamer}
+\beamertemplatenavigationsymbolsempty
+\usecolortheme{beaver}
+% \usetheme{Madrid}
+\usefonttheme{professionalfonts}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{algorithm, algorithmic}
+\usepackage{graphicx}
+\usepackage{booktabs}
+
+\title{Bayesian ensembling - \textit{Bensemble}}
+\author{Sobolevsky Fedor, Nabiev Muhammadsharif, Vasilenko Dmitriy, Kasiuk Vadim}
+\institute{Moscow Institute of Physics and Technology}
+\date{2025}
+\begin{document}
+
+\begin{frame}
+\titlepage
+\end{frame}
+
+\begin{frame}{Library Interface}
+\centering
+% \includegraphics[width=0.9\textwidth]{library_interface_diagram.png} % (Create this diagram)
+\vspace{0.5cm}
+
+\begin{itemize}
+    \item \textbf{Unified API}: Single entry point for all ensembling methods.
+    \item \textbf{Model Agnostic}: Works with any differentiable model (Neural Networks, etc.).
+    \item \textbf{Posterior Sampling}: Each algorithm provides a different strategy for sampling models from the posterior.
+    \item \textbf{Ensemble Generation}: Easy generation of model ensembles for uncertainty quantification and improved performance.
+    \item \textbf{Hyperparameter Tuning}: Built-in methods for optimizing algorithm-specific parameters.
+\end{itemize}
+
+\textbf{Example Usage:}
+% \begin{verbatim}
+% library = BayesianEnsembleLibrary()
+% library.load_model(my_neural_network)
+% library.load_data(X_train, y_train)
+% ensemble = library.fit_ensemble(method='VR', alpha=0.5)
+% predictions = library.predict(X_test)
+% \end{verbatim}
+\end{frame}
+
+\begin{frame}{Algorithm 1: Practical Variational Inference (Graves)}
+\textbf{Problem:}
+\begin{itemize}
+    \item Standard neural networks use \textbf{point estimates} of weights → prone to \textbf{overfitting}.
+    \item True \textbf{Bayesian posterior} $p(w \mid D)$ is \textbf{intractable} for large networks.
+\end{itemize}
+
+\textbf{Goal:}
+\begin{itemize}
+    \item Approximate posterior with a \textbf{variational distribution} $q_\theta(w) = \mathcal{N}(\mu, \sigma^2)$.
+    \item Optimize \textbf{ELBO} to make $q_\theta(w)$ close to $p(w \mid D)$.
+    \item Make it \textbf{practical} and compatible with gradient-based training.
+\end{itemize}
+
+\textbf{Benefit:}
+\begin{itemize}
+    \item Captures \textbf{uncertainty} in predictions.
+    \item Improves \textbf{generalization}.
+    \item Enables \textbf{weight pruning} and compact models.
+    \item Simple to integrate into \textbf{existing networks}.
+\end{itemize}
+\end{frame}
+
+% Slide 2: Variational Inference & ELBO
+\begin{frame}{Variational Inference \& ELBO}
+\begin{itemize}
+    \item Introduce \textbf{variational posterior} $q_\theta(w)$.
+    \item Define \textbf{ELBO (Evidence Lower Bound)}:
+\[
+\log p(D) \ge \mathbb{E}_{q_\theta(w)}[\log p(D \mid w)] - \mathrm{KL}(q_\theta(w) \| p(w))
+\]
+    \item ELBO balances:
+    \begin{itemize}
+        \item \textbf{Accuracy:} $\mathbb{E}_{q_\theta}[\log p(D|w)]$
+        \item \textbf{Regularization:} $\mathrm{KL}(q_\theta \| p)$
+    \end{itemize}
+    \item Maximizing ELBO → $q_\theta(w)$ approximates true posterior.
+\end{itemize}
+\end{frame}
+
+% Slide 3: Reparameterization Trick
+\begin{frame}{Reparameterization Trick}
+\begin{itemize}
+    \item To backprop through stochastic weights:
+\[
+w = \mu + \sigma \odot \epsilon, \quad \epsilon \sim \mathcal{N}(0, I)
+\]
+    \item $\odot$ — element-wise multiplication
+    \item Allows \textbf{gradient-based optimization} of $\mu$ and $\sigma$
+    \item Enables \textbf{stochastic gradient descent} on ELBO
+\end{itemize}
+\end{frame}
+
+
+
+\begin{frame}{Algorithm 2: Scalable Laplace Approximation}
+\begin{itemize}
+    \item \textbf{Problem}: Exact Bayesian inference in neural networks is intractable due to large parameter spaces.
+    \item \textbf{Goal}: A scalable, post hoc method to approximate the posterior without retraining the model.
+    \item \textbf{Benefit}: Fast uncertainty estimates for pre-trained models used in production.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Algorithm 2: Scalable Laplace Approximation}
+\begin{block}{Laplace Approximation}
+\[
+p(\theta | \mathcal{D}) \approx \mathcal{N}(\theta; \theta^* , \bar{H}^{-1})
+\]
+where $\theta^*$ is the MAP estimate and $\bar{H}$ is the average Hessian of the negative log-posterior.
+\end{block}
+
+\begin{block}{Kronecker-Factored Hessian}
+For layer $\lambda$, the Hessian block is approximated as:
+\[
+H_{\lambda} \approx \mathbb{E}[\mathcal{Q}_{\lambda}] \otimes \mathbb{E}[\mathcal{H}_{\lambda}]
+\]
+where $\mathcal{Q}_{\lambda}$ is the covariance of inputs and $\mathcal{H}_{\lambda}$ is the pre-activation Hessian.
+\end{block}
+\end{frame}
+
+\begin{frame}{Algorithm 2: Scalable Laplace Approximation}
+
+
+\begin{block}{Posterior Sampling}
+Sample weights for layer $\lambda$ from:
+\[
+W_{\lambda} \sim \mathcal{MN}(W_{\lambda}^*, \bar{\mathcal{Q}}_{\lambda}^{-1}, \bar{\mathcal{H}}_{\lambda}^{-1})
+\]
+\end{block}
+Applied after training, requiring no changes to the original training procedure.
+\end{frame}
+
+
+
+\begin{frame}{Algorithm 3: Variational Renyi Bound (VR)}
+
+\begin{itemize}
+    \item \textbf{Problem}: Traditional VI (e.g., VAE) uses KL divergence, which can lead to under-estimated uncertainty (mode-seeking).
+    \item \textbf{Goal}: Generalize VI to the rich family of Renyi divergences, enabling interpolation between mode-seeking ($\alpha \to \infty$) and mass-covering ($\alpha \to -\infty$) behavior.
+    \item \textbf{Benefit}: Better uncertainty estimates and tighter bounds on the marginal likelihood.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Algorithm 3: Variational Renyi Bound (VR)}
+
+\begin{itemize}
+    \item \textbf{Core Idea}: Minimize the Renyi $\alpha$-divergence $D_\alpha[q || p]$ between approximate posterior $q$ and true posterior $p$.
+    \item \textbf{VR Bound}: Derive a new variational bound $\mathcal{L}_\alpha$ that generalizes the ELBO. For $\alpha \to 1$, recover standard VI (KL divergence).
+    \item \textbf{Optimization}: Use reparameterization trick and Monte Carlo sampling to optimize $\mathcal{L}_\alpha$ stochastically.
+    \item \textbf{Special Case}: $\alpha \to -\infty$ (VR-max) focuses on the sample with the highest importance weight, leading to a fast, high-quality approximation.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Algorithm 3: Variational Renyi Bound (VR)}
+
+\begin{block}{VR Bound}
+\[
+\mathcal{L}_\alpha(q; \mathcal{D}) = \frac{1}{1-\alpha} \log \mathbb{E}_{q(\boldsymbol{\theta})} \left[ \left( \frac{p(\boldsymbol{\theta}, \mathcal{D})}{q(\boldsymbol{\theta})} \right)^{1-\alpha} \right]
+\]
+\end{block}
+
+\begin{block}{Gradient (Reparameterized)}
+\[
+\nabla_{\phi} \mathcal{L}_{\alpha} = \mathbb{E}_{\epsilon} \left[ w_{\alpha}(\epsilon; \phi, \mathcal{D}) \nabla_{\phi} \log \frac{p(g_{\phi}(\epsilon), \mathcal{D})}{q(g_{\phi}(\epsilon))} \right]
+\]
+where $w_{\alpha}$ is the normalized importance weight.
+\end{block}
+
+\begin{block}{Key Properties}
+\begin{itemize}
+    \item Continuous and non-increasing in $\alpha$.
+    \item For $\alpha < 0$, $\mathcal{L}_\alpha$ is an upper bound on $\log p(\mathcal{D})$; for $\alpha > 0$, a lower bound.
+    \item Enables smooth interpolation between VI ($\alpha=1$), IWAE ($\alpha=0$), and VR-max ($\alpha \to -\infty$).
+\end{itemize}
+\end{block}
+\end{frame}
+
+
+
+\begin{frame}{Algorithm 4: Probabilistic Backpropagation (PBP)}
+
+\begin{itemize}
+    \item \textbf{Problem}: Backpropagation provides point estimates; hyperparameter tuning is costly; predictive uncertainty is ignored.
+    \item \textbf{Goal}: A scalable, Bayesian alternative to backprop that provides uncertainty.
+    \item \textbf{Benefit}: Combines the efficiency of backprop with the advantages of Bayesian inference.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Algorithm 4: Probabilistic Backpropagation (PBP)}
+
+\begin{itemize}
+    \item \textbf{Core Idea}: Maintain a Gaussian posterior over each weight. Use moment propagation to compute means and variances of network outputs, and then update the posteriors using gradients of the marginal likelihood.
+    \item \textbf{Assumed Density Filtering (ADF)}: Sequentially incorporate data points, approximating the true posterior with a factorized Gaussian.
+    \item \textbf{Moment Matching}: Update the Gaussian parameters to match the moments of the posterior after incorporating each data point.
+    \item \textbf{Efficiency}: Similar computational cost to backpropagation, but with built-in uncertainty estimation.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Algorithm 4: Probabilistic Backpropagation (PBP)}
+
+\begin{block}{Factorized Gaussian Posterior}
+\[
+q(\mathcal{W}) = \prod_{l,i,j} \mathcal{N}(w_{ij,l}; m_{ij,l}, v_{ij,l})
+\]
+\end{block}
+
+\begin{block}{Forward Propagation of Moments}
+For each layer, compute mean and variance of pre-activations $\mathbf{a}_l$ and activations $\mathbf{z}_l$:
+\[
+\mathbf{m}^{\mathbf{a}_l} = \mathbf{M}_l \mathbf{m}^{\mathbf{z}_{l-1}} / \sqrt{V_{l-1}+1}, \quad
+\mathbf{v}^{\mathbf{a}_l} = \cdots
+\]
+\[
+m_i^{b_l} = \Phi(\alpha_i) v'_i, \quad v_i^{b_l} = \cdots
+\]
+\end{block}
+
+\begin{block}{Posterior Update via Moment Matching}
+\[
+m^{\text{new}} = m + v \frac{\partial \log Z}{\partial m}, \quad
+v^{\text{new}} = v - v^2 \left[ \left( \frac{\partial \log Z}{\partial m} \right)^2 - 2 \frac{\partial \log Z}{\partial v} \right]
+\]
+where $Z$ is the normalization constant of the tilted distribution.
+\end{block}
+\end{frame}
+
+\end{document}
