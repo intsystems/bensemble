@@ -40,7 +40,7 @@ Repository Structure
 
 ::
 
-    BMM_25-26_Bayesian_ensembling_Bensemble_Project/
+    bensemble/
     │
     ├── README.rst                          # Project description and overview
     ├── requirements.txt                    # Python dependencies
