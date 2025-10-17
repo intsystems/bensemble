@@ -21,6 +21,8 @@
     :Научный руководитель: к. ф.-м. н. Бахтеев Олег Юрьевич
     :Научный консультант(при наличии): степень, Фамилия Имя Отчество
 
+Project documentation can be found [here](https://intsystems.github.io/bensemble/).
+
 Abstract: Comparative Analysis of Bayesian Deep Learning Methods for Multimodel Ensembling
 ========
 
