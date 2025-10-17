@@ -21,8 +21,6 @@
     :Научный руководитель: к. ф.-м. н. Бахтеев Олег Юрьевич
     :Научный консультант(при наличии): степень, Фамилия Имя Отчество
 
-Project documentation can be found [here](https://intsystems.github.io/bensemble/).
-
 Abstract: Comparative Analysis of Bayesian Deep Learning Methods for Multimodel Ensembling
 ========
 
@@ -31,6 +29,9 @@ Bayesian methods provide a principled framework for uncertainty quantification i
 We implement these methods in a unified framework and evaluate them on benchmark classification and regression tasks using metrics including predictive accuracy, negative log-likelihood, expected calibration error, and out-of-distribution detection performance. Our results demonstrate the trade-offs between computational efficiency, uncertainty quantification quality, and model performance across different methods. Specifically, we show how Renyi divergence with α < 1 provides improved uncertainty calibration compared to standard ELBO, while scalable Laplace approximation offers competitive performance with reduced computational overhead. The study provides practical guidance for selecting appropriate Bayesian inference methods based on application requirements and computational constraints.
 
 Keywords: Bayesian Deep Learning, Variational Inference, Uncertainty Quantification, Renyi Divergence, Laplace Approximation, Neural Networks Ensembling
+
+Project documentation can be found `here`_.
+.. _here: https://intsystems.github.io/bensemble/
 
 Bayesian Multimodeling Project
 ==============================
