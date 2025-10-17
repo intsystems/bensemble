@@ -30,6 +30,9 @@ We implement these methods in a unified framework and evaluate them on benchmark
 
 Keywords: Bayesian Deep Learning, Variational Inference, Uncertainty Quantification, Renyi Divergence, Laplace Approximation, Neural Networks Ensembling
 
+Project documentation can be found `here`_.
+.. _here: https://intsystems.github.io/bensemble/
+
 Bayesian Multimodeling Project
 ==============================
 
