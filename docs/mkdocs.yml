@@ -1,3 +1,16 @@
 site_name: bensemble
 site_url: https://intsystems.github.io/bensemble/
 theme: readthedocs
+nav:
+  - Home: index.md
+  - Getting started: getting-started.md
+  - References: references.md
+  - User Guide:
+    - Interface: user-guide/interface.md
+    - Variational Inference: user-guide/variational-inference.md
+    - Laplace Approximation: user-guide/laplace-approximation.md
+    - Renyi Divergence: user-guide/renyi-divergence.md
+    - Bayes by Backprop: user-guide/bayes-by-backprop.md
+  - API:
+    - Core: api/core.md
+    - Methods: api/methods.md
