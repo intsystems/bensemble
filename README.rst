@@ -33,6 +33,8 @@ Keywords: Bayesian Deep Learning, Variational Inference, Uncertainty Quantificat
 Project documentation can be found `here`_.
 .. _here: https://intsystems.github.io/bensemble/
 
+Blog post draft: https://intsystems.github.io/bensemble/paper/blogpost_draft
+
 Bayesian Multimodeling Project
 ==============================
 
