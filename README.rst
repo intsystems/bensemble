@@ -35,6 +35,8 @@ Project documentation can be found `here`_.
 
 Blog post draft: https://github.com/intsystems/bensemble/blob/master/paper/blogpost_draft/blog_post_draft.pdf
 
+Benchmark notebook: https://github.com/intsystems/bensemble/blob/master/notebooks/benchmark.ipynb
+
 Bayesian Multimodeling Project
 ==============================
 
