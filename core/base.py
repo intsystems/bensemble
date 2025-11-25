@@ -9,9 +9,10 @@ class BaseBayesianEnsemble(abc.ABC):
     def __init__(self, model: nn.Module, **kwargs):
         self.model = model
         self.is_fitted = False
+        self.ensemble = []
         
     @abc.abstractmethod
-    def fit(self, 
+    def fit(self,  # 
             train_loader: torch.utils.data.DataLoader,
             val_loader: Optional[torch.utils.data.DataLoader] = None,
             **kwargs) -> Dict[str, List[float]]:
@@ -28,12 +29,12 @@ class BaseBayesianEnsemble(abc.ABC):
         pass
     
     @abc.abstractmethod
-    def sample_models(self, n_models: int = 10) -> List[nn.Module]:
+    def sample_models(self, n_models: int = 10) -> List[nn.Module]: # Добавить онлайн-поддерживание сгенереированных моделей -> Поменять предикт
         """Сэмплирование моделей из апостериорного распределения"""
         # Надо обсудить параметры
         pass
     
-    def save(self, path: str):
+    def save(self, path: str): # Сделать загрузку и выгрузку моделей через стэйт диктов
         """Сохранение обученного ансамбля"""
         torch.save({
             'model_state_dict': self.model.state_dict(),
@@ -41,7 +42,7 @@ class BaseBayesianEnsemble(abc.ABC):
             'is_fitted': self.is_fitted
         }, path)
     
-    def load(self, path: str):
+    def load(self, path: str): # Сделать загрузку и выгрузку моделей через стэйт диктов
         """Загрузка обученного ансамбля"""
         checkpoint = torch.load(path)
         self.model.load_state_dict(checkpoint['model_state_dict'])
