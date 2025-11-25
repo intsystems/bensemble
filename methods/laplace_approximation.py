@@ -8,7 +8,11 @@ import numpy as np
 
 import copy
 from typing import Any, Dict, List, Optional, Tuple
-from ..core.base import BaseBayesianEnsemble
+
+# THIS SHOULD BE CHANGED AFTER WE SET UP PROPER LIBRARY BUILDING
+import sys
+sys.path.append('../core')
+from base import BaseBayesianEnsemble
 
 
 class LaplaceApproximation(BaseBayesianEnsemble):
