@@ -43,6 +43,7 @@ Demos
 Practical Variational Inference: https://github.com/intsystems/bensemble/blob/master/notebooks/pvi_demo.ipynb
 Kronecker-Factored Laplace Approximation: https://github.com/intsystems/bensemble/blob/master/notebooks/laplace_demo.ipynb
 Bayes by Backprop: https://github.com/intsystems/bensemble/blob/master/notebooks/pbp_probabilistic_backpropagation_test.ipynb 
+Benchmarking against other methods: https://github.com/intsystems/bensemble/blob/master/notebooks/benchmark.ipynb
 
 Bayesian Multimodeling Project
 ==============================
