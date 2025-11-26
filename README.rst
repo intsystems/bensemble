@@ -30,14 +30,19 @@ We implement these methods in a unified framework and evaluate them on benchmark
 
 Keywords: Bayesian Deep Learning, Variational Inference, Uncertainty Quantification, Renyi Divergence, Laplace Approximation, Neural Networks Ensembling
 
-Project documentation can be found `here`_.
-.. _here: https://intsystems.github.io/bensemble/
+Project documentation can be found here: https://intsystems.github.io/bensemble/
 
 Blog post draft: https://github.com/intsystems/bensemble/blob/master/paper/blogpost_draft/blog_post_draft.pdf
 
 Techreport draft: https://github.com/intsystems/bensemble/blob/master/paper/techreport_draft/bensemble_Tech_Report_draft.pdf
 
 Benchmark notebook: https://github.com/intsystems/bensemble/blob/master/notebooks/benchmark.ipynb
+
+Demos
+--------------------
+Practical Variational Inference: https://github.com/intsystems/bensemble/blob/master/notebooks/pvi_demo.ipynb
+Kronecker-Factored Laplace Approximation: https://github.com/intsystems/bensemble/blob/master/notebooks/laplace_demo.ipynb
+Bayes by Backprop: https://github.com/intsystems/bensemble/blob/master/notebooks/pbp_probabilistic_backpropagation_test.ipynb 
 
 Bayesian Multimodeling Project
 ==============================
