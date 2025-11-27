@@ -44,6 +44,8 @@ Practical Variational Inference: https://github.com/intsystems/bensemble/blob/ma
 
 Kronecker-Factored Laplace Approximation: https://github.com/intsystems/bensemble/blob/master/notebooks/laplace_demo.ipynb
 
+Variational Inference with Renyi Divergence: https://github.com/intsystems/bensemble/blob/master/notebooks/variatinal_renyi_demo.ipynb
+
 Bayes by Backprop: https://github.com/intsystems/bensemble/blob/master/notebooks/pbp_probabilistic_backpropagation_test.ipynb 
 
 Bayesian Multimodeling Project
