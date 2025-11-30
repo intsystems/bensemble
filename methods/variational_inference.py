@@ -1,9 +1,10 @@
+import copy
+from typing import List, Optional, Tuple
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-import copy
-from typing import List, Optional, Tuple
 
 from ..core.base import BaseBayesianEnsemble
 

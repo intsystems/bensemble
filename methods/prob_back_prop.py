@@ -6,9 +6,10 @@ import torch.nn as nn
 
 from ..core.base import BaseBayesianEnsemble
 
+
 class PBPEnsemble(BaseBayesianEnsemble):
     """Bayesian ensemble using Probabilistic Backpropagation (PBP)"""
-    
+
     class ProbLinear(nn.Module):
         def __init__(self, in_features: int, out_features: int):
             super().__init__()
@@ -25,28 +26,34 @@ class PBPEnsemble(BaseBayesianEnsemble):
             super().__init__()
             self.layers: List[PBPEnsemble.ProbLinear] = nn.ModuleList()
             for i in range(len(layer_sizes) - 1):
-                self.layers.append(PBPEnsemble.ProbLinear(layer_sizes[i], layer_sizes[i+1]))
+                self.layers.append(
+                    PBPEnsemble.ProbLinear(layer_sizes[i], layer_sizes[i + 1])
+                )
 
         def forward_moments(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
             batch = x.shape[0]
             mz = torch.cat([x, torch.ones(batch, 1, dtype=torch.float64)], dim=1)
             vz = torch.zeros_like(mz)
-            
+
             for li, layer in enumerate(self.layers):
                 d = layer.in_features + 1
                 scale = 1.0 / math.sqrt(d)
-                
+
                 ma = (mz @ layer.m.t()) * scale
-                term1 = (vz @ (layer.m ** 2).t())
-                term2 = ((mz ** 2) @ layer.v.t())
-                term3 = (vz @ layer.v.t())
-                va = (term1 + term2 + term3) * (scale ** 2)
-                
-                is_last = (li == len(self.layers) - 1)
+                term1 = vz @ (layer.m**2).t()
+                term2 = (mz**2) @ layer.v.t()
+                term3 = vz @ layer.v.t()
+                va = (term1 + term2 + term3) * (scale**2)
+
+                is_last = li == len(self.layers) - 1
                 if not is_last:
                     mb, vb = PBPEnsemble.relu_moments(ma, va)
-                    mz = torch.cat([mb, torch.ones(batch, 1, dtype=torch.float64)], dim=1)
-                    vz = torch.cat([vb, torch.zeros(batch, 1, dtype=torch.float64)], dim=1)
+                    mz = torch.cat(
+                        [mb, torch.ones(batch, 1, dtype=torch.float64)], dim=1
+                    )
+                    vz = torch.cat(
+                        [vb, torch.zeros(batch, 1, dtype=torch.float64)], dim=1
+                    )
                 else:
                     mz = ma
                     vz = va
@@ -56,9 +63,9 @@ class PBPEnsemble(BaseBayesianEnsemble):
         model = self.PBPNet(layer_sizes)
         super().__init__(model, **kwargs)
         self.alpha_g = torch.tensor(6.0, dtype=torch.float64)  # noise precision
-        self.beta_g  = torch.tensor(6.0, dtype=torch.float64)
+        self.beta_g = torch.tensor(6.0, dtype=torch.float64)
         self.alpha_l = torch.tensor(6.0, dtype=torch.float64)  # weight precision
-        self.beta_l  = torch.tensor(6.0, dtype=torch.float64)
+        self.beta_l = torch.tensor(6.0, dtype=torch.float64)
 
     @staticmethod
     def phi(x: torch.Tensor) -> torch.Tensor:
@@ -69,7 +76,9 @@ class PBPEnsemble(BaseBayesianEnsemble):
         return 0.5 * (1.0 + torch.erf(x / math.sqrt(2.0)))
 
     @staticmethod
-    def relu_moments(m: torch.Tensor, v: torch.Tensor, eps: float = 1e-12) -> Tuple[torch.Tensor, torch.Tensor]:
+    def relu_moments(
+        m: torch.Tensor, v: torch.Tensor, eps: float = 1e-12
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         v = torch.clamp(v, min=eps)
         sigma = torch.sqrt(v)
         alpha = m / sigma
@@ -86,10 +95,15 @@ class PBPEnsemble(BaseBayesianEnsemble):
         alpha_g = torch.clamp(alpha_g, min=1.0 + 1e-6)
         sigma2_eff = beta_g / (alpha_g - 1.0) + vz
         sigma2_eff = torch.clamp(sigma2_eff, min=eps)
-        return (-0.5 * ((y - mz) ** 2) / sigma2_eff - 0.5 * torch.log(2.0 * math.pi * sigma2_eff)).squeeze(-1)
+        return (
+            -0.5 * ((y - mz) ** 2) / sigma2_eff
+            - 0.5 * torch.log(2.0 * math.pi * sigma2_eff)
+        ).squeeze(-1)
 
     @staticmethod
-    def gamma_adf_update_from_Z(logZ, logZ1, logZ2, alpha_old, beta_old, clamp_eps=1e-9):
+    def gamma_adf_update_from_Z(
+        logZ, logZ1, logZ2, alpha_old, beta_old, clamp_eps=1e-9
+    ):
         r1 = torch.exp(logZ1 - logZ)
         r2 = torch.exp(logZ2 - logZ)
         term_alpha = (r2 / (r1 * r1)) * ((alpha_old + 1.0) / alpha_old)
@@ -103,15 +117,23 @@ class PBPEnsemble(BaseBayesianEnsemble):
         beta_new = torch.clamp(beta_new, min=clamp_eps, max=1e9)
         return alpha_new.detach(), beta_new.detach()
 
-    def single_datapoint_adf_step(self, x: torch.Tensor, y: torch.Tensor, step_clip: float = 1.0):
+    def single_datapoint_adf_step(
+        self, x: torch.Tensor, y: torch.Tensor, step_clip: float = 1.0
+    ):
         net = self.model
         for layer in net.layers:
             layer.m.requires_grad_(True)
             layer.v.requires_grad_(True)
         mz, vz = net.forward_moments(x[None, :])
-        logZ = self.logZ_gaussian_likelihood(y[None, None], mz, vz, self.alpha_g, self.beta_g).mean()
-        logZ1 = self.logZ_gaussian_likelihood(y[None, None], mz, vz, self.alpha_g + 1.0, self.beta_g).mean()
-        logZ2 = self.logZ_gaussian_likelihood(y[None, None], mz, vz, self.alpha_g + 2.0, self.beta_g).mean()
+        logZ = self.logZ_gaussian_likelihood(
+            y[None, None], mz, vz, self.alpha_g, self.beta_g
+        ).mean()
+        logZ1 = self.logZ_gaussian_likelihood(
+            y[None, None], mz, vz, self.alpha_g + 1.0, self.beta_g
+        ).mean()
+        logZ2 = self.logZ_gaussian_likelihood(
+            y[None, None], mz, vz, self.alpha_g + 2.0, self.beta_g
+        ).mean()
         for p in net.parameters():
             if p.grad is not None:
                 p.grad.zero_()
@@ -131,7 +153,9 @@ class PBPEnsemble(BaseBayesianEnsemble):
             with torch.no_grad():
                 layer.m.copy_(m_new)
                 layer.v.copy_(v_new)
-        self.alpha_g, self.beta_g = self.gamma_adf_update_from_Z(logZ.detach(), logZ1.detach(), logZ2.detach(), self.alpha_g, self.beta_g)
+        self.alpha_g, self.beta_g = self.gamma_adf_update_from_Z(
+            logZ.detach(), logZ1.detach(), logZ2.detach(), self.alpha_g, self.beta_g
+        )
         for layer in net.layers:
             layer.m.grad = None
             layer.v.grad = None
@@ -154,7 +178,9 @@ class PBPEnsemble(BaseBayesianEnsemble):
                 m_tmp = m.detach().clone().requires_grad_(True)
                 v_tmp = v.detach().clone().requires_grad_(True)
                 sigma2 = s2 + v_tmp
-                lp = -0.5 * (m_tmp ** 2) / sigma2 - 0.5 * torch.log(2.0 * math.pi * sigma2)
+                lp = -0.5 * (m_tmp**2) / sigma2 - 0.5 * torch.log(
+                    2.0 * math.pi * sigma2
+                )
                 logZ_prior = lp.sum()
                 for p in [m_tmp, v_tmp]:
                     if p.grad is not None:
@@ -170,10 +196,14 @@ class PBPEnsemble(BaseBayesianEnsemble):
                 with torch.no_grad():
                     layer.m.copy_(m_new)
                     layer.v.copy_(v_new)
+
                 def sum_logZ_given_s2(s2_local: torch.Tensor) -> torch.Tensor:
                     sigma2_local = s2_local + v
-                    lp_local = -0.5 * (m ** 2) / sigma2_local - 0.5 * torch.log(2.0 * math.pi * sigma2_local)
+                    lp_local = -0.5 * (m**2) / sigma2_local - 0.5 * torch.log(
+                        2.0 * math.pi * sigma2_local
+                    )
                     return lp_local.sum()
+
                 Z_acc += sum_logZ_given_s2(s2).detach()
                 Z1_acc += sum_logZ_given_s2(s2_1).detach()
                 Z2_acc += sum_logZ_given_s2(s2_2).detach()
@@ -181,20 +211,24 @@ class PBPEnsemble(BaseBayesianEnsemble):
             logZ_avg = Z_acc / max(n_tot, 1)
             logZ1_avg = Z1_acc / max(n_tot, 1)
             logZ2_avg = Z2_acc / max(n_tot, 1)
-            alpha_l, beta_l = self.gamma_adf_update_from_Z(logZ_avg, logZ1_avg, logZ2_avg, alpha_l, beta_l)
+            alpha_l, beta_l = self.gamma_adf_update_from_Z(
+                logZ_avg, logZ1_avg, logZ2_avg, alpha_l, beta_l
+            )
         self.alpha_l = alpha_l.detach()
         self.beta_l = beta_l.detach()
 
-    def fit(self, 
-            train_loader: torch.utils.data.DataLoader,
-            val_loader: Optional[torch.utils.data.DataLoader] = None,
-            epochs: int = 1,
-            step_clip: float = 2.0,
-            refresh_prior: bool = True,
-            **kwargs) -> Dict[str, List[float]]:
+    def fit(
+        self,
+        train_loader: torch.utils.data.DataLoader,
+        val_loader: Optional[torch.utils.data.DataLoader] = None,
+        epochs: int = 1,
+        step_clip: float = 2.0,
+        refresh_prior: bool = True,
+        **kwargs
+    ) -> Dict[str, List[float]]:
         """Пример реализации fit для PBP"""
         self.model.train()
-        history = {'rmse': [], 'nlpd': []}
+        history = {"rmse": [], "nlpd": []}
         for epoch in range(epochs):
             for x, y in train_loader:
                 self.single_datapoint_adf_step(x, y, step_clip=step_clip)
@@ -203,7 +237,9 @@ class PBPEnsemble(BaseBayesianEnsemble):
         self.is_fitted = True
         return history
 
-    def predict(self, X: torch.Tensor, n_samples: int = 100) -> Tuple[torch.Tensor, torch.Tensor]:
+    def predict(
+        self, X: torch.Tensor, n_samples: int = 100
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Предсказание среднего и дисперсии"""
         self.model.eval()
         with torch.no_grad():
@@ -217,16 +253,16 @@ class PBPEnsemble(BaseBayesianEnsemble):
 
     def _get_ensemble_state(self) -> Dict[str, Any]:
         return {
-            'alpha_g': self.alpha_g,
-            'beta_g': self.beta_g,
-            'alpha_l': self.alpha_l,
-            'beta_l': self.beta_l,
-            'model_state': self.model.state_dict()
+            "alpha_g": self.alpha_g,
+            "beta_g": self.beta_g,
+            "alpha_l": self.alpha_l,
+            "beta_l": self.beta_l,
+            "model_state": self.model.state_dict(),
         }
 
     def _set_ensemble_state(self, state: Dict[str, Any]):
-        self.alpha_g = state['alpha_g']
-        self.beta_g = state['beta_g']
-        self.alpha_l = state['alpha_l']
-        self.beta_l = state['beta_l']
-        self.model.load_state_dict(state['model_state'])
+        self.alpha_g = state["alpha_g"]
+        self.beta_g = state["beta_g"]
+        self.alpha_l = state["alpha_l"]
+        self.beta_l = state["beta_l"]
+        self.model.load_state_dict(state["model_state"])
