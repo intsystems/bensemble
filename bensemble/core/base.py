@@ -18,11 +18,11 @@ class BaseBayesianEnsemble(abc.ABC):
         self,  #
         train_loader: torch.utils.data.DataLoader,
         val_loader: Optional[torch.utils.data.DataLoader] = None,
-        **kwargs
+        **kwargs,
     ) -> Dict[str, List[float]]:
         """Обучение ансамбля"""
         # Надо обсудить параметры и реализацию
-        pass
+        ...
 
     @abc.abstractmethod
     def predict(
@@ -30,7 +30,7 @@ class BaseBayesianEnsemble(abc.ABC):
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Предсказание с оценкой неопределенности"""
         # Надо обсудить параметры и реализацию
-        pass
+        ...
 
     @abc.abstractmethod
     def sample_models(
@@ -40,7 +40,7 @@ class BaseBayesianEnsemble(abc.ABC):
     ]:  # Добавить онлайн-поддерживание сгенереированных моделей -> Поменять предикт
         """Сэмплирование моделей из апостериорного распределения"""
         # Надо обсудить параметры
-        pass
+        ...
 
     def save(self, path: str):  # Сделать загрузку и выгрузку моделей через стэйт диктов
         """Сохранение обученного ансамбля"""
@@ -64,10 +64,10 @@ class BaseBayesianEnsemble(abc.ABC):
     def _get_ensemble_state(self) -> Dict[str, Any]:
         """Получение внутреннего состояния ансамбля"""
         # Надо обсудить параметры
-        pass
+        ...
 
     @abc.abstractmethod
     def _set_ensemble_state(self, state: Dict[str, Any]):
         """Установка внутреннего состояния ансамбля"""
         # Надо обсудить параметры
-        pass
+        ...
