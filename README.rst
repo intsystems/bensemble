@@ -1,35 +1,3 @@
-|test| |codecov| |docs|
-
-.. |test| image:: https://github.com/intsystems/ProjectTemplate/workflows/test/badge.svg
-    :target: https://github.com/intsystems/ProjectTemplate/tree/master
-    :alt: Test status
-    
-.. |codecov| image:: https://img.shields.io/codecov/c/github/intsystems/ProjectTemplate/master
-    :target: https://app.codecov.io/gh/intsystems/ProjectTemplate
-    :alt: Test coverage
-    
-.. |docs| image:: https://github.com/intsystems/ProjectTemplate/workflows/docs/badge.svg
-    :target: https://intsystems.github.io/ProjectTemplate/
-    :alt: Docs status
-
-
-.. class:: center
-
-    :Название исследуемой задачи: Bayesian ensembling
-    :Тип научной работы: Учебный проект по курсу байесовского мультимоделирования
-    :Автор: Соболевский Федор, Набиев Мухаммадшариф, Василенко Дмитрий, Касюк Вадим
-    :Научный руководитель: к. ф.-м. н. Бахтеев Олег Юрьевич
-    :Научный консультант(при наличии): степень, Фамилия Имя Отчество
-
-Abstract: Comparative Analysis of Bayesian Deep Learning Methods for Multimodel Ensembling
-========
-
-Bayesian methods provide a principled framework for uncertainty quantification in deep learning, which is crucial for safety-critical applications. This project presents a comprehensive comparative study of four prominent variational inference algorithms for Bayesian neural networks: the baseline Evidence Lower Bound (ELBO) with local reparameterization trick, hyperparameter optimization, and pruning; Renyi divergence as a generalization of ELBO offering tunable mode-seeking/covering behavior; scalable Laplace approximation for efficient posterior estimation; and Bayes by Backpropagation as an alternative variational inference scheme.
-
-We implement these methods in a unified framework and evaluate them on benchmark classification and regression tasks using metrics including predictive accuracy, negative log-likelihood, expected calibration error, and out-of-distribution detection performance. Our results demonstrate the trade-offs between computational efficiency, uncertainty quantification quality, and model performance across different methods. Specifically, we show how Renyi divergence with α < 1 provides improved uncertainty calibration compared to standard ELBO, while scalable Laplace approximation offers competitive performance with reduced computational overhead. The study provides practical guidance for selecting appropriate Bayesian inference methods based on application requirements and computational constraints.
-
-Keywords: Bayesian Deep Learning, Variational Inference, Uncertainty Quantification, Renyi Divergence, Laplace Approximation, Neural Networks Ensembling
-
 Bayesian Multimodeling Project
 ==============================
 
