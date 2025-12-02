@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from core.base import BaseBayesianEnsemble
+from ..core.base import BaseBayesianEnsemble
 
 
 class VariationalRenyi(BaseBayesianEnsemble):
