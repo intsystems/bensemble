@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bensemble"
+version = "0.1.0"
+description = "Bayesian ensemble methods for neural networks"
+readme = "README.rst"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+keywords = ["bayesian", "neural network", "ensemble", "variational inference", "renyi"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+authors = [
+  {name = "Соболевский Федор"},
+  {name = "Набиев Мухаммадшариф"},
+  {name = "Василенко Дмитрий"},
+  {name = "Касюк Вадим"}
+]
+
+dependencies = [
+    "torch>=2.9.1",
+    "numpy>=2.2.6",
+    "scikit-learn>=1.7.2",
+    "matplotlib>=3.10.7",
+    "scipy>=1.15.3"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "black",
+    "isort",
+    "nbqa",
+    "mypy",
+    "autopep8",
+    "ruff"
+]
+
+[project.urls]
+Homepage = "https://github.com/intsystems/bensemble"
+Bug_Tracker = "https://github.com/intsystems/bensemble/issues"
+Documentation = "https://github.com/intsystems/bensemble#readme"
+Source = "https://github.com/intsystems/bensemble"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["bensemble*"]
