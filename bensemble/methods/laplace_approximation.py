@@ -58,7 +58,6 @@ class LaplaceApproximation(BaseBayesianEnsemble):
         prior_precision: float = 1.0,
         num_samples: int = 1000,
     ) -> Dict[str, List[float]]:
-
         history = {}
 
         if not self.pretrained:
@@ -455,7 +454,7 @@ class LaplaceApproximation(BaseBayesianEnsemble):
     def _set_ensemble_state(self, state: Dict[str, Any]):
         """Установка внутреннего состояния ансамбля"""
         if state["likelihood"] in ["classification", "regression"]:
-            self.likelihood = state[""]
+            self.likelihood = state["likelihood"]
         else:
             raise ValueError(f"Unsupported likelihood: {state['']}")
 
