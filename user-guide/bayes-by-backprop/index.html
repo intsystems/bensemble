@@ -63,6 +63,18 @@
                   </li>
                   <li class="toctree-l1 current"><a class="reference internal current" href="#">Bayes by Backprop</a>
     <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#how-it-works">How it works</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#usage">Usage</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#initialization">Initialization</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#training">Training</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#testing-and-model-sampling">Testing and model sampling</a>
+    </li>
+        </ul>
+    </li>
     </ul>
                   </li>
               </ul>
@@ -71,6 +83,8 @@
                   <li class="toctree-l1"><a class="reference internal" href="../../api/core/">Core</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../../api/methods/">Methods</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/additional-classes/">Additional Classes</a>
                   </li>
               </ul>
       </div>
@@ -97,7 +111,80 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
             <div class="section" itemprop="articleBody">
               
-                <h1 id="bayes-by-backprop">Bayes by Backprop</h1>
+                <h1 id="probabilistic-backpropagation">Probabilistic Backpropagation</h1>
+<p><em>Pro tip: check out our <a href="https://github.com/intsystems/bensemble/blob/master/notebooks/pbp_probabilistic_backpropagation_test.ipynb">probabilistic backpropagation demo</a>.</em></p>
+<p>We implement the probabilistic backpropagation (or Bayes by Backprop) method described by <a href="https://proceedings.mlr.press/v37/hernandez-lobatoc15.html">Jose Miguel Hernandez-Lobato and Ryan Adams (2015)</a> in the <a href="../../api/methods/#probabilisticbackpropagation"><code>bensemble.methods.probabilistic_backpropagation.ProbabilisticBackpropagation</code></a> class (phew, that's a long one). This is a method that combines the backpropagation algorithm with Bayesian machine learning for efficient posterior optimization during model training. </p>
+<p><em>Note: currently the algorithm is implemented for regression with a Gaussian likelihood.</em></p>
+<h2 id="how-it-works">How it works</h2>
+<p>Probabilistic Backpropagation (PBP) pushes the classical “uncertainty in weights” idea quite literally. PBP maintains a Gaussian distribution for model weights:
+<script type="math/tex; mode=display">
+w_{ij} = \mathcal{N}(\mu_{ij}, \sigma^2_{ij}).
+</script>
+Noise and weight precisions are also treated as random with gamma posterior distributions. Conceptually, for each input the network does not produce a single scalar, but an approximate predictive distribution:
+<script type="math/tex; mode=display">
+p(y | \mathbf{x}, q) \approx \mathcal{N}(y | \mu(\mathbf{x}), \sigma^2(\mathbf{x})),
+</script>
+where the distribution parameters are computed via propagation of means and variances through the network layers.</p>
+<p>Learning then proceeds in an assumed density filtering style. For each data point, we take the current approximate posterior, multiply it by the likelihood of that point, and project the result back to the Gaussian family:
+<script type="math/tex; mode=display">
+q_\text{new}(\boldsymbol{\theta}) \propto q_\text{old}(\theta)p(y | \mathbf{x}, \boldsymbol{\theta}) \quad \text{(projected back to Gaussians)}.
+</script>
+</p>
+<h2 id="usage">Usage</h2>
+<h3 id="initialization">Initialization</h3>
+<p>First of all, you'll need to create a <code>ProbabilisticBackpropagation</code> instance. This is done slightly differently since at its core, the <code>ProbabilisticBackpropagation</code> has a <a href="../../api/methods/#PBPNet"><code>bensemble.methods.probabilistic_backpropagation.PBPNet</code></a> instance which is a network of probabilistic linear layers with ReLU activations. The simplest way to use the method is to specify layer sizes directly in the <code>layer_sizes</code> parameter:</p>
+<pre><code class="language-python">from bensemble.methods.probabilistic_backpropagation import ProbabilisticBackpropagation
+
+# Create ProbabilisticBackpropagation instance
+ensemble = ProbabilisticBackpropagation(layer_sizes=[1, 16, 16, 1])
+</code></pre>
+<p>Alternatively, you can create a <code>PBPNet</code> model and then specify it in the <code>model</code> parameter of the <code>ProbabilisticBackpropagation</code> constructor (see the <a href="../../api/methods/#PBPNet">API section</a> for more info on PBPNet).</p>
+<p>You can also specify several optional parameters:</p>
+<ul>
+<li><code>noise_alpha: float = 6.0</code> - the alpha parameter of the Gamma distribution over the weight noise.</li>
+<li><code>noise_beta: float = 6.0</code>  - the beta parameter of the Gamma distribution over the weight noise.</li>
+<li><code>weight_alpha: float = 6.0</code> - the alpha parameter of the Gamma distribution over the weight precision.</li>
+<li><code>weight_beta: float = 6.0</code> - the beta parameter of the Gamma distribution over the weight precision.</li>
+<li><code>dtype: torch.dtype = torch.float64</code> - value type for network.</li>
+<li><code>device: Optional[torch.device] = None</code> - model device.</li>
+</ul>
+<h3 id="training">Training</h3>
+<p>For model training, it is sufficient to specify just a training data <code>DataLoader</code>:</p>
+<pre><code class="language-python">from torch.utils.data import DataLoader
+
+# Create train dataset
+train_data = ...
+
+# Create DataLoader
+train_loader = DataLoader(data, ...)
+
+# Train ensemble
+training_history = ensemble.fit(train_loader)
+</code></pre>
+<p>You can also add several optional parameters, including:</p>
+<ul>
+<li><code>val_loader: Optional[torch.utils.data.DataLoader] = None</code> - a DataLoader for model validation during training.</li>
+<li><code>num_epochs: int = 100</code> - the number of training epochs.</li>
+<li><code>step_clip: Optional[float] = 2.0</code> - value for step-wise clipping during training.</li>
+</ul>
+<p>The <code>fit</code> method returns a <code>Dict[str, List[float]]</code> containing training and validation RMSE and NLPD values acquired during model training:</p>
+<pre><code class="language-python">training_history.keys()
+&gt; ['train_rmse', 'train_nlpd', 'val_rmse', 'val_nlpd']
+</code></pre>
+<h3 id="testing-and-model-sampling">Testing and model sampling</h3>
+<p>When the ensemble is trained, you can make predictions and sample model just like with any other method in Bensemble:</p>
+<pre><code class="language-python"># Create test dataset
+test_data = ...
+
+# Make predictions
+for X in test_data:
+    prediction, uncertainty = ensemble.predict(X, n_samples=50)
+    print(prediction, uncertainty)
+
+# Sample models
+models = ensemble.sample_models(5)
+</code></pre>
+<p><em>For more information on class methods and parameters, visit the <a href="../../api/methods/#probabilisticbackpropagation">API section</a>.</em></p>
               
             </div>
           </div><footer>
@@ -137,6 +224,7 @@
     <script>var base_url = "../..";</script>
     <script src="../../js/theme_extra.js"></script>
     <script src="../../js/theme.js"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
       <script src="../../search/main.js"></script>
     <script>
         jQuery(function () {

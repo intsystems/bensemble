@@ -59,6 +59,18 @@
                   </li>
                   <li class="toctree-l1 current"><a class="reference internal current" href="#">Laplace Approximation</a>
     <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#how-it-works">How it works</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#usage">Usage</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#initialization">Initialization</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#posterior-computation-and-training">Posterior computation and training</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#prediction-and-model-sampling">Prediction and model sampling</a>
+    </li>
+        </ul>
+    </li>
     </ul>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../renyi-divergence/">Renyi Divergence</a>
@@ -71,6 +83,8 @@
                   <li class="toctree-l1"><a class="reference internal" href="../../api/core/">Core</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../../api/methods/">Methods</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/additional-classes/">Additional Classes</a>
                   </li>
               </ul>
       </div>
@@ -97,7 +111,108 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
             <div class="section" itemprop="articleBody">
               
-                <h1 id="laplace-approximation">Laplace Approximation</h1>
+                <h1 id="kronecker-factored-laplace-approximation">Kronecker-Factored Laplace Approximation</h1>
+<p><em>Pro tip: check out our <a href="https://github.com/intsystems/bensemble/blob/master/notebooks/laplace_demo.ipynb">Kronecker-factored Laplace approximation demo</a>.</em></p>
+<p>We implement the Kronecker-factored Laplace approximation method described by <a href="https://discovery.ucl.ac.uk/id/eprint/10080902/1/kflaplace.pdf">Hippolyt Ritter, Aleksandar Botev and David Barber (2018)</a> in the <a href="../../api/methods/#laplaceapproximation"><code>bensemble.methods.laplace_approximation.LaplaceApproximation</code></a> class. This is a post-hoc method for posterior approximation based on the Laplace approximation of the negative log-likelihood and Kronecker factorization of the Hessian in this approximation.</p>
+<h2 id="how-it-works">How it works</h2>
+<p>The <strong>Laplace approximation</strong> is based on second-order approximation of the negative log-posterior using Taylor decomposition around the MAP-estimate, which gives a Gaussian distribution centered a the MAP-estimate with the Hessian of the negative log-posterior as the covariance matrix:
+<script type="math/tex; mode=display">
+p(\theta | \mathcal{D}) \approx \mathcal{N}(\theta; \theta^* , \bar{H}^{-1}).
+</script>
+</p>
+<p>Since direct Hessian computation is still quite impractical, the Hessian block for each layer is further approximated as the <em>Kronecker product</em> of the covariance of inputs and the pre-activation Hessian:
+<script type="math/tex; mode=display">
+H_{\lambda} \approx \mathbb{E}[\mathcal{Q}_{\lambda}] \otimes \mathbb{E}[\mathcal{H}_{\lambda}].
+</script>
+</p>
+<p>Then we can sample weights from the posterior as from the following matrix normal distribution:
+<script type="math/tex; mode=display">
+W_{\lambda} \sim \mathcal{MN}(W_{\lambda}^*, \bar{\mathcal{Q}}_{\lambda}^{-1}, \bar{\mathcal{H}}_{\lambda}^{-1}).
+</script>
+The power of this method is in its <em>post hoc</em> nature: you can plug a pretrained model into it and quickly compute the posterior approximation without having to change the training procedure. </p>
+<h2 id="usage">Usage</h2>
+<h3 id="initialization">Initialization</h3>
+<p>First of all, you'll need to create a <code>LaplaceApproximation</code> instance. This can be done as simple as:</p>
+<pre><code class="language-python">from bensemble.methods.laplace_approximation import LaplaceApproximation
+
+# Create your nn.Module model
+model = ...
+
+# Train your model
+...
+
+# Create LaplaceApproximation instance
+ensemble = LaplaceApproximation(model)
+</code></pre>
+<p>You can also specify several optional parameters:</p>
+<ul>
+<li><code>likelihood: str = "classification"</code> - the likelihood to use. The current implementation supports cross entropy (<code>"classification"</code>) and MSE loss (<code>"regression"</code>).</li>
+<li><code>pretrained: bool = True</code> - whether the model is pretrained. If not, <code>.fit()</code> will train the model before posterior computation (see below).</li>
+<li><code>verbose: bool = False</code> - whether verbose for all methods is on. Verbose can be also toggled using the <code>.toggle_verbose()</code> method.</li>
+</ul>
+<h3 id="posterior-computation-and-training">Posterior computation and training</h3>
+<p>Since Laplace approximation is post hoc, the default usage scenario is posterior computation over a pretrained model. You can do this by calling the <code>compute_posterior</code> method which takes a <code>DataLoader</code> as input. By default, the <code>fit</code> method does the same thing (it just calls <code>compute_posterior</code>):</p>
+<pre><code class="language-python">from torch.utils.data import DataLoader
+
+# Create train dataset
+train_data = ...
+
+# Create DataLoader
+train_loader = DataLoader(data, ...)
+
+# Train ensemble
+ensemble.compute_posterior(train_loader) # The same as: ensemble.fit(train_loader)
+</code></pre>
+<p>You can also add several optional parameters to <code>compute_posterior</code>, including:</p>
+<ul>
+<li><code>prior_precision: float = 0.0</code> - the precision of the prior distribution for reqularization.</li>
+<li><code>num_samples: int = 1000</code> - number of samples to use for posterior computation.</li>
+</ul>
+<p>Alternatively, you can pass <code>pretrained=False</code> to the ensemble constructor and then call the <code>fit</code> method to train the model and then compute the posterior:</p>
+<pre><code class="language-python">from bensemble.methods.laplace_approximation import LaplaceApproximation
+from torch.utils.data import DataLoader
+
+# Create your nn.Module model
+model = ...
+
+# Create untrained LaplaceApproximation instance
+ensemble = LaplaceApproximation(model, pretrained=False)
+
+# Create train dataset
+train_data = ...
+
+# Create DataLoader
+train_loader = DataLoader(data, ...)
+
+# Train ensemble
+ensemble.fit(train_loader)
+</code></pre>
+<p>The optional parameters of <code>fit</code> are:</p>
+<ul>
+<li><code>num_epochs: int = 100</code> - the number of training epochs.</li>
+<li><code>lr: float = 1e-3</code> - the learning rate for model training.</li>
+<li><code>prior_precision: float = 1.0</code> - the precision of the prior distribution for reqularization.</li>
+<li><code>num_samples: int = 1000</code> - number of samples to use for posterior computation.</li>
+</ul>
+<p>The <code>fit</code> method returns a <code>Dict[str, List[float]]</code> containing training loss values acquired during model training:</p>
+<pre><code class="language-python"># Train loss
+train_loss = training_history[&quot;train_loss&quot;]
+</code></pre>
+<h3 id="prediction-and-model-sampling">Prediction and model sampling</h3>
+<p>When the ensemble is trained, you can make predictions and sample model just like with any other method in Bensemble. Note that model sampling takes some time in this method, so a better approach to testing may be to sample an ensemble of models and then make all the predictions with them. </p>
+<pre><code class="language-python"># Create test dataset
+test_data = ...
+
+# Make predictions
+for X in test_data:
+    prediction, uncertainty = ensemble.predict(X, n_samples=20)
+    print(prediction, uncertainty)
+
+# Sample models
+models = ensemble.sample_models(10)
+</code></pre>
+<p>The <code>predict</code> and <code>sample_models</code> also have a float <code>temperature</code> parameter which can be specified to scale the posterior distribution. </p>
+<p><em>For more information on class methods and parameters, visit the <a href="../../api/methods/#laplaceapproximation">API section</a>.</em></p>
               
             </div>
           </div><footer>
@@ -137,6 +252,7 @@
     <script>var base_url = "../..";</script>
     <script src="../../js/theme_extra.js"></script>
     <script src="../../js/theme.js"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
       <script src="../../search/main.js"></script>
     <script>
         jQuery(function () {
