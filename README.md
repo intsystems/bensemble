@@ -9,7 +9,7 @@
 
 ---
 
-## 📚 Key Resources
+##  Key Resources
 
 | Resource | Description |
 | :--- | :--- |
@@ -20,7 +20,7 @@
 
 ---
 
-## 🚀 Features
+## Features
 
 - **Unified API**: All methods share a consistent `fit` / `predict` interface (Scikit-learn style).
 - **4 SOTA Algorithms**: From Variational Inference to Scalable Laplace approximations.
@@ -29,7 +29,7 @@
 
 ---
 
-## 📦 Installation
+## Installation
 
 We recommend using a virtual environment.
 
@@ -55,7 +55,7 @@ uv pip install -e ".[dev]"
 
 ---
 
-## ⚡ Quick Start
+##  Quick Start
 
 Here is how to turn a standard PyTorch model into a Bayesian one using **Variational Inference**:
 
@@ -88,7 +88,7 @@ print(f"Prediction: {mean[0].item():.4f} ± {std[0].item():.4f}")
 
 ---
 
-## 🧠 Algorithms & Demos
+##  Algorithms & Demos
 
 We have implemented four distinct approaches. Check out the interactive demos for each:
 
@@ -101,20 +101,13 @@ We have implemented four distinct approaches. Check out the interactive demos fo
 
 ---
 
-## 🛠 Development & Testing
+##  Development & Testing
 
-We take quality seriously. The library is covered by a comprehensive test suite to ensure reliability.
+The library is covered by a comprehensive test suite to ensure reliability.
 
 ### Run Tests
 ```bash
 pytest tests/
-```
-
-### Check Coverage
-To generate the HTML coverage report:
-```bash
-pytest --cov=bensemble --cov-report=html tests/
-# Open htmlcov/index.html in your browser
 ```
 
 ### Linting
@@ -126,9 +119,9 @@ ruff format .
 
 ---
 
-## 👥 Authors
+##  Authors
 
-Developed by the **Intelligent Systems Team**:
+Developed by:
 * **Fedor Sobolevskiy**
 * **Mukhamadsharif Nabiev**
 * **Dmitrii Vasilenko**
@@ -136,6 +129,6 @@ Developed by the **Intelligent Systems Team**:
 
 ---
 
-## 📄 License
+##  License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
