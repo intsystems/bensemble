@@ -5,7 +5,7 @@ A comprehensive comparative study of Bayesian deep learning methods for neural n
 
 Project documentation can be found here: https://intsystems.github.io/bensemble/
 
-Blog post draft: https://github.com/intsystems/bensemble/blob/master/paper/blogpost_draft/blog_post_draft.pdf
+Blog post: https://mikhmed-nabiev.github.io/bayesian-multimodelling.html
 
 Techreport draft: https://github.com/intsystems/bensemble/blob/master/paper/techreport_draft/bensemble_Tech_Report_draft.pdf
 
