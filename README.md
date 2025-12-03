@@ -7,7 +7,7 @@ Project documentation can be found here: https://intsystems.github.io/bensemble/
 
 Blog post: https://mikhmed-nabiev.github.io/bayesian-multimodelling.html
 
-Techreport draft: https://github.com/intsystems/bensemble/blob/master/paper/techreport_draft/bensemble_Tech_Report_draft.pdf
+Techreport: https://github.com/intsystems/bensemble/blob/master/paper/techreport_draft/bensemble_tech_report.pdf
 
 Benchmark notebook: https://github.com/intsystems/bensemble/blob/master/notebooks/benchmark.ipynb
 
