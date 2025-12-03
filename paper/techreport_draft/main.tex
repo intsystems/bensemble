@@ -1,0 +1,239 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}  
+\usepackage{amsmath, amssymb, amsfonts}
+\usepackage{graphicx}
+\usepackage{hyperref}
+
+\title{Bensemble: A Python Library for Bayesian Neural Networks}
+\author{Sobolevsky Fedor, Nabiev Mukhammadsharif, Vasilenko Dmitry, Kasyuk Vadim}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Introduction}
+\texttt{bensemble} is a Python library for building Bayesian neural networks (BNNs) with a unified interface for approximate posterior inference and uncertainty estimation. While deep neural networks have achieved remarkable success across various domains, their predictions are often overconfident, limiting reliability in safety-critical applications. \texttt{bensemble} addresses this gap by implementing multiple state-of-the-art Bayesian inference methods in a consistent PyTorch-compatible framework.
+
+The library supports four approximation techniques:
+\begin{itemize}
+\item \textbf{Variational Inference (VI)} for scalable optimization-based posterior approximation
+\item \textbf{Laplace Approximation (LA)} for Hessian-based uncertainty estimation
+\item \textbf{Probabilistic Backpropagation (PBP)} for moment-propagation-based inference
+\item \textbf{Variational Rényi (VR)} for flexible divergence minimization
+\end{itemize}
+
+Designed for researchers and practitioners, \texttt{bensemble} enables seamless integration of Bayesian principles into PyTorch workflows while maintaining computational efficiency and usability. This document provides a technical overview of the library's architecture, implementation, and usage patterns.
+
+\section{Supported Methods}
+
+\subsection{Variational Inference (VI)}
+VI approximates the posterior over weights with a tractable distribution. Key features:
+\begin{itemize}
+    \item Mean-field Gaussian variational posterior.
+    \item Reparameterization trick for stochastic gradient optimization.
+    \item Optimizes the Evidence Lower Bound (ELBO).
+    \item Monte Carlo sampling for predictive mean and uncertainty estimation.
+\end{itemize}
+
+\subsection{Laplace Approximation (LA)}
+LA approximates the posterior as a Gaussian centered at the MAP estimate. Features:
+\begin{itemize}
+    \item Hessian-based covariance computation using Kronecker-factored approximation (KFAC-LA).
+    \item Hooks capture activations and pre-activation Hessians.
+    \item Posterior sampling for uncertainty estimation.
+    \item Compatible with any linear architecture.
+\end{itemize}
+
+\subsection{Probabilistic Backpropagation (PBP)}
+PBP propagates first and second moments through the network. Features:
+\begin{itemize}
+    \item Assumed Density Filtering updates weight and noise posteriors sequentially.
+    \item Supports ReLU and linear layers with analytical moment propagation.
+    \item Efficient for small- to medium-sized datasets.
+    \item Produces predictive mean and variance for regression, and predictive probabilities for classification.
+\end{itemize}
+
+\subsection{Variational Rényi (VR)}
+VR generalizes VI using the $\alpha$-Rényi divergence. Features:
+\begin{itemize}
+    \item Reparameterized Gaussian weights with $\mu$ and $\rho$.
+    \item Minimizes Rényi divergence for flexible posterior approximation.
+    \item Monte Carlo sampling for predictions and uncertainty estimation.
+    \item Tunable $\alpha$ parameter for controlling divergence behavior.
+\end{itemize}
+
+\section{Interface Overview}
+
+\subsection{Model Initialization}
+\begin{itemize}
+    \item Accepts arbitrary \texttt{nn.Module} PyTorch models.
+    \item Automatically converts linear layers to Bayesian layers for VI and VR.
+    \item Stores a template model for posterior sampling.
+\end{itemize}
+
+\subsection{Training and Fitting}
+\begin{itemize}
+    \item \texttt{fit} trains models using the selected Bayesian method.
+    \item Supports standard optimizers (Adam) and gradient clipping.
+    \item Allows specification of epochs, learning rate, and number of Monte Carlo samples.
+\end{itemize}
+
+\subsection{Prediction and Sampling}
+\begin{itemize}
+    \item \texttt{predict} returns predictive mean and optionally posterior samples.
+    \item \texttt{sample\_models} generates fully sampled deterministic models from the posterior.
+    \item Supports estimation of aleatoric and epistemic uncertainty.
+\end{itemize}
+
+\subsection{State Management}
+\begin{itemize}
+    \item \texttt{\_get\_ensemble\_state} and \texttt{\_set\_ensemble\_state} for saving/loading model state.
+    \item Preserves optimizer state, model parameters, and hyperparameters.
+\end{itemize}
+
+\section{Experiments and Evaluation}
+\label{sec:experiments}
+
+\subsection{Experimental Setup}
+We evaluate \texttt{bensemble} on the Boston Housing dataset (506 samples, 13 features) with an 80/20 train-test split.
+
+\subsection{Performance Metrics}
+\begin{itemize}
+    \item \textbf{RMSE}: Root Mean Squared Error, measures prediction accuracy.
+    \item \textbf{NLL}: Negative Log-Likelihood, measures probabilistic calibration.
+    \item \textbf{ECE}: Expected Calibration Error, quantifies the agreement between predicted probabilities and actual outcomes.
+    \item \textbf{Brier Score}: Measures accuracy of probabilistic predictions.
+\end{itemize}
+
+\subsection{Results on Boston Housing}
+\begin{table}[ht]
+\centering
+\caption{Performance comparison on Boston Housing test set (n=101)}
+\label{tab:boston_results}
+\begin{tabular}{lcccc}
+\hline
+\textbf{Method} & \textbf{RMSE} & \textbf{NLL} & \textbf{ECE} & \textbf{Brier Score} \\
+\hline
+Deterministic MLP & 4.211 & 47.994 & 0.0329 & 0.0895 \\
+MC Dropout & 3.835 & 3.676 & 0.0190 & 0.0546 \\
+HMC Linear & 5.850 & 3.222 & 0.0063 & 0.0940 \\
+Variational Rényi & 5.364 & 3.155 & 0.0057 & 0.1274 \\
+Probabilistic Backprop & 5.420 & 3.170 & 0.0081 & 0.0913 \\
+Variational Inference (VI) & 4.631 & \textbf{2.882} & 0.0080 & 0.0991 \\
+Laplace Approx & 19.377 & 4.549 & 0.0108 & 0.2412 \\
+\hline
+\end{tabular}
+\end{table}
+
+\textbf{Key observations:}
+\begin{itemize}
+    \item MC Dropout achieves the best RMSE, while Deterministic MLP follows closely.
+    \item VI achieves the best NLL, indicating superior probabilistic calibration.
+    \item Bayesian methods generally have lower ECE than deterministic approaches.
+    \item Laplace Approximation performs poorly, likely due to Hessian approximation issues.
+\end{itemize}
+
+\subsection{Adversarial Robustness Analysis}
+We evaluate models under FGSM attacks with varying $\epsilon$:
+
+\begin{table}[ht]
+\centering
+\caption{RMSE under FGSM adversarial attacks}
+\label{tab:adversarial_rmse}
+\begin{tabular}{lccccccc}
+\hline
+$\epsilon$ & Det. MLP & HMC Lin. & Laplace & MC Dropout & VI & PBP & VR \\
+\hline
+0.00 & 4.21 & 5.86 & 19.22 & 3.80 & 4.58 & 5.42 & 5.35 \\
+0.05 & 5.79 & 6.00 & 20.63 & 4.40 & 4.79 & 5.60 & 5.49 \\
+0.10 & 7.41 & 6.19 & 24.04 & 5.16 & 5.16 & 5.73 & 5.76 \\
+0.15 & 8.96 & 6.42 & 21.71 & 5.99 & 5.38 & 6.01 & 5.88 \\
+0.20 & 10.45 & 6.69 & 21.34 & 6.90 & 5.65 & 6.33 & 6.19 \\
+0.30 & 13.13 & 7.32 & 22.92 & 8.82 & 6.40 & 6.87 & 6.64 \\
+0.40 & 15.50 & 8.04 & 22.93 & 10.75 & 7.02 & 7.60 & 7.54 \\
+0.50 & 17.70 & 8.84 & 26.40 & 12.67 & 7.71 & 8.28 & 8.74 \\
+0.60 & 19.77 & 9.70 & 29.54 & 14.69 & 8.60 & 9.04 & 9.40 \\
+0.70 & 21.79 & 10.60 & 27.79 & 16.71 & 9.79 & 9.85 & 11.06 \\
+0.80 & 23.81 & 11.53 & 33.15 & 18.72 & 10.48 & 10.68 & 11.17 \\
+0.90 & 25.79 & 12.49 & 35.19 & 20.81 & 11.48 & 11.45 & 11.89 \\
+1.00 & 27.74 & 13.47 & 40.46 & 23.05 & 12.22 & 12.34 & 13.50 \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=1\textwidth]{report_adv_attack.jpg}
+\caption{RMSE degradation under FGSM attacks. Bayesian methods (VI, PBP, VR) degrade more gradually than deterministic approaches.}
+\label{fig:adversarial}
+\end{figure}
+
+\subsection{Ensemble Size Analysis}
+% \begin{figure}[h]
+% \centering
+% \includegraphics[width=1\textwidth]{report_metrics.jpg}
+% \caption{Performance metrics vs ensemble size (left) and calibration under distribution shift (right). Bayesian methods improve with more samples and maintain better calibration under input noise.}
+% \label{fig:metrics_analysis}
+% \end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.7\linewidth]{report_metrics1.jpg}
+    \caption{NLL vs Ensemble size}
+    \label{fig:placeholder}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.7\linewidth]{report_metrics2.jpg}
+    \caption{ECE vs Ensemble size}
+    \label{fig:placeholder}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.7\linewidth]{report_metrics3.jpg}
+    \caption{ECE vs Shift severity}
+    \label{fig:placeholder}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.7\linewidth]{report_metrics4.jpg}
+    \caption{RMSE vs Ensemble size}
+    \label{fig:placeholder}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.7\linewidth]{report_metrics5.jpg}
+    \caption{Brier score vs Ensemble size}
+    \label{fig:placeholder}
+\end{figure}
+
+\textbf{Key findings:}
+\begin{itemize}
+    \item Most Bayesian methods achieve optimal performance with 20-30 ensemble members.
+    \item ECE consistently decreases with more samples across Bayesian methods.
+    \item Bayesian models remain better calibrated than deterministic ones under input perturbations.
+\end{itemize}
+
+\subsection{Practical Recommendations}
+\begin{itemize}
+    \item \textbf{Maximum accuracy}: MC Dropout or Deterministic MLP
+    \item \textbf{Well-calibrated uncertainty}: Variational Inference (VI)
+    \item \textbf{Adversarial robustness}: Any Bayesian method
+    \item \textbf{Linear interpretability}: HMC Linear (if applicable)
+\end{itemize}
+
+\section{Conclusion}
+\texttt{bensemble} provides a unified framework for Bayesian neural networks with multiple inference algorithms, allowing users to:
+\begin{itemize}
+    \item Flexibly switch between VI, LA, PBP, and VR.
+    \item Obtain predictive uncertainties for regression and classification.
+    \item Sample ensembles of models from approximate posteriors.
+    \item Integrate seamlessly with PyTorch workflows.
+\end{itemize}
+\texttt{bensemble} is suitable for both research and practical applications requiring principled uncertainty estimation.
+
+\end{document}
