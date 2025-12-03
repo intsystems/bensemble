@@ -1,11 +1,11 @@
-# 🔮 BEnsemble: Bayesian Multimodeling Project
+# 😎 Bensemble: Bayesian Multimodeling Project
 
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Coverage](https://img.shields.io/badge/coverage-98%25-brightgreen.svg)](tests/)
 [![Documentation](https://img.shields.io/badge/docs-online-blue)](https://intsystems.github.io/bensemble/)
 
-**BEnsemble** is a comprehensive comparative study and a production-ready library for Bayesian Deep Learning. It integrates state-of-the-art methods for neural network ensembling and uncertainty quantification under a unified PyTorch interface.
+**Bensemble** is a comprehensive comparative study and a production-ready library for Bayesian Deep Learning. It integrates state-of-the-art methods for neural network ensembling and uncertainty quantification under a unified PyTorch interface.
 
 ---
 
@@ -71,7 +71,7 @@ model = nn.Sequential(
     nn.Linear(50, 1)
 )
 
-# 2. Wrap it with BEnsemble
+# 2. Wrap it with Bensemble
 # auto_convert=True automatically replaces Linear layers with BayesianLinear
 ensemble = VariationalEnsemble(model, auto_convert=True)
 
@@ -131,7 +131,7 @@ ruff format .
 Developed by the **Intelligent Systems Team**:
 * **Fedor Sobolevskiy**
 * **Mukhamadsharif Nabiev**
-* **Dmitriy Vasilenko**
+* **Dmitrii Vasilenko**
 * **Vadim Kasyuk**
 
 ---
