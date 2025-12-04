@@ -35,7 +35,7 @@ We recommend using a virtual environment.
 
 ### For Users (pip)
 ```bash
-pip install .
+pip install bensemble
 ```
 
 ### For Developers (uv)
@@ -130,5 +130,6 @@ Developed by:
 ---
 
 ##  License
+
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
