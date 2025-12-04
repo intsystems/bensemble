@@ -69,16 +69,34 @@
                   <li class="toctree-l1 current"><a class="reference internal current" href="#">Core</a>
     <ul class="current">
     <li class="toctree-l2"><a class="reference internal" href="#basebayesianensemble">BaseBayesianEnsemble</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#constructor">Constructor</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#compute_uncertainty">compute_uncertainty</a>
+    <li class="toctree-l3"><a class="reference internal" href="#fit">fit</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#enable_dropout">enable_dropout</a>
+    <li class="toctree-l3"><a class="reference internal" href="#predict">predict</a>
     </li>
-    <li class="toctree-l2"><a class="reference internal" href="#earlystopping">EarlyStopping</a>
+    <li class="toctree-l3"><a class="reference internal" href="#sample_models">sample_models</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#_get_ensemble_state">_get_ensemble_state</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#_set_ensemble_state">_set_ensemble_state</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#save">save</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#load">load</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#implementation-notes">Implementation Notes</a>
+    </li>
+        </ul>
+    </li>
+        </ul>
     </li>
     </ul>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../methods/">Methods</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../additional-classes/">Additional Classes</a>
                   </li>
               </ul>
       </div>
@@ -107,9 +125,161 @@
               
                 <h1 id="core">Core</h1>
 <h2 id="basebayesianensemble">BaseBayesianEnsemble</h2>
-<h2 id="compute_uncertainty">compute_uncertainty</h2>
-<h2 id="enable_dropout">enable_dropout</h2>
-<h2 id="earlystopping">EarlyStopping</h2>
+<p><strong><code>class bensemble.core.base.BaseBayesianEnsemble</code></strong></p>
+<p>Base class for all Bayesian ensemble methods.</p>
+<h3 id="constructor">Constructor</h3>
+<pre><code class="language-python">def __init__(self, model: nn.Module, **kwargs):
+</code></pre>
+<p><strong>Parameters</strong></p>
+<ul>
+<li><strong>model</strong> (<code>nn.Module</code>): Base PyTorch model architecture to use for ensemble members</li>
+<li><strong>kwargs</strong>: Additional implementation-specific parameters</li>
+</ul>
+<p><strong>Attributes</strong></p>
+<ul>
+<li><strong>model</strong> (<code>nn.Module</code>): Reference to the base model architecture</li>
+<li><strong>is_fitted</strong> (<code>bool</code>): Flag indicating whether the ensemble has been trained</li>
+<li><strong>ensemble</strong> (<code>list</code>): Container for ensemble members (implementation-specific)</li>
+</ul>
+<h3 id="fit"><code>fit</code></h3>
+<pre><code class="language-python">@abc.abstractmethod
+def fit(
+    self,
+    train_loader: torch.utils.data.DataLoader,
+    val_loader: Optional[torch.utils.data.DataLoader] = None,
+    **kwargs,
+) -&gt; Dict[str, List[float]]:
+</code></pre>
+<p>Trains the ensemble using the provided data loaders.</p>
+<p><strong>Parameters</strong></p>
+<ul>
+<li><strong>train_loader</strong> (<code>DataLoader</code>): DataLoader for training data</li>
+<li><strong>val_loader</strong> (<code>DataLoader</code>, optional): DataLoader for validation data</li>
+<li><strong>kwargs</strong>: Additional training parameters (implementation-specific)</li>
+</ul>
+<p><strong>Returns</strong></p>
+<ul>
+<li><code>Dict[str, List[float]]</code>: Training history/metrics (implementation-specific format)</li>
+</ul>
+<p><strong>Notes</strong></p>
+<ul>
+<li>Must be implemented by all subclasses</li>
+<li>Should update <code>self.is_fitted</code> to <code>True</code> upon successful training</li>
+</ul>
+<h3 id="predict"><code>predict</code></h3>
+<pre><code class="language-python">@abc.abstractmethod
+def predict(
+    self, X: torch.Tensor, n_samples: int = 100
+) -&gt; Tuple[torch.Tensor, torch.Tensor]:
+</code></pre>
+<p>Makes predictions with uncertainty estimates.</p>
+<p><strong>Parameters</strong></p>
+<ul>
+<li><strong>X</strong> (<code>torch.Tensor</code>): Input tensor of shape <code>(batch_size, ...)</code></li>
+<li><strong>n_samples</strong> (<code>int</code>, default=100): Number of forward passes/samples for uncertainty estimation</li>
+</ul>
+<p><strong>Returns</strong></p>
+<ul>
+<li><code>Tuple[torch.Tensor, torch.Tensor]</code>: </li>
+<li>First tensor: Predictions (typically mean)</li>
+<li>Second tensor: Uncertainty estimates (e.g., variance, standard deviation)</li>
+</ul>
+<p><strong>Notes</strong></p>
+<ul>
+<li>Should raise an error if <code>self.is_fitted</code> is <code>False</code></li>
+<li>The exact form of uncertainty estimates depends on the implementation</li>
+</ul>
+<h3 id="sample_models"><code>sample_models</code></h3>
+<pre><code class="language-python">@abc.abstractmethod
+def sample_models(self, n_models: int = 10) -&gt; List[nn.Module]:
+</code></pre>
+<p>Samples individual models from the posterior distribution.</p>
+<p><strong>Parameters</strong></p>
+<ul>
+<li><strong>n_models</strong> (<code>int</code>, default=10): Number of models to sample</li>
+</ul>
+<p><strong>Returns</strong></p>
+<ul>
+<li><code>List[nn.Module]</code>: List of sampled PyTorch models</li>
+</ul>
+<p><strong>Notes</strong></p>
+<ul>
+<li>Intended for online generation and maintenance of ensemble members</li>
+<li>Sampled models should be ready for inference</li>
+</ul>
+<h3 id="_get_ensemble_state"><code>_get_ensemble_state</code></h3>
+<pre><code class="language-python">@abc.abstractmethod
+def _get_ensemble_state(self) -&gt; Dict[str, Any]:
+</code></pre>
+<p>Gets the internal state of the ensemble for serialization.</p>
+<p><strong>Returns</strong></p>
+<ul>
+<li><code>Dict[str, Any]</code>: Dictionary containing all necessary state information</li>
+</ul>
+<p><strong>Notes</strong></p>
+<ul>
+<li>Used internally by <code>save()</code> method</li>
+<li>Implementation should include all parameters needed to restore the ensemble</li>
+</ul>
+<h3 id="_set_ensemble_state"><code>_set_ensemble_state</code></h3>
+<pre><code class="language-python">@abc.abstractmethod
+def _set_ensemble_state(self, state: Dict[str, Any]):
+</code></pre>
+<p>Restores the internal state of the ensemble from serialized data.</p>
+<p><strong>Parameters</strong></p>
+<ul>
+<li><strong>state</strong> (<code>Dict[str, Any]</code>): Dictionary containing saved state information</li>
+</ul>
+<p><strong>Notes</strong></p>
+<ul>
+<li>Used internally by <code>load()</code> method</li>
+<li>Should handle version compatibility if needed</li>
+</ul>
+<h3 id="save"><code>save</code></h3>
+<pre><code class="language-python">def save(self, path: str):
+</code></pre>
+<p>Saves the trained ensemble to disk.</p>
+<p><strong>Parameters</strong></p>
+<ul>
+<li><strong>path</strong> (<code>str</code>): File path where the ensemble will be saved</li>
+</ul>
+<p><strong>Saves</strong></p>
+<ul>
+<li>Base model state dictionary</li>
+<li>Ensemble state (via <code>_get_ensemble_state()</code>)</li>
+<li><code>is_fitted</code> flag</li>
+</ul>
+<p><strong>File Format</strong></p>
+<ul>
+<li>PyTorch checkpoint file (<code>.pt</code> or <code>.pth</code>)</li>
+</ul>
+<h3 id="load"><code>load</code></h3>
+<pre><code class="language-python">def load(self, path: str):
+</code></pre>
+<p>Loads a trained ensemble from disk.</p>
+<p><strong>Parameters</strong></p>
+<ul>
+<li><strong>path</strong> (<code>str</code>): File path to the saved ensemble</li>
+</ul>
+<p><strong>Loads</strong></p>
+<ul>
+<li>Base model state dictionary</li>
+<li>Ensemble state (via <code>_set_ensemble_state()</code>)</li>
+<li><code>is_fitted</code> flag</li>
+</ul>
+<p><strong>Raises</strong></p>
+<ul>
+<li><code>FileNotFoundError</code>: If the specified path doesn't exist</li>
+<li>Runtime errors if the saved format is incompatible</li>
+</ul>
+<h4 id="implementation-notes">Implementation Notes</h4>
+<ol>
+<li><strong>Subclassing</strong>: All abstract methods must be implemented by subclasses</li>
+<li><strong>Device Management</strong>: Implementations should handle device placement (CPU/GPU)</li>
+<li><strong>State Management</strong>: Ensure <code>_get_ensemble_state()</code> and <code>_set_ensemble_state()</code> are comprehensive</li>
+<li><strong>Error Handling</strong>: Check <code>is_fitted</code> flag in <code>predict()</code> and <code>sample_models()</code></li>
+<li><strong>Serialization</strong>: Consider versioning for saved models to handle future changes</li>
+</ol>
               
             </div>
           </div><footer>
@@ -149,6 +319,7 @@
     <script>var base_url = "../..";</script>
     <script src="../../js/theme_extra.js"></script>
     <script src="../../js/theme.js"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
       <script src="../../search/main.js"></script>
     <script>
         jQuery(function () {

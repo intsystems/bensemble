@@ -35,7 +35,7 @@ We recommend using a virtual environment.
 
 ### For Users (pip)
 ```bash
-pip install .
+pip install bensemble
 ```
 
 ### For Developers (uv)
@@ -123,7 +123,7 @@ ruff format .
 
 Developed by:
 * **Fedor Sobolevsky**
-* **Muhammadsharif Nabiev**
+* **Muhamadsharif Nabiev**
 * **Dmitrii Vasilenko**
 * **Vadim Kasyuk**
 
@@ -131,4 +131,6 @@ Developed by:
 
 ##  License
 
+
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+

@@ -55,6 +55,18 @@
               <ul class="current">
                   <li class="toctree-l1 current"><a class="reference internal current" href="#">Interface</a>
     <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#initialization-__init__">Initialization (__init__)</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#fit">fit</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#predict">predict</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#sample_models">sample_models</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#save">save</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#load">load</a>
+    </li>
     </ul>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../variational-inference/">Variational Inference</a>
@@ -71,6 +83,8 @@
                   <li class="toctree-l1"><a class="reference internal" href="../../api/core/">Core</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../../api/methods/">Methods</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/additional-classes/">Additional Classes</a>
                   </li>
               </ul>
       </div>
@@ -98,6 +112,29 @@
             <div class="section" itemprop="articleBody">
               
                 <h1 id="interface">Interface</h1>
+<p>The interface of all of the models implemented in Bensemble is (almost) the same to provide interchangeability. In this section we will explore the common methods used in all of Bensemble's classes.</p>
+<h2 id="initialization-__init__">Initialization (<code>__init__</code>)</h2>
+<p>All of the methods' constructors take different input arguments, however, one thing that they have in common is that they all require a <code>nn.Module</code> model as their first argument. This is because Bensemble models are in fact wrappers around PyTorch models allowing for posterior approximation rather than independent models themselves.</p>
+<h2 id="fit"><code>fit</code></h2>
+<p>All methods have a <code>fit</code> method that trains the model as well as calculates the parameters needed for model sampling and uncertainty estimation. The <code>fit</code> method always requires the <code>train_loader</code> parameter that is a <code>torch.utils.data.DataLoader</code> instance. You can additionally optionally provide a <code>val_loader</code> of the same type for validation.</p>
+<p>Keep in mind that if you use <a href="../laplace-approximation"><code>LaplaceApproximation</code></a>, which is a post hoc method primarily used to approximate posterior weight distributions for pretrained models, the <code>fit</code> method will by default just call the <code>compute_posterior</code> method without model training (more on that in the <a href="../laplace-approximation">section about Laplace approximation</a>). </p>
+<h2 id="predict"><code>predict</code></h2>
+<p>The <code>predict</code> method is use to make predictions for test objects with uncertainty estimation by sampling a given amount of model weights and making the corresponding amount of predctions. The parameters of <code>predict</code> in all models are:</p>
+<ul>
+<li>
+<p><code>X: torch.Tensor</code>: the object for which you are making a prediction. Keep in mind that it must be a <code>torch.Tensor</code> instance of the same shape as training objects.</p>
+</li>
+<li>
+<p><code>n_samples: int = 100</code>: the number of weight samples used to make the prediction. The default value of this parameter may vary across different methods depending on sampling speeds.</p>
+</li>
+</ul>
+<p>The <code>predict</code> method outputs a tuple of <code>torch.Tensor</code> object containing the mean predictions and their uncertainties.</p>
+<h2 id="sample_models"><code>sample_models</code></h2>
+<p>This is the go-to method for model ensemble sampling. It takes the <code>n_models</code> parameter as input, defining the number of models to be sampled, and returns a list of sampled models as <code>nn.Module</code> instances. The sampled models are in fact just copies of the original model with perturbed weights.</p>
+<h2 id="save"><code>save</code></h2>
+<p>This method takes a <code>path</code> file name as input and saves the ensemble state to the specified file.</p>
+<h2 id="load"><code>load</code></h2>
+<p>This method takes a <code>path</code> file name as input and loads the ensemble state for the specified file.</p>
               
             </div>
           </div><footer>
@@ -137,6 +174,7 @@
     <script>var base_url = "../..";</script>
     <script src="../../js/theme_extra.js"></script>
     <script src="../../js/theme.js"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
       <script src="../../search/main.js"></script>
     <script>
         jQuery(function () {
