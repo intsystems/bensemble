@@ -178,8 +178,68 @@ def test_errors_not_fitted(base_model):
         ensemble.sample_models()
 
 
-def test_stubs(base_model):
-    """Tests placeholder methods to ensure complete coverage."""
-    ensemble = VariationalEnsemble(base_model)
-    assert ensemble._get_ensemble_state() == {}
-    assert ensemble._set_ensemble_state({}) is None
+def test_state_save_load(base_model, simple_data):
+    """
+    Tests that the model state can be saved and restored correctly.
+    Verifies that a restored model produces identical predictions to the original.
+    """
+    X, y, loader = simple_data
+
+    model_1 = VariationalEnsemble(base_model, auto_convert=True)
+    model_1.fit(loader, epochs=1, verbose=False)
+
+    state = model_1._get_ensemble_state()
+
+    assert "model_state_dict" in state
+    assert "likelihood_state_dict" in state
+    assert state["is_fitted"] is True
+
+    import copy
+
+    fresh_base_model = copy.deepcopy(base_model)
+    model_2 = VariationalEnsemble(fresh_base_model, auto_convert=True)
+
+    assert not model_2.is_fitted
+
+    model_2._set_ensemble_state(state)
+
+    assert model_2.is_fitted is True
+    assert model_2.prior_sigma == model_1.prior_sigma
+
+    for p1, p2 in zip(model_1.model.parameters(), model_2.model.parameters()):
+        assert torch.equal(p1, p2)
+
+    assert model_1.likelihood.get_noise_sigma() == model_2.likelihood.get_noise_sigma()
+
+    model_1.model.eval()
+    model_2.model.eval()
+    model_1._set_sampling_mode(False)
+    model_2._set_sampling_mode(False)
+
+    with torch.no_grad():
+        pred_1 = model_1.model(X)
+        pred_2 = model_2.model(X)
+
+    assert torch.allclose(pred_1, pred_2), (
+        "Restored model predictions do not match original"
+    )
+
+
+def test_optimizer_state_ignored_if_none(base_model):
+    """
+    Ensures that loading state into a model without an optimizer
+    doesn't crash (optimizer state is simply ignored until fit is called).
+    """
+    model = VariationalEnsemble(base_model)
+
+    fake_state = {
+        "model_state_dict": model.model.state_dict(),
+        "likelihood_state_dict": model.likelihood.state_dict(),
+        "is_fitted": True,
+        "prior_sigma": 1.0,
+        "learning_rate": 0.01,
+        "optimizer_state_dict": {"some": "garbage"},
+    }
+
+    model._set_ensemble_state(fake_state)
+    assert model.is_fitted is True
