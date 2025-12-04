@@ -5,7 +5,7 @@
 [![Coverage](https://img.shields.io/badge/coverage-98%25-brightgreen.svg)](tests/)
 [![Documentation](https://img.shields.io/badge/docs-online-blue)](https://intsystems.github.io/bensemble/)
 
-**Bensemble** is a comprehensive comparative study and a production-ready library for Bayesian Deep Learning. It integrates state-of-the-art methods for neural network ensembling and uncertainty quantification under a unified PyTorch interface.
+**Bensemble** is a comprehensive comparative study and a production-ready library for Bayesian Deep Learning. It integrates established  methods for neural network ensembling and uncertainty quantification under a unified PyTorch interface.
 
 ---
 
