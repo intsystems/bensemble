@@ -23,7 +23,7 @@
 ## Features
 
 - **Unified API**: All methods share a consistent `fit` / `predict` interface (Scikit-learn style).
-- **4 SOTA Algorithms**: From Variational Inference to Scalable Laplace approximations.
+- **Core Bayesian Methods**: Implements canonical algorithms from Variational Inference to Scalable Laplace approximations.
 - **Model Agnostic**: Works with standard `torch.nn.Module` architectures.
 - **Modern Stack**: Built with `uv`, fully typed, and tested with **98% code coverage**.
 
@@ -122,8 +122,8 @@ ruff format .
 ##  Authors
 
 Developed by:
-* **Fedor Sobolevskiy**
-* **Mukhamadsharif Nabiev**
+* **Fedor Sobolevsky**
+* **Muhammadsharif Nabiev**
 * **Dmitrii Vasilenko**
 * **Vadim Kasyuk**
 
