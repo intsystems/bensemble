@@ -122,8 +122,8 @@ ruff format .
 ##  Authors
 
 Developed by:
-* **Fedor Sobolevskiy**
-* **Mukhamadsharif Nabiev**
+* **Fedor Sobolevsky**
+* **Muhamadsharif Nabiev**
 * **Dmitrii Vasilenko**
 * **Vadim Kasyuk**
 
@@ -133,3 +133,4 @@ Developed by:
 
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
