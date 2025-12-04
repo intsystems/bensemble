@@ -57,6 +57,18 @@
                   </li>
                   <li class="toctree-l1 current"><a class="reference internal current" href="#">Variational Inference</a>
     <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#how-it-works">How it works</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#usage">Usage</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#initialization">Initialization</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#training">Training</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#prediction-and-model-sampling">Prediction and model sampling</a>
+    </li>
+        </ul>
+    </li>
     </ul>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../laplace-approximation/">Laplace Approximation</a>
@@ -71,6 +83,8 @@
                   <li class="toctree-l1"><a class="reference internal" href="../../api/core/">Core</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../../api/methods/">Methods</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/additional-classes/">Additional Classes</a>
                   </li>
               </ul>
       </div>
@@ -97,7 +111,73 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
             <div class="section" itemprop="articleBody">
               
-                <h1 id="variational-inference">Variational Inference</h1>
+                <h1 id="practical-variational-inference">Practical Variational Inference</h1>
+<p><em>Pro tip: check out our <a href="https://github.com/intsystems/bensemble/blob/master/notebooks/pvi_demo.ipynb">practical variational inference demo</a>.</em></p>
+<p>We implement the practical variational inference method described by <a href="https://papers.nips.cc/paper_files/paper/2011/hash/7eb3c8be3d411e8ebfab08eba5f49632-Abstract.html">Graves (2011)</a> in the <a href="../../api/methods/#variationalensemble"><code>bensemble.methods.variational_inference.VariationalEnsemble</code></a> class. This is a simple method of in-training posterior approximation for linear neural networks that uses independent Gaussian distributions over the weights of the network.</p>
+<h2 id="how-it-works">How it works</h2>
+<p>The <strong>practical variational inference</strong> (PVI) methods follows the "Bayesian layers" approach: instead of treating the whole network as a single variational object, it replaces ordinary linear layers by Bayesian linear layers and adds a simple Gaussian likelihood on top. Each weight in a linear layer is assumed to have the following distribution:
+<script type="math/tex; mode=display">
+w_{ij} = \mathcal{N}(\mu_{ij}, \sigma^2_{ij})
+</script>
+with a fixed Gaussian prior. We also implement the <strong>local reparametrization trick</strong> to allow for standard backpropagation through the Bayesian network and effeicient sampling: for an input mini-batch, the pre-activation means and variances are 
+<script type="math/tex; mode=display">
+\boldsymbol{\gamma} = \mathbf{xW}\boldsymbol{\mu}^\top, \quad \boldsymbol{\delta} = \mathbf{xW}\boldsymbol{\sigma}^{2\top} + \text{bias term},
+</script>
+and activations are drawn as
+<script type="math/tex; mode=display">
+\mathbf{z} = \boldsymbol{\gamma} + \boldsymbol{\varepsilon}\odot\boldsymbol{\delta}, \quad \boldsymbol{\varepsilon} \sim \mathcal{N}(0, 1).
+</script>
+The model is then optimized via a modified loss function that incorporates KL-divergence.</p>
+<h2 id="usage">Usage</h2>
+<h3 id="initialization">Initialization</h3>
+<p>First of all, you'll need to create a <code>VariationalEnsemble</code> instance. This can be done as simple as:</p>
+<pre><code class="language-python">from bensemble.methods.variational_inference import VariationalEnsemble
+
+# Create your nn.Module model
+model = ...
+
+# Create VariationalEnsemble instance
+ensemble = VariationalEnsemble(model)
+</code></pre>
+<p>You can also specify several optional parameters:</p>
+<ul>
+<li><code>likelihood: Optional[nn.Module] = None</code> - custom likelihood function for the model. By default a Gaussian likelihood based on MSE for regression is used (see <a href="../../api/methods/#gaussianlikelihood"><code>GaussianLikelihood</code></a> in the API section for details).</li>
+<li><code>learning_rate: float = 1e-3</code> - learning rate for model training.</li>
+<li><code>prior_sigma: float = 1.0</code> - the variance of the prior distribution, which in this model is assumed to be a zero-mean Gaussian distribution.</li>
+</ul>
+<h3 id="training">Training</h3>
+<p>For model training, it is sufficient to specify just a training data <code>DataLoader</code>:</p>
+<pre><code class="language-python">from torch.utils.data import DataLoader
+
+# Create train dataset
+train_data = ...
+
+# Create DataLoader
+train_loader = DataLoader(data, ...)
+
+# Train ensemble
+ensemble.fit(train_loader)
+</code></pre>
+<p>You can also add several optional parameters, including:</p>
+<ul>
+<li><code>epochs: int = 100</code>: the number of training epochs.</li>
+<li><code>kl_weight: float = 0.1</code>: the weight of the KL-divergence in the loss function.</li>
+<li><code>verbose: bool = True</code>: option to turn training verbose on or off.</li>
+</ul>
+<h3 id="prediction-and-model-sampling">Prediction and model sampling</h3>
+<p>When the ensemble is trained, you can make predictions and sample model just like with any other method in Bensemble:</p>
+<pre><code class="language-python"># Create test dataset
+test_data = ...
+
+# Make predictions
+for X in test_data:
+    prediction, uncertainty = ensemble.predict(X, n_samples=50)
+    print(prediction, uncertainty)
+
+# Sample models
+models = ensemble.sample_models(5)
+</code></pre>
+<p><em>For more information on class methods and parameters, visit the <a href="../../api/methods/#variationalensemble">API section</a>.</em></p>
               
             </div>
           </div><footer>
@@ -137,6 +217,7 @@
     <script>var base_url = "../..";</script>
     <script src="../../js/theme_extra.js"></script>
     <script src="../../js/theme.js"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
       <script src="../../search/main.js"></script>
     <script>
         jQuery(function () {

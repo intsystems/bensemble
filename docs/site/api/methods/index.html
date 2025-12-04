@@ -70,13 +70,73 @@
                   </li>
                   <li class="toctree-l1 current"><a class="reference internal current" href="#">Methods</a>
     <ul class="current">
-    <li class="toctree-l2"><a class="reference internal" href="#variationalinference">VariationalInference</a>
+    <li class="toctree-l2"><a class="reference internal" href="#variationalensemble">VariationalEnsemble</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#constructor">Constructor</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#fit">fit</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#predict">predict</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#sample_models">sample_models</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#notes">Notes</a>
+    </li>
+        </ul>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#laplaceapproximation">LaplaceApproximation</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#constructor_1">Constructor</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#toggle_verbose">toggle_verbose</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#fit_1">fit</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#compute_posterior">compute_posterior</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#sample_models_1">sample_models</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#predict_1">predict</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#notes_1">Notes</a>
+    </li>
+        </ul>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#variationalrenyi">VariationalRenyi</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#constructor_2">Constructor</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#fit_2">fit</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#predict_2">predict</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#sample_models_2">sample_models</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#forward">forward</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#notes_2">Notes</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#probabilisticbackpropagation">ProbabilisticBackpropagation</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#constructor_3">Constructor</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#fit_3">fit</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#predict_3">predict</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#noise_variance">noise_variance</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#sample_models_3">sample_models</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#notes_3">Notes</a>
+    </li>
+        </ul>
     </li>
     </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../additional-classes/">Additional Classes</a>
                   </li>
               </ul>
       </div>
@@ -104,14 +164,506 @@
             <div class="section" itemprop="articleBody">
               
                 <h1 id="methods">Methods</h1>
-<h2 id="variationalinference">VariationalInference</h2>
+<h2 id="variationalensemble">VariationalEnsemble</h2>
+<p><strong><code>class bensemble.methods.variational_inference.VariationalEnsemble</code></strong></p>
+<p>Main ensemble class for Bayesian neural networks with variational inference.</p>
+<h3 id="constructor">Constructor</h3>
+<pre><code class="language-python">VariationalEnsemble(
+    model: nn.Module,
+    likelihood: Optional[nn.Module] = None,
+    learning_rate: float = 1e-3,
+    prior_sigma: float = 1.0,
+    auto_convert: bool = True,
+    **kwargs
+)
+</code></pre>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>model</code> (nn.Module): Base neural network model</li>
+<li><code>likelihood</code> (nn.Module, optional): Likelihood module. If None, uses <code>GaussianLikelihood()</code>. Default: None</li>
+<li><code>learning_rate</code> (float, optional): Learning rate for optimizer. Default: 1e-3</li>
+<li><code>prior_sigma</code> (float, optional): Prior standard deviation for Bayesian layers. Default: 1.0</li>
+<li><code>auto_convert</code> (bool, optional): Automatically convert Linear layers to BayesianLinear. Default: True</li>
+<li><code>**kwargs</code>: Additional arguments passed to parent class</li>
+</ul>
+<p><strong>Attributes:</strong></p>
+<ul>
+<li><code>prior_sigma</code> (float): Prior standard deviation</li>
+<li><code>learning_rate</code> (float): Learning rate</li>
+<li><code>likelihood</code> (nn.Module): Likelihood module</li>
+<li><code>optimizer</code> (torch.optim.Optimizer): Optimizer instance (initialized during <code>fit</code>)</li>
+<li><code>model</code> (nn.Module): Bayesian model</li>
+<li><code>is_fitted</code> (bool): Training status flag</li>
+</ul>
+<h3 id="fit"><code>fit</code></h3>
+<p>Trains the Bayesian ensemble model.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>train_loader</code> (torch.utils.data.DataLoader): Training data loader</li>
+<li><code>val_loader</code> (torch.utils.data.DataLoader, optional): Validation data loader. Default: None</li>
+<li><code>epochs</code> (int, optional): Number of training epochs. Default: 100</li>
+<li><code>kl_weight</code> (float, optional): Weight for KL divergence term. Default: 0.1</li>
+<li><code>verbose</code> (bool, optional): Print training progress. Default: True</li>
+<li><code>**kwargs</code>: Additional arguments including:</li>
+<li><code>device</code> (str/torch.device): Device to use for training</li>
+</ul>
+<p><strong>Returns:</strong></p>
+<ul>
+<li><code>dict</code>: Training history with keys: <code>train_loss</code>, <code>nll</code>, <code>kl</code></li>
+</ul>
+<p><strong>Raises:</strong></p>
+<ul>
+<li><code>ValueError</code>: If data loaders are improperly configured</li>
+</ul>
+<h3 id="predict"><code>predict</code></h3>
+<p>Makes predictions with uncertainty estimates using Monte Carlo sampling.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>X</code> (torch.Tensor): Input tensor of shape <code>(batch_size, features)</code></li>
+<li><code>n_samples</code> (int, optional): Number of Monte Carlo samples. Default: 100</li>
+</ul>
+<p><strong>Returns:</strong></p>
+<ul>
+<li><code>Tuple[torch.Tensor, torch.Tensor]</code>: Mean and standard deviation predictions</li>
+</ul>
+<p><strong>Raises:</strong></p>
+<ul>
+<li><code>RuntimeError</code>: If model is not fitted</li>
+</ul>
+<p><strong>Note:</strong>
+Predictions are moved to CPU and detached from computation graph.</p>
+<h3 id="sample_models"><code>sample_models</code></h3>
+<p>Samples deterministic models from the variational posterior.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>n_models</code> (int, optional): Number of models to sample. Default: 10</li>
+</ul>
+<p><strong>Returns:</strong></p>
+<ul>
+<li><code>List[nn.Module]</code>: List of sampled neural network models</li>
+</ul>
+<p><strong>Raises:</strong></p>
+<ul>
+<li><code>RuntimeError</code>: If model is not fitted</li>
+</ul>
+<p><strong>Note:</strong>
+Each sampled model has fixed weights (sampling disabled) and is in evaluation mode.</p>
+<h3 id="notes">Notes</h3>
+<ol>
+<li>
+<p><strong>Device Management:</strong> The ensemble automatically moves models to the appropriate device during training and prediction.</p>
+</li>
+<li>
+<p><strong>Sampling Behavior:</strong></p>
+<ul>
+<li>Training: Sampling enabled with local reparameterization</li>
+<li>Prediction: Sampling enabled for MC estimates</li>
+<li>Sampled models: Sampling permanently disabled (deterministic)</li>
+</ul>
+</li>
+<li>
+<p><strong>KL Weighting:</strong> The <code>kl_weight</code> parameter controls the trade-off between data fit and model complexity.</p>
+</li>
+<li>
+<p><strong>Noise Estimation:</strong> When using <code>GaussianLikelihood</code>, the noise sigma is learned during training and used for prediction uncertainty.</p>
+</li>
+<li>
+<p><strong>Memory:</strong> <code>sample_models</code> creates deep copies of the model, which may be memory intensive for large models.</p>
+</li>
+</ol>
+<hr />
 <h2 id="laplaceapproximation">LaplaceApproximation</h2>
+<p><strong><code>class bensemble.methods.laplace_approximation.LaplaceApproximation</code></strong></p>
+<h3 id="constructor_1">Constructor</h3>
+<pre><code class="language-python">def __init__(
+    self,
+    model: nn.Module,
+    pretrained: bool = True,
+    likelihood: str = &quot;classification&quot;,
+    verbose: bool = False,
+)
+</code></pre>
+<p>Initializes the Laplace approximation ensemble.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>model</code> (nn.Module): The neural network model to apply Laplace approximation to.</li>
+<li><code>pretrained</code> (bool, optional): Whether the model is already trained. If <code>False</code>, the model will be trained during <code>fit()</code>. Default: <code>True</code>.   </li>
+<li><code>likelihood</code> (str, optional): The type of likelihood function. Must be either <code>"classification"</code> or <code>"regression"</code>. Default: <code>"classification"</code>.</li>
+<li><code>verbose</code> (bool, optional): Whether to print progress information during training and posterior computation. Default: <code>False</code>.</li>
+</ul>
+<p><strong>Raises:</strong></p>
+<ul>
+<li><code>ValueError</code>: If <code>likelihood</code> is not <code>"classification"</code> or <code>"regression"</code>.</li>
+</ul>
+<p><strong>Example:</strong></p>
+<pre><code class="language-python">model = nn.Sequential(nn.Linear(10, 20), nn.ReLU(), nn.Linear(20, 2))
+la = LaplaceApproximation(model, likelihood=&quot;classification&quot;, verbose=True)
+</code></pre>
+<h3 id="toggle_verbose"><code>toggle_verbose</code></h3>
+<pre><code class="language-python">def toggle_verbose(self) -&gt; None
+</code></pre>
+<p>Toggles verbose mode on or off.</p>
+<p><strong>Example:</strong></p>
+<pre><code class="language-python">la.toggle_verbose()  # Turns verbose on if off, off if on
+</code></pre>
+<hr />
+<h3 id="fit_1"><code>fit</code></h3>
+<pre><code class="language-python">def fit(
+    self,
+    train_loader: torch.utils.data.DataLoader,
+    val_loader: Optional[torch.utils.data.DataLoader] = None,
+    num_epochs: int = 100,
+    lr: float = 1e-3,
+    prior_precision: float = 1.0,
+    num_samples: int = 1000,
+) -&gt; Dict[str, List[float]]
+</code></pre>
+<p>Trains the model (if not pretrained) and computes the Laplace approximation posterior.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>train_loader</code> (DataLoader): DataLoader for training data.</li>
+<li><code>val_loader</code> (DataLoader, optional): DataLoader for validation data. Currently unused but included for API consistency.</li>
+<li><code>num_epochs</code> (int, optional): Number of training epochs if model is not pretrained. Default: <code>100</code>.</li>
+<li><code>lr</code> (float, optional): Learning rate for training if model is not pretrained. Default: <code>1e-3</code>.</li>
+<li><code>prior_precision</code> (float, optional): Precision (inverse variance) of the Gaussian prior. Default: <code>1.0</code>.</li>
+<li><code>num_samples</code> (int, optional): Number of samples to use for estimating Kronecker factors. Default: <code>1000</code>.</li>
+</ul>
+<p><strong>Returns:</strong></p>
+<ul>
+<li><code>Dict[str, List[float]]</code>: Training history containing loss values.</li>
+</ul>
+<p><strong>Example:</strong></p>
+<pre><code class="language-python">history = la.fit(
+    train_loader=train_loader,
+    num_epochs=50,
+    lr=0.001,
+    prior_precision=0.1,
+    num_samples=500
+)
+</code></pre>
+<hr />
+<h3 id="compute_posterior"><code>compute_posterior</code></h3>
+<pre><code class="language-python">def compute_posterior(
+    self,
+    train_loader: DataLoader,
+    prior_precision: float = 0.0,
+    num_samples: int = 1000,
+) -&gt; None
+</code></pre>
+<p>Computes the Kronecker-factored Laplace approximation posterior.</p>
+<p>This method estimates the posterior distribution by computing Kronecker-factored curvature matrices for each linear layer in the network.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>train_loader</code> (DataLoader): DataLoader containing training data for posterior estimation.</li>
+<li><code>prior_precision</code> (float, optional): Precision (inverse variance) of the Gaussian prior. Default: <code>0.0</code>.</li>
+<li><code>num_samples</code> (int, optional): Number of samples to use for estimating Kronecker factors. Default: <code>1000</code>.</li>
+</ul>
+<p><strong>Example:</strong></p>
+<pre><code class="language-python">la.compute_posterior(
+    train_loader=train_loader,
+    prior_precision=1.0,
+    num_samples=2000
+)
+</code></pre>
+<hr />
+<h3 id="sample_models_1"><code>sample_models</code></h3>
+<pre><code class="language-python">def sample_models(
+    self,
+    n_models: int = 10,
+    temperature: float = 1.0
+) -&gt; List[nn.Module]
+</code></pre>
+<p>Samples weight matrices from the matrix normal posterior distribution.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>n_models</code> (int, optional): Number of model samples to generate. Default: <code>10</code>.</li>
+<li><code>temperature</code> (float, optional): Scaling factor for the covariance during sampling. Higher values increase diversity. Default: <code>1.0</code>.</li>
+</ul>
+<p><strong>Returns:</strong></p>
+<ul>
+<li><code>List[nn.Module]</code>: List of sampled model instances with different weight configurations.</li>
+</ul>
+<p><strong>Example:</strong></p>
+<pre><code class="language-python">sampled_models = la.sample_models(n_models=5, temperature=0.5)
+for model in sampled_models:
+    predictions = model(test_data)
+</code></pre>
+<hr />
+<h3 id="predict_1"><code>predict</code></h3>
+<pre><code class="language-python">def predict(
+    self,
+    X: torch.Tensor,
+    n_samples: int = 100,
+    temperature: float = 1.0
+) -&gt; Tuple[torch.Tensor, torch.Tensor]
+</code></pre>
+<p>Computes predictive distribution using Monte Carlo sampling from the posterior.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>X</code> (torch.Tensor): Input tensor of shape <code>(batch_size, input_dim)</code>.</li>
+<li><code>n_samples</code> (int, optional): Number of Monte Carlo samples to draw. Default: <code>100</code>.</li>
+<li><code>temperature</code> (float, optional): Scaling factor for the covariance during sampling. Default: <code>1.0</code>.</li>
+</ul>
+<p><strong>Returns:</strong></p>
+<ul>
+<li><code>Tuple[torch.Tensor, torch.Tensor]</code>:</li>
+<li>For classification: <code>(mean_probabilities, predictive_entropy)</code></li>
+<li>For regression: <code>(mean_prediction, predictive_variance)</code></li>
+</ul>
+<p><strong>Example:</strong></p>
+<pre><code class="language-python"># For classification
+mean_probs, uncertainty = la.predict(X_test, n_samples=50)
+
+# For regression
+mean_pred, variance = la.predict(X_test, n_samples=50)
+</code></pre>
+<hr />
+<h3 id="notes_1">Notes</h3>
+<ol>
+<li>
+<p><strong>Model Requirements:</strong> The method currently supports <code>nn.Linear</code> layers. Other layer types are ignored.</p>
+</li>
+<li>
+<p><strong>Device Handling:</strong> The class automatically detects and uses the same device as the input model.</p>
+</li>
+<li>
+<p><strong>State Management:</strong> After calling <code>fit()</code> or <code>compute_posterior()</code>, the internal state (<code>kronecker_factors</code>, <code>sampling_factors</code>, etc.) is populated and ready for sampling.</p>
+</li>
+<li>
+<p><strong>Memory Usage:</strong> Sampling large models with many Monte Carlo samples may require significant memory.</p>
+</li>
+<li>
+<p><strong>Likelihood Types:</strong></p>
+<ul>
+<li><code>"classification"</code>: Uses cross-entropy loss with softmax output.</li>
+<li><code>"regression"</code>: Uses mean squared error loss.</li>
+</ul>
+</li>
+</ol>
+<hr />
 <h2 id="variationalrenyi">VariationalRenyi</h2>
+<p><strong><code>class bensemble.methods.variational_renyi.VariationalRenyi</code></strong></p>
+<h3 id="constructor_2">Constructor</h3>
+<pre><code class="language-python">def __init__(
+    self,
+    model: nn.Module,
+    alpha: float = 1.0,
+    prior_sigma: float = 1.0,
+    initial_rho: float = -2.0,
+    **kwargs
+)
+</code></pre>
+<p>Initializes the VariationalRenyi model.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>model</code> (nn.Module): A deterministic PyTorch neural network model. Only Linear layers will be made Bayesian.</li>
+<li><code>alpha</code> (float, optional): Rényi alpha parameter. When α=1, this reduces to standard Variational Inference. Default: 1.0.</li>
+<li><code>prior_sigma</code> (float, optional): Standard deviation of the Gaussian prior distribution for weights. Default: 1.0.</li>
+<li><code>initial_rho</code> (float, optional): Initial value for the rho parameter used in variational weight parameterization. Default: -2.0.</li>
+<li><code>**kwargs</code>: Additional arguments passed to the parent <code>BaseBayesianEnsemble</code> class.</li>
+</ul>
+<h3 id="fit_2"><code>fit</code></h3>
+<pre><code class="language-python">def fit(
+    self,
+    train_loader: torch.utils.data.DataLoader,
+    val_loader: Optional[torch.utils.data.DataLoader] = None,
+    num_epochs: int = 100,
+    lr: float = 5e-4,
+    n_samples: int = 10,
+    grad_clip: Optional[float] = 5.0,
+    **kwargs
+) -&gt; Dict[str, List[float]]
+</code></pre>
+<p>Trains the model using the Variational Rényi bound.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>train_loader</code> (DataLoader): DataLoader for training data.</li>
+<li><code>val_loader</code> (DataLoader, optional): DataLoader for validation data. If provided, validation loss is computed each epoch. Default: None.</li>
+<li><code>num_epochs</code> (int, optional): Number of training epochs. Default: 100.</li>
+<li><code>lr</code> (float, optional): Learning rate for the Adam optimizer. Default: 5e-4.</li>
+<li><code>n_samples</code> (int, optional): Number of Monte Carlo samples used to approximate the loss each iteration. Default: 10.</li>
+<li><code>grad_clip</code> (float, optional): Maximum absolute value for gradient clipping. If None, no clipping is applied. Default: 5.0.</li>
+<li><code>**kwargs</code>: Additional keyword arguments (not currently used).</li>
+</ul>
+<p><strong>Returns:</strong></p>
+<ul>
+<li><code>Dict[str, List[float]]</code>: Training history containing:</li>
+<li><code>"train_loss"</code>: List of training losses for each epoch.</li>
+<li><code>"val_loss"</code>: List of validation losses for each epoch (if val_loader provided).</li>
+</ul>
+<h3 id="predict_2"><code>predict</code></h3>
+<pre><code class="language-python">def predict(
+    self, 
+    X: torch.Tensor, 
+    n_samples: int = 100
+) -&gt; Tuple[torch.Tensor, torch.Tensor]
+</code></pre>
+<p>Makes predictions using the trained model with uncertainty quantification.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>X</code> (torch.Tensor): Input tensor of shape (batch_size, ...).</li>
+<li><code>n_samples</code> (int, optional): Number of stochastic forward passes to sample. Default: 100.</li>
+</ul>
+<p><strong>Returns:</strong></p>
+<ul>
+<li><code>Tuple[torch.Tensor, torch.Tensor]</code>: A tuple containing:</li>
+<li>Mean prediction across all samples.</li>
+<li>All sampled predictions of shape (n_samples, batch_size, ...).</li>
+</ul>
+<p><strong>Raises:</strong></p>
+<ul>
+<li><code>RuntimeError</code>: If the model hasn't been fitted (call <code>fit()</code> first).</li>
+</ul>
+<h3 id="sample_models_2"><code>sample_models</code></h3>
+<pre><code class="language-python">def sample_models(self, n_models: int = 10) -&gt; List[nn.Module]
+</code></pre>
+<p>Samples multiple deterministic models from the learned variational distribution.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>n_models</code> (int, optional): Number of models to sample. Default: 10.</li>
+</ul>
+<p><strong>Returns:</strong></p>
+<ul>
+<li><code>List[nn.Module]</code>: List of sampled PyTorch models with frozen weights.</li>
+</ul>
+<h3 id="forward"><code>forward</code></h3>
+<pre><code class="language-python">def forward(self, x: torch.Tensor) -&gt; torch.Tensor
+</code></pre>
+<p>Performs a single stochastic forward pass through the network.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>x</code> (torch.Tensor): Input tensor.</li>
+</ul>
+<p><strong>Returns:</strong></p>
+<ul>
+<li><code>torch.Tensor</code>: Model output. For regression: shape (batch_size, 1); for classification: shape (batch_size, num_classes).</li>
+</ul>
+<h3 id="notes_2">Notes</h3>
+<ul>
+<li>The model converts all <code>nn.Linear</code> layers in the provided template to Bayesian layers with learnable mean (mu) and variance (rho) parameters.</li>
+<li>For regression tasks, the likelihood uses a Gaussian distribution with fixed sigma=0.1.</li>
+<li>For classification tasks, the likelihood uses cross-entropy loss.</li>
+<li>When <code>alpha=1.0</code>, the method reduces to standard Variational Inference (ELBO).</li>
+<li>The <code>is_fitted</code> attribute is set to <code>True</code> after successful training.</li>
+<li>The class inherits from <code>BaseBayesianEnsemble</code> and may have additional methods from the parent class.</li>
+</ul>
+<hr />
+<h2 id="probabilisticbackpropagation">ProbabilisticBackpropagation</h2>
+<p><strong><code>class bensemble.methods.probabilistic_backpropagation.ProbabilisticBackpropagation</code></strong></p>
+<h3 id="constructor_3">Constructor</h3>
+<pre><code class="language-python">def __init__(
+    self,
+    model: Optional[nn.Module] = None,
+    layer_sizes: Optional[List[int]] = None,
+    noise_alpha: float = 6.0,
+    noise_beta: float = 6.0,
+    weight_alpha: float = 6.0,
+    weight_beta: float = 6.0,
+    dtype: torch.dtype = torch.float64,
+    device: Optional[torch.device] = None,
+)
+</code></pre>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>model</code> (Optional[nn.Module]): Pre-initialized PBP model. If None, <code>layer_sizes</code> must be provided.</li>
+<li><code>layer_sizes</code> (Optional[List[int]]): List specifying the number of neurons in each layer (e.g., <code>[input_dim, hidden_dim, output_dim]</code>).</li>
+<li><code>noise_alpha</code> (float): Prior shape parameter for observation noise Gamma distribution. Default: 6.0</li>
+<li><code>noise_beta</code> (float): Prior rate parameter for observation noise Gamma distribution. Default: 6.0</li>
+<li><code>weight_alpha</code> (float): Prior shape parameter for weight precision Gamma distribution. Default: 6.0</li>
+<li><code>weight_beta</code> (float): Prior rate parameter for weight precision Gamma distribution. Default: 6.0</li>
+<li><code>dtype</code> (torch.dtype): Data type for computations. Default: torch.float64</li>
+<li><code>device</code> (Optional[torch.device]): Device for computations (CPU/GPU). Default: torch.device("cpu")</li>
+</ul>
+<p><strong>Raises:</strong></p>
+<ul>
+<li><code>ValueError</code>: If neither <code>model</code> nor <code>layer_sizes</code> are specified.</li>
+</ul>
+<h3 id="fit_3">fit</h3>
+<pre><code class="language-python">def fit(
+    self,
+    train_loader: torch.utils.data.DataLoader,
+    val_loader: Optional[torch.utils.data.DataLoader] = None,
+    num_epochs: int = 100,
+    step_clip: Optional[float] = 2.0,
+    prior_refresh: int = 1,
+    **kwargs
+) -&gt; Dict[str, List[float]]
+</code></pre>
+<p>Train the PBP model using Assumed Density Filtering (ADF).</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>train_loader</code> (DataLoader): DataLoader for training data.</li>
+<li><code>val_loader</code> (Optional[DataLoader]): DataLoader for validation data. Default: None</li>
+<li><code>num_epochs</code> (int): Number of training epochs. Default: 100</li>
+<li><code>step_clip</code> (Optional[float]): Gradient clipping value for ADF updates. If None, no clipping. Default: 2.0</li>
+<li><code>prior_refresh</code> (int): Number of prior refresh steps per epoch. Default: 1</li>
+<li><code>**kwargs</code>: Additional arguments (ignored, for compatibility).</li>
+</ul>
+<p><strong>Returns:</strong></p>
+<ul>
+<li><code>Dict[str, List[float]]</code>: Training history containing:</li>
+<li><code>train_rmse</code>: List of training RMSE values per epoch</li>
+<li><code>train_nlpd</code>: List of training Negative Log Predictive Density (NLPD) values per epoch</li>
+<li><code>val_rmse</code>: List of validation RMSE values per epoch (if val_loader provided)</li>
+<li><code>val_nlpd</code>: List of validation NLPD values per epoch (if val_loader provided)</li>
+</ul>
+<h3 id="predict_3">predict</h3>
+<pre><code class="language-python">def predict(
+    self,
+    X: torch.Tensor,
+    n_samples: int = 100
+) -&gt; Tuple[torch.Tensor, torch.Tensor]
+</code></pre>
+<p>Generate predictive distribution for input data.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>X</code> (torch.Tensor): Input tensor of shape <code>(n_samples, n_features)</code>.</li>
+<li><code>n_samples</code> (int): Number of Monte Carlo samples to draw from predictive distribution. Default: 100</li>
+</ul>
+<p><strong>Returns:</strong></p>
+<ul>
+<li><code>Tuple[torch.Tensor, torch.Tensor]</code>: Tuple containing:</li>
+<li><code>mean</code>: Predictive mean tensor of shape <code>(n_samples, output_dim)</code></li>
+<li><code>samples</code>: Monte Carlo samples tensor of shape <code>(n_samples, n_samples, output_dim)</code></li>
+</ul>
+<p><strong>Raises:</strong></p>
+<ul>
+<li><code>RuntimeError</code>: If model has not been fitted.</li>
+</ul>
+<h3 id="noise_variance">noise_variance</h3>
+<pre><code class="language-python">def noise_variance(self) -&gt; torch.Tensor
+</code></pre>
+<p>Get the estimated observation noise variance.</p>
+<p><strong>Returns:</strong></p>
+<ul>
+<li><code>torch.Tensor</code>: Scalar tensor representing the noise variance.</li>
+</ul>
+<h3 id="sample_models_3">sample_models</h3>
+<pre><code class="language-python">def sample_models(self, n_models: int = 10) -&gt; List[nn.Module]
+</code></pre>
+<p>Sample deterministic neural networks from the posterior distribution.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>n_models</code> (int): Number of models to sample. Default: 10</li>
+</ul>
+<p><strong>Returns:</strong></p>
+<ul>
+<li><code>List[nn.Module]</code>: List of sampled models as <code>nn.Sequential</code> instances with ReLU activations.</li>
+</ul>
+<h3 id="notes_3">Notes</h3>
+<ol>
+<li>The implementation uses double precision (<code>torch.float64</code>) by default for numerical stability.</li>
+<li>Training is performed using Assumed Density Filtering (ADF) with online updates.</li>
+<li>The model provides both epistemic (model) and aleatoric (noise) uncertainty.</li>
+<li>The prior refresh mechanism helps maintain stable hyperparameter updates during training.</li>
+<li>The <code>predict</code> method returns both the predictive mean and Monte Carlo samples for full distribution analysis.</li>
+</ol>
               
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
         <a href="../core/" class="btn btn-neutral float-left" title="Core"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../additional-classes/" class="btn btn-neutral float-right" title="Additional Classes">Next <span class="icon icon-circle-arrow-right"></span></a>
     </div>
 
   <hr/>
@@ -137,12 +689,15 @@
       <span><a href="../core/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
+      <span><a href="../additional-classes/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
   </span>
 </div>
     <script src="../../js/jquery-3.6.0.min.js"></script>
     <script>var base_url = "../..";</script>
     <script src="../../js/theme_extra.js"></script>
     <script src="../../js/theme.js"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
       <script src="../../search/main.js"></script>
     <script>
         jQuery(function () {

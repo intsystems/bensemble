@@ -25,7 +25,7 @@ model = nn.Sequential(
     nn.Linear(16, 1)
 )
 
-# Create some simple synthetic data
+# Choose your data
 train_data = ...
 test_data = ...
 

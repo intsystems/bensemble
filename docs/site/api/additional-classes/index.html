@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://intsystems.github.io/bensemble/api/additional-classes/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>Additional Classes - bensemble</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Additional Classes";
+        var mkdocs_page_input_path = "api/additional-classes.md";
+        var mkdocs_page_url = "/bensemble/api/additional-classes/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> bensemble
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../getting-started/">Getting started</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../references/">References</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">User Guide</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../user-guide/interface/">Interface</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../user-guide/variational-inference/">Variational Inference</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../user-guide/laplace-approximation/">Laplace Approximation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../user-guide/renyi-divergence/">Renyi Divergence</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../user-guide/bayes-by-backprop/">Bayes by Backprop</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">API</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../core/">Core</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../methods/">Methods</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Additional Classes</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#bayesianlinear">BayesianLinear</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#constructor">Constructor</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#forward">forward</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#kl_divergence">kl_divergence</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#gaussianlikelihood">GaussianLikelihood</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#constructor_1">Constructor</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#forward_1">forward</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#get_noise_sigma">get_noise_sigma</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#pbpnet">PBPNet</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#constructor_2">Constructor</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#forward_moments">forward_moments</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#usage-notes">Usage Notes</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">bensemble</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">API</li>
+      <li class="breadcrumb-item active">Additional Classes</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="additional-classes">Additional Classes</h1>
+<h2 id="bayesianlinear">BayesianLinear</h2>
+<p><strong><code>class bensemble.methods.variational_inference.BayesianLinear</code></strong></p>
+<p>Bayesian linear layer with mean-field variational inference.</p>
+<h3 id="constructor">Constructor</h3>
+<pre><code class="language-python">BayesianLinear(in_features, out_features, prior_sigma=1.0)
+</code></pre>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>in_features</code> (int): Size of each input sample</li>
+<li><code>out_features</code> (int): Size of each output sample</li>
+<li><code>prior_sigma</code> (float, optional): Standard deviation of the Gaussian prior. Default: 1.0</li>
+</ul>
+<p><strong>Attributes:</strong></p>
+<ul>
+<li><code>in_features</code> (int): Input feature dimension</li>
+<li><code>out_features</code> (int): Output feature dimension</li>
+<li><code>prior_sigma</code> (float): Prior standard deviation</li>
+<li><code>sampling</code> (bool): Sampling mode flag (True for training/MC, False for mean prediction)</li>
+<li><code>w_mu</code> (torch.Tensor): Mean of weight variational distribution</li>
+<li><code>w_rho</code> (torch.Tensor): Raw parameter for weight standard deviation</li>
+<li><code>b_mu</code> (torch.Tensor): Mean of bias variational distribution</li>
+<li><code>b_rho</code> (torch.Tensor): Raw parameter for bias standard deviation</li>
+</ul>
+<h3 id="forward"><code>forward</code></h3>
+<p>Performs forward pass through the Bayesian linear layer.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>x</code> (torch.Tensor): Input tensor of shape <code>(batch_size, in_features)</code></li>
+</ul>
+<p><strong>Returns:</strong></p>
+<ul>
+<li><code>torch.Tensor</code>: Output tensor of shape <code>(batch_size, out_features)</code></li>
+</ul>
+<p><strong>Behavior:</strong></p>
+<ul>
+<li>In sampling mode (<code>sampling=True</code>): Uses local reparameterization trick</li>
+<li>In mean mode (<code>sampling=False</code>): Uses only the mean parameters</li>
+</ul>
+<h3 id="kl_divergence"><code>kl_divergence</code></h3>
+<p>Computes KL divergence between variational posterior and prior.</p>
+<p><strong>Returns:</strong></p>
+<ul>
+<li><code>torch.Tensor</code>: KL divergence scalar value</li>
+</ul>
+<p><strong>Formula:</strong>
+KL(q(w|θ) || p(w)) where p(w) = N(0, prior_sigma²) and q(w|θ) = N(μ, σ²)</p>
+<hr />
+<h2 id="gaussianlikelihood">GaussianLikelihood</h2>
+<p><strong><code>class bensemble.methods.variational_inference.GaussianLikelihood</code></strong></p>
+<p>Gaussian likelihood module for regression tasks with learnable noise parameter.</p>
+<h3 id="constructor_1">Constructor</h3>
+<pre><code class="language-python">GaussianLikelihood(init_log_sigma=-2.0)
+</code></pre>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>init_log_sigma</code> (float, optional): Initial value for log(sigma). Default: -2.0</li>
+</ul>
+<p><strong>Attributes:</strong></p>
+<ul>
+<li><code>log_sigma</code> (torch.nn.Parameter): Learnable log standard deviation parameter</li>
+</ul>
+<h3 id="forward_1"><code>forward</code></h3>
+<p>Computes negative log-likelihood for Gaussian distribution.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>preds</code> (torch.Tensor): Model predictions</li>
+<li><code>target</code> (torch.Tensor): Ground truth targets</li>
+</ul>
+<p><strong>Returns:</strong></p>
+<ul>
+<li><code>torch.Tensor</code>: Negative log-likelihood scalar value</li>
+</ul>
+<p><strong>Formula:</strong>
+-0.5 * (target - preds)² / σ² + log(σ)</p>
+<h3 id="get_noise_sigma"><code>get_noise_sigma</code></h3>
+<p>Gets the current noise standard deviation value.</p>
+<p><strong>Returns:</strong>
+- <code>float</code>: Noise sigma value (detached from computation graph)</p>
+<hr />
+<h2 id="pbpnet">PBPNet</h2>
+<p><strong><code>class bensemble.methods.probabilistic_backpropagation.PBPNet</code></strong></p>
+<p>A neural network architecture based on <code>ProbLinear</code> layers with analytical moment propagation for Probabilistic Backpropagation (PBP).</p>
+<p>This network implements moment propagation through Gaussian approximations, enabling efficient Bayesian inference without sampling during forward passes. It uses analytical formulas to propagate means and variances through linear transformations and ReLU activations.</p>
+<h3 id="constructor_2">Constructor</h3>
+<pre><code class="language-python">def __init__(
+    self,
+    layer_sizes: List[int],
+    dtype: torch.dtype = torch.float64,
+    device: Optional[torch.device] = None,
+)
+</code></pre>
+<p>Initialize a PBPNet with specified architecture.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>layer_sizes</code> (List[int]): List specifying the number of neurons in each layer.</li>
+<li>Example: <code>[input_dim, hidden_dim1, hidden_dim2, ..., output_dim]</code></li>
+<li>Minimum length: 2 (input and output layers)</li>
+<li><code>dtype</code> (torch.dtype): Data type for network parameters and computations. Default: <code>torch.float64</code></li>
+<li><code>device</code> (Optional[torch.device]): Device for network parameters and computations (CPU/GPU). Default: CPU device</li>
+</ul>
+<p><strong>Raises:</strong></p>
+<ul>
+<li><code>ValueError</code>: If <code>layer_sizes</code> has less than 2 elements.</li>
+</ul>
+<p><strong>Example:</strong></p>
+<pre><code class="language-python"># Create a network with 10 inputs, 2 hidden layers (50 and 20 neurons), and 1 output
+model = PBPNet(layer_sizes=[10, 50, 20, 1], dtype=torch.float64, device=torch.device(&quot;cuda&quot;))
+</code></pre>
+<h3 id="forward_moments"><code>forward_moments</code></h3>
+<pre><code class="language-python">def forward_moments(self, x: torch.Tensor) -&gt; Tuple[torch.Tensor, torch.torch.Tensor]
+</code></pre>
+<p>Propagate input through the network while tracking means and variances analytically.</p>
+<p>This method implements the core moment propagation algorithm for PBP:</p>
+<ol>
+<li>Appends a bias term (constant 1) to the input with zero variance</li>
+<li>For each layer:</li>
+<li>Computes mean and variance of linear transformation</li>
+<li>For non-final layers: applies ReLU activation with moment matching</li>
+<li>For final layer: returns linear transformation moments</li>
+</ol>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>x</code> (torch.Tensor): Input tensor of shape <code>(batch_size, input_dim)</code>.</li>
+<li>Must have 2 dimensions (batch dimension required)</li>
+<li>Batch size must be ≥ 1</li>
+</ul>
+<p><strong>Returns:</strong></p>
+<ul>
+<li><code>Tuple[torch.Tensor, torch.Tensor]</code>: Tuple containing:</li>
+<li><code>mean</code>: Output mean tensor of shape <code>(batch_size, output_dim)</code></li>
+<li><code>variance</code>: Output variance tensor of shape <code>(batch_size, output_dim)</code></li>
+</ul>
+<p><strong>Raises:</strong></p>
+<ul>
+<li><code>AssertionError</code>: If input tensor does not have 2 dimensions or batch size is 0.</li>
+</ul>
+<p><strong>Mathematical Details:</strong>
+For a linear layer with input moments <code>(m_z, v_z)</code> and layer parameters <code>(m, v)</code>:
+- Output mean: <code>m_a = (m_z @ m^T) / sqrt(d)</code> where <code>d = input_dim + 1</code>
+- Output variance: <code>v_a = (v_z @ m^2 + m_z^2 @ v + v_z @ v) / d</code></p>
+<p>For ReLU activation (non-final layers):
+- Uses <code>relu_moments()</code> function to compute post-activation moments
+- Bias term is added back after activation</p>
+<p><strong>Example:</strong></p>
+<pre><code class="language-python"># Create network
+model = PBPNet(layer_sizes=[5, 10, 1])
+
+# Input batch of 3 samples, 5 features each
+x = torch.randn(3, 5, dtype=torch.float64)
+
+# Get predictive moments
+mean, variance = model.forward_moments(x)
+# mean.shape: (3, 1)
+# variance.shape: (3, 1)
+</code></pre>
+<h3 id="usage-notes">Usage Notes</h3>
+<ol>
+<li><strong>Precision</strong>: Defaults to <code>torch.float64</code> for numerical stability in moment computations.</li>
+<li><strong>Device Management</strong>: Automatically moves input tensors to the network's device and dtype.</li>
+<li><strong>Batch Processing</strong>: Efficiently processes batches using matrix operations.</li>
+<li><strong>No Training Interface</strong>: This class only provides forward moment propagation; training is handled by <code>ProbabilisticBackpropagation</code>.</li>
+</ol>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../methods/" class="btn btn-neutral float-left" title="Methods"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../methods/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
