@@ -123,7 +123,7 @@ ruff format .
 
 Developed by:
 * **Fedor Sobolevsky**
-* **Muhamadsharif Nabiev**
+* **Muhammadsharif Nabiev**
 * **Dmitrii Vasilenko**
 * **Vadim Kasyuk**
 
@@ -133,4 +133,5 @@ Developed by:
 
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
 
