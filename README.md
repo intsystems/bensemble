@@ -1,6 +1,6 @@
 # 😎 Bensemble: Bayesian Multimodeling Project
 
-[![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11-blue.svg)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Coverage](https://img.shields.io/badge/coverage-98%25-brightgreen.svg)](tests/)
 [![Documentation](https://img.shields.io/badge/docs-online-blue)](https://intsystems.github.io/bensemble/)
@@ -31,25 +31,32 @@
 
 ## Installation
 
-We recommend using a virtual environment.
+You can install `bensemble` using pip:
 
-### For Users (pip)
 ```bash
 pip install bensemble
 ```
 
-### For Developers (uv)
-We use [uv](https://github.com/astral-sh/uv) for lightning-fast dependency management.
+Or, if you prefer using [uv](https://github.com/astral-sh/uv) for lightning-fast installation:
 
 ```bash
-# 1. Install uv
-pip install uv
+uv pip install bensemble
+```
 
-# 2. Create virtual environment
+## Development Setup
+
+If you want to contribute to `bensemble` or run tests, we recommend using **uv** to manage the environment.
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/intsystems/bensemble.git
+cd bensemble
+
+# 2. Create and activate virtual environment via uv
 uv venv
-source .venv/bin/activate  # or .venv\Scripts\activate on Windows
+source .venv/bin/activate  # on Windows: .venv\Scripts\activate
 
-# 3. Install in editable mode with dev tools
+# 3. Install in editable mode with dev dependencies
 uv pip install -e ".[dev]"
 ```
 
