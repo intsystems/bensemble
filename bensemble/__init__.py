@@ -8,10 +8,17 @@ Modules:
 
 __version__ = "0.1.0"
 
-from .core import *
-from .methods import *
+
+from .methods import (
+    VariationalEnsemble,
+    LaplaceApproximation,
+    ProbabilisticBackpropagation,
+    VariationalRenyi,
+)
 
 __all__ = [
-    "core",
-    "methods",
+    "VariationalEnsemble",
+    "LaplaceApproximation",
+    "ProbabilisticBackpropagation",
+    "VariationalRenyi",
 ]

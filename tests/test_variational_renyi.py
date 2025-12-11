@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader
 
-from bensemble.methods.variational_renyi import VariationalRenyi
+from bensemble import VariationalRenyi
 
 
 @pytest.fixture
