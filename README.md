@@ -1,9 +1,11 @@
 # 😎 Bensemble: Bayesian Multimodeling Project
 
-[![Python](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/python-3.10%20|%203.11%20|%203.12%20|%203.13-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Coverage](https://img.shields.io/badge/coverage-98%25-brightgreen.svg)](tests/)
 [![Documentation](https://img.shields.io/badge/docs-online-blue)](https://intsystems.github.io/bensemble/)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![image](https://img.shields.io/badge/uv-managed-a6c489)](https://github.com/astral-sh/uv)
 
 **Bensemble** is a comprehensive comparative study and a production-ready library for Bayesian Deep Learning. It integrates established  methods for neural network ensembling and uncertainty quantification under a unified PyTorch interface.
 
