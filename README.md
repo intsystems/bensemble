@@ -135,10 +135,10 @@ ruff format .
 ##  Authors
 
 Developed by:
-* **Fedor Sobolevsky**
-* **Muhammadsharif Nabiev**
-* **Dmitrii Vasilenko**
-* **Vadim Kasyuk**
+* [**Fedor Sobolevsky**](https://github.com/TeoSable)
+* [**Muhammadsharif Nabiev**](https://github.com/mikhmed-nabiev)
+* [**Dmitrii Vasilenko**](https://github.com/Dimundel)
+* [**Vadim Kasyuk**](https://github.com/KasiukVadim)
 
 ---
 
