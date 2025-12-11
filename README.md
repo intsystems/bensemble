@@ -62,14 +62,18 @@ Here is how to turn a standard PyTorch model into a Bayesian one using **Variati
 ```python
 import torch
 import torch.nn as nn
-from bensemble.methods import VariationalEnsemble
+from torch.utils.data import DataLoader, TensorDataset
+
+from bensemble import VariationalEnsemble
+
+# 0. Prepare dummy data
+X_train = torch.randn(100, 10)
+y_train = torch.randn(100, 1)
+dataset = TensorDataset(X_train, y_train)
+train_loader = DataLoader(dataset, batch_size=32, shuffle=True)
 
 # 1. Define your standard PyTorch model
-model = nn.Sequential(
-    nn.Linear(10, 50),
-    nn.ReLU(),
-    nn.Linear(50, 1)
-)
+model = nn.Sequential(nn.Linear(10, 50), nn.ReLU(), nn.Linear(50, 1))
 
 # 2. Wrap it with Bensemble
 # auto_convert=True automatically replaces Linear layers with BayesianLinear
