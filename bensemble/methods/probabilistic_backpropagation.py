@@ -47,10 +47,7 @@ class ProbLinear(nn.Module):
         self.device = device or torch.device("cpu")
         d = self.in_features + 1  # +1 для bias
         h = self.out_features
-        scale = 1.0 / math.sqrt(d)
-        self.m = nn.Parameter(
-            scale * torch.randn(h, d, dtype=self.dtype, device=self.device)
-        )
+        self.m = nn.Parameter(torch.randn(h, d, dtype=self.dtype, device=self.device))
         self.v = nn.Parameter(
             0.5 * torch.ones(h, d, dtype=self.dtype, device=self.device)
         )
@@ -117,7 +114,6 @@ class PBPNet(nn.Module):
 class ProbabilisticBackpropagation(BaseBayesianEnsemble):
     """
     Probabilistic Backpropagation (PBP) for Bayesian regression with moment matching.
-    Основано на демо ноутбуке pbp_demo.ipynb.
     """
 
     def __init__(
@@ -145,6 +141,23 @@ class ProbabilisticBackpropagation(BaseBayesianEnsemble):
         self.beta_g = torch.tensor(noise_beta, dtype=self.dtype, device=self.device)
         self.alpha_l = torch.tensor(weight_alpha, dtype=self.dtype, device=self.device)
         self.beta_l = torch.tensor(weight_beta, dtype=self.dtype, device=self.device)
+        # Initialize weights to match the stated Gaussian prior (before 1/sqrt(d) scaling).
+        self._init_from_prior()
+
+    def _init_from_prior(self) -> None:
+        """Initialize PBP parameters so that stored m/v reflect the weight prior."""
+        if not hasattr(self.model, "layers"):
+            return
+        s2 = float(self.beta_l.cpu() / (self.alpha_l.cpu() - 1.0))
+        for layer in self.model.layers:
+            if not isinstance(layer, ProbLinear):
+                continue
+            d = layer.in_features + 1
+            scale = 1.0 / math.sqrt(d)
+            std = math.sqrt(s2) / scale
+            with torch.no_grad():
+                layer.m.normal_(mean=0.0, std=std)
+                layer.v.fill_(s2 / (scale**2))
 
     def _logZ_gaussian_likelihood(
         self,
@@ -231,15 +244,14 @@ class ProbabilisticBackpropagation(BaseBayesianEnsemble):
                 layer.m.copy_(m_new.detach())
                 layer.v.copy_(v_new.detach())
 
-        self.alpha_g, self.beta_g = self._gamma_adf_update_from_Z(
-            logZ.detach(), logZ1.detach(), logZ2.detach(), self.alpha_g, self.beta_g
-        )
-
         for layer in self.model.layers:
             layer.m.grad = None
             layer.v.grad = None
+        return logZ.detach(), logZ1.detach(), logZ2.detach()
 
-    def _prior_refresh_epoch(self, n_refresh: int = 1) -> None:
+    def _prior_refresh_epoch(
+        self, n_refresh: int = 1, step_clip: Optional[float] = None
+    ) -> None:
         alpha_l = torch.clamp(self.alpha_l, min=1.0 + 1e-6)
         beta_l = self.beta_l
         for _ in range(n_refresh):
@@ -247,19 +259,25 @@ class ProbabilisticBackpropagation(BaseBayesianEnsemble):
             s2_1 = beta_l / (alpha_l)
             s2_2 = beta_l / (alpha_l + 1.0)
 
-            Z_acc = 0.0
-            Z1_acc = 0.0
-            Z2_acc = 0.0
+            Z_acc = torch.tensor(0.0, device=self.device, dtype=self.dtype)
+            Z1_acc = torch.tensor(0.0, device=self.device, dtype=self.dtype)
+            Z2_acc = torch.tensor(0.0, device=self.device, dtype=self.dtype)
             n_tot = 0
 
             for layer in self.model.layers:
                 m = layer.m
                 v = torch.clamp(layer.v, min=1e-12)
+                d = layer.in_features + 1
+                scale = 1.0 / math.sqrt(d)
+                # Prior is on the scaled weights; adjust variance accordingly.
+                s2_scaled = s2 / (scale**2)
+                s2_1_scaled = s2_1 / (scale**2)
+                s2_2_scaled = s2_2 / (scale**2)
 
                 m_tmp = m.detach().clone().requires_grad_(True)
                 v_tmp = v.detach().clone().requires_grad_(True)
 
-                sigma2 = s2 + v_tmp
+                sigma2 = s2_scaled + v_tmp
                 lp = -0.5 * (m_tmp**2) / sigma2 - 0.5 * torch.log(
                     2.0 * math.pi * sigma2
                 )
@@ -272,6 +290,10 @@ class ProbabilisticBackpropagation(BaseBayesianEnsemble):
 
                 gm = m_tmp.grad
                 gv = v_tmp.grad
+
+                if step_clip is not None:
+                    gm = torch.clamp(gm, min=-step_clip, max=step_clip)
+                    gv = torch.clamp(gv, min=-step_clip, max=step_clip)
 
                 m_new = m + v * gm
                 v_new = v - (v * v) * (gm * gm - 2.0 * gv)
@@ -288,9 +310,9 @@ class ProbabilisticBackpropagation(BaseBayesianEnsemble):
                     )
                     return lp_local.sum()
 
-                Z_acc += sum_logZ_given_s2(s2).detach()
-                Z1_acc += sum_logZ_given_s2(s2_1).detach()
-                Z2_acc += sum_logZ_given_s2(s2_2).detach()
+                Z_acc += sum_logZ_given_s2(s2_scaled).detach()
+                Z1_acc += sum_logZ_given_s2(s2_1_scaled).detach()
+                Z2_acc += sum_logZ_given_s2(s2_2_scaled).detach()
                 n_tot += m.numel()
 
             denom = max(n_tot, 1)
@@ -335,13 +357,32 @@ class ProbabilisticBackpropagation(BaseBayesianEnsemble):
         for epoch in range(num_epochs):
             X_full, y_full = self._collect_dataset(train_loader)
             order = torch.randperm(X_full.shape[0], device=self.device)
+            logZ_acc = torch.tensor(0.0, device=self.device, dtype=self.dtype)
+            logZ1_acc = torch.tensor(0.0, device=self.device, dtype=self.dtype)
+            logZ2_acc = torch.tensor(0.0, device=self.device, dtype=self.dtype)
             for idx in order.tolist():
                 x = X_full[idx]
                 y = y_full[idx]
-                self._single_datapoint_adf_step(x, y, step_clip)
+                logZ, logZ1, logZ2 = self._single_datapoint_adf_step(
+                    x, y, step_clip
+                )
+                logZ_acc += logZ
+                logZ1_acc += logZ1
+                logZ2_acc += logZ2
+
+            # Update noise hyperparameters once per epoch for stability.
+            denom = max(len(order), 1)
+            logZ_avg = logZ_acc / denom
+            logZ1_avg = logZ1_acc / denom
+            logZ2_avg = logZ2_acc / denom
+            self.alpha_g, self.beta_g = self._gamma_adf_update_from_Z(
+                logZ_avg, logZ1_avg, logZ2_avg, self.alpha_g, self.beta_g
+            )
 
             if prior_refresh > 0:
-                self._prior_refresh_epoch(n_refresh=prior_refresh)
+                self._prior_refresh_epoch(
+                    n_refresh=prior_refresh, step_clip=step_clip
+                )
 
             train_rmse, train_nlpd = self._evaluate_loader(train_loader)
             history["train_rmse"].append(train_rmse)
