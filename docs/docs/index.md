@@ -4,7 +4,7 @@
 
 ## About Bensemble
 
-***Bensemble*** is a lightweight library based on PyTorch that implements several Bayesian (probabilistic) neural network model ensembling. Bayesian ensembling is a method of making predictions in machine learning that incorporate uncertainty about the predictions into the estimate. This is done by approximating the posterior distribution over the weights of the neural network and then using the distribution to either sample predictions or *ensembles* of models, the predictions of which are then averaged and analyzed for uncertainty estimation.
+***Bensemble*** is a lightweight library based on PyTorch that implements several Bayesian (probabilistic) ensembling methods for linear neural network models. Bayesian ensembling is a method of making predictions in machine learning that incorporate uncertainty about the predictions into the estimate. This is done by approximating the posterior distribution over the weights of the neural network and then using the distribution to either sample predictions or *ensembles* of models, the predictions of which are then averaged and analyzed for uncertainty estimation.
 
 ## Navigation
 

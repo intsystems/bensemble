@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader
 
-from bensemble.methods.laplace_approximation import LaplaceApproximation
+from bensemble.methods import LaplaceApproximation
 
 
 @pytest.fixture

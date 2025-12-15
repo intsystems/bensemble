@@ -61,6 +61,18 @@
                   </li>
                   <li class="toctree-l1 current"><a class="reference internal current" href="#">Renyi Divergence</a>
     <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#how-it-works">How it works</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#usage">Usage</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#initialization">Initialization</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#training">Training</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#testing-and-model-sampling">Testing and model sampling</a>
+    </li>
+        </ul>
+    </li>
     </ul>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../bayes-by-backprop/">Bayes by Backprop</a>
@@ -71,6 +83,8 @@
                   <li class="toctree-l1"><a class="reference internal" href="../../api/core/">Core</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../../api/methods/">Methods</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../api/additional-classes/">Additional Classes</a>
                   </li>
               </ul>
       </div>
@@ -97,7 +111,75 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
             <div class="section" itemprop="articleBody">
               
-                <h1 id="renyi-divergence">Renyi Divergence</h1>
+                <h1 id="renyi-divergence-variational-inference">Renyi Divergence Variational Inference</h1>
+<p><em>Pro tip: check out our <a href="https://github.com/intsystems/bensemble/blob/master/notebooks/variatinal_renyi_demo.ipynb">Renyi divergence variational inference demo</a>.</em></p>
+<p>We implement the Renyi divergence variational inference method described by <a href="https://arxiv.org/abs/1602.02311">Yingzhen Li and Richard E. Turner (2016)</a> in the <a href="../../api/methods/#variationalrenyi"><code>bensemble.methods.variational_renyi.VariationalRenyi</code></a> class. This is a modification of the standard variational inference method that uses Renyi divergence instead of the usual KL-divergence for optimization.</p>
+<h2 id="how-it-works">How it works</h2>
+<p><strong>Variational Rényi inference</strong> keeps the spirit of standard variational inference method but replaces the usual KL-divergence by a whole family of divergences indexed by a parameter α. <strong>Rényi's α-divergence</strong> for two distributions is defined as
+<script type="math/tex; mode=display">
+D_\alpha(p\|q) = \frac{1}{\alpha - 1}\log\int p(\boldsymbol{\theta})^\alpha q(\boldsymbol{\theta})^{1-\alpha}d\boldsymbol{\theta}.
+</script>
+</p>
+<p>Qualitatively, this gives a knob that controls how aggressive or conservative the variational approximation is. Once trained, sampling networks is as simple as drawing from the Gaussian and plugging the sampled weights into the base model.</p>
+<h2 id="usage">Usage</h2>
+<h3 id="initialization">Initialization</h3>
+<p>First of all, you'll need to create a <code>VariationalRenyi</code> instance. This can be done just by wrapping a model with it:</p>
+<pre><code class="language-python">from bensemble.methods.variational_renyi import VariationalRenyi
+
+# Create your nn.Module model
+model = ...
+
+# Create VariationalRenyi instance
+ensemble = VariationalRenyi(model)
+</code></pre>
+<p>You can also specify several optional parameters:</p>
+<ul>
+<li><code>alpha: float = 1.0</code> - the α parameter of Renyi divergence.</li>
+<li><code>prior_sigma: float = 1.0</code> - the variance of the prior distribution, which in this model is assumed to be a zero-mean Gaussian distribution.</li>
+<li><code>initial_rho: float = -2.0</code> - the initial rho parameter of the variational weight distribution.</li>
+</ul>
+<h3 id="training">Training</h3>
+<p>For model training, it is sufficient to specify just a training data <code>DataLoader</code>:</p>
+<pre><code class="language-python">from torch.utils.data import DataLoader
+
+# Create train dataset
+train_data = ...
+
+# Create DataLoader
+train_loader = DataLoader(data, ...)
+
+# Train ensemble
+training_history = ensemble.fit(train_loader)
+</code></pre>
+<p>You can also add several optional parameters, including:</p>
+<ul>
+<li><code>val_loader: Optional[torch.utils.data.DataLoader] = None</code> - a DataLoader for model validation during training.</li>
+<li><code>num_epochs: int = 100</code> - the number of training epochs.</li>
+<li><code>lr: float = 5e-4</code> - the learning rate for training.</li>
+<li><code>n_samples: int = 10</code> - the number of weights samples to use for predictions during validation.</li>
+<li><code>grad_clip: Optional[float] = 5.0</code> - gradient clipping parameter.</li>
+</ul>
+<p>The <code>fit</code> method returns a <code>Dict[str, List[float]]</code> containing training and validation loss values acquired during model training:</p>
+<pre><code class="language-python"># Train loss
+train_loss = training_history[&quot;train_loss&quot;]
+
+# Validation loss
+val_loss = training_history[&quot;val_loss&quot;]
+</code></pre>
+<h3 id="testing-and-model-sampling">Testing and model sampling</h3>
+<p>When the ensemble is trained, you can make predictions and sample model just like with any other method in Bensemble:</p>
+<pre><code class="language-python"># Create test dataset
+test_data = ...
+
+# Make predictions
+for X in test_data:
+    prediction, uncertainty = ensemble.predict(X, n_samples=50)
+    print(prediction, uncertainty)
+
+# Sample models
+models = ensemble.sample_models(5)
+</code></pre>
+<p><em>For more information on class methods and parameters, visit the <a href="../../api/methods/#variationalrenyi">API section</a>.</em></p>
               
             </div>
           </div><footer>
@@ -137,6 +219,7 @@
     <script>var base_url = "../..";</script>
     <script src="../../js/theme_extra.js"></script>
     <script src="../../js/theme.js"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
       <script src="../../search/main.js"></script>
     <script>
         jQuery(function () {

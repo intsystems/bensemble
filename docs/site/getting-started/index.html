@@ -76,6 +76,8 @@
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../api/methods/">Methods</a>
                   </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../api/additional-classes/">Additional Classes</a>
+                  </li>
               </ul>
       </div>
     </div>
@@ -100,12 +102,42 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
             <div class="section" itemprop="articleBody">
               
-                <h1 id="getting-started">Getting started</h1>
+                <h1 id="getting-started">Getting Started</h1>
+<p>To get started with Bensemble, all you'll need is Python with at least version 3.10.</p>
 <h2 id="installation">Installation</h2>
 <pre><code>pip install bensemble
 </code></pre>
 <h2 id="basic-usage">Basic usage</h2>
-<pre><code class="language-python">print('Hello, world!')
+<p>All Bensemble classes are built as wrappers around PyTorch models that are subclasses of the <code>torch.nn.Module</code> class. All you need then is a model, a <code>torch.utils.data.DataLoader</code> for training and you're good to go!</p>
+<pre><code class="language-python">import torch
+from torch import nn
+from torch.utils.data import DataLoader
+from bensemble.methods.variational_inference import VariationalEnsemble
+
+# Create a model
+model = nn.Sequential(
+    nn.Linear(1, 16),
+    nn.ReLU(),
+    nn.Linear(16, 1)
+)
+
+# Choose your data
+train_data = ...
+test_data = ...
+
+
+# Create a DataLoader instance
+train_loader = DataLoader(data)
+
+# Create ensemble
+ensemble = VariationalEnsemble(model)
+
+# Train model and its posterior
+ensemble.fit(train_loader)
+
+# Make predictions
+for x in test_data:
+    print(ensemble.predict(x, n_samples=10))
 </code></pre>
               
             </div>
@@ -146,6 +178,7 @@
     <script>var base_url = "..";</script>
     <script src="../js/theme_extra.js"></script>
     <script src="../js/theme.js"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
       <script src="../search/main.js"></script>
     <script>
         jQuery(function () {

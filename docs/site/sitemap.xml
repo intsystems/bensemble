@@ -2,42 +2,46 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://intsystems.github.io/bensemble/</loc>
-         <lastmod>2025-10-17</lastmod>
+         <lastmod>2025-12-03</lastmod>
     </url>
     <url>
          <loc>https://intsystems.github.io/bensemble/getting-started/</loc>
-         <lastmod>2025-10-17</lastmod>
+         <lastmod>2025-12-03</lastmod>
     </url>
     <url>
          <loc>https://intsystems.github.io/bensemble/references/</loc>
-         <lastmod>2025-10-17</lastmod>
+         <lastmod>2025-12-03</lastmod>
+    </url>
+    <url>
+         <loc>https://intsystems.github.io/bensemble/api/additional-classes/</loc>
+         <lastmod>2025-12-03</lastmod>
     </url>
     <url>
          <loc>https://intsystems.github.io/bensemble/api/core/</loc>
-         <lastmod>2025-10-17</lastmod>
+         <lastmod>2025-12-03</lastmod>
     </url>
     <url>
          <loc>https://intsystems.github.io/bensemble/api/methods/</loc>
-         <lastmod>2025-10-17</lastmod>
+         <lastmod>2025-12-03</lastmod>
     </url>
     <url>
          <loc>https://intsystems.github.io/bensemble/user-guide/bayes-by-backprop/</loc>
-         <lastmod>2025-10-17</lastmod>
+         <lastmod>2025-12-03</lastmod>
     </url>
     <url>
          <loc>https://intsystems.github.io/bensemble/user-guide/interface/</loc>
-         <lastmod>2025-10-17</lastmod>
+         <lastmod>2025-12-03</lastmod>
     </url>
     <url>
          <loc>https://intsystems.github.io/bensemble/user-guide/laplace-approximation/</loc>
-         <lastmod>2025-10-17</lastmod>
+         <lastmod>2025-12-03</lastmod>
     </url>
     <url>
          <loc>https://intsystems.github.io/bensemble/user-guide/renyi-divergence/</loc>
-         <lastmod>2025-10-17</lastmod>
+         <lastmod>2025-12-03</lastmod>
     </url>
     <url>
          <loc>https://intsystems.github.io/bensemble/user-guide/variational-inference/</loc>
-         <lastmod>2025-10-17</lastmod>
+         <lastmod>2025-12-03</lastmod>
     </url>
 </urlset>

@@ -232,9 +232,26 @@ class VariationalEnsemble(BaseBayesianEnsemble):
         replace_layers(model)
         return model
 
-    # Временные заглушки!!!!!
     def _get_ensemble_state(self):
-        return {}
+        state = {
+            "model_state_dict": self.model.state_dict(),
+            "likelihood_state_dict": self.likelihood.state_dict(),
+            "is_fitted": self.is_fitted,
+            "prior_sigma": self.prior_sigma,
+            "learning_rate": self.learning_rate,
+        }
+
+        if self.optimizer is not None:
+            state["optimizer_state_dict"] = self.optimizer.state_dict()
+        return state
 
     def _set_ensemble_state(self, state):
-        pass
+        self.is_fitted = state["is_fitted"]
+        self.prior_sigma = state["prior_sigma"]
+        self.learning_rate = state["learning_rate"]
+
+        self.model.load_state_dict(state["model_state_dict"])
+        self.likelihood.load_state_dict(state["likelihood_state_dict"])
+
+        if self.optimizer is not None and "optimizer_state_dict" in state:
+            self.optimizer.load_state_dict(state["optimizer_state_dict"])
