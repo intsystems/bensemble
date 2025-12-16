@@ -1,7 +1,6 @@
 import copy
 from typing import Any, Dict, List, Optional, Tuple
 
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -310,12 +309,10 @@ class LaplaceApproximation(BaseBayesianEnsemble):
                 N = self.dataset_size
                 tau = self.prior_precision
 
-                Q_reg = np.sqrt(N) * Q + np.sqrt(tau) * torch.eye(
-                    acc["in_dim"], device=self.device
-                )
-                H_reg = np.sqrt(N) * H + np.sqrt(tau) * torch.eye(
-                    acc["out_dim"], device=self.device
-                )
+                # Posterior precision in the Kronecker-factored form:
+                # tau * I + N * (Q ⊗ H) -> factors become (N * Q + tau * I) and (N * H + tau * I)
+                Q_reg = N * Q + tau * torch.eye(acc["in_dim"], device=self.device)
+                H_reg = N * H + tau * torch.eye(acc["out_dim"], device=self.device)
 
                 # Store the precision matrices for sampling
                 self.kronecker_factors[name] = {

@@ -66,11 +66,6 @@ dmypy.json
 # --- Datasets & Big Files ---
 # (Чтобы случайно не залить датасет на 5Гб)
 *.csv
-*.dat
-*.pkl
-*.h5
-*/mnist/
-
-# --- OS Junk ---
-.DS_Store
-Thumbs.db
+!.dvc
+data/housing.data
+notebooks/adversarial_rmse.ipynb
