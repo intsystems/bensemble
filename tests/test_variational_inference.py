@@ -2,12 +2,17 @@ import pytest
 import torch
 import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader
+import torch.nn.functional as F
+from torch.distributions import Normal
 
 from bensemble.methods.variational_inference import (
     BayesianLinear,
     GaussianLikelihood,
     VariationalEnsemble,
 )
+
+
+torch.manual_seed(42)
 
 
 @pytest.fixture
@@ -243,3 +248,83 @@ def test_optimizer_state_ignored_if_none(base_model):
 
     model._set_ensemble_state(fake_state)
     assert model.is_fitted is True
+
+
+def test_kl_matches_closed_form():
+    """KL(q || p) computed by the layer should match manual closed-form formula."""
+    in_f, out_f = 4, 3
+    prior_sigma = 1.5
+    layer = BayesianLinear(in_f, out_f, prior_sigma=prior_sigma, init_sigma=0.2)
+
+    with torch.no_grad():
+        layer.w_mu.normal_(mean=0.1, std=0.2)
+        layer.b_mu.normal_(mean=0.0, std=0.1)
+
+    kl_method = layer.kl_divergence().detach()
+
+    w_mu = layer.w_mu
+    b_mu = layer.b_mu
+    w_sigma = F.softplus(layer.w_rho)
+    b_sigma = F.softplus(layer.b_rho)
+    var_q_w = w_sigma.pow(2)
+    var_q_b = b_sigma.pow(2)
+    var_p = prior_sigma**2
+
+    kl_w = (
+        torch.log(prior_sigma / w_sigma) + (var_q_w + w_mu.pow(2)) / (2.0 * var_p) - 0.5
+    ).sum()
+    kl_b = (
+        torch.log(prior_sigma / b_sigma) + (var_q_b + b_mu.pow(2)) / (2.0 * var_p) - 0.5
+    ).sum()
+    kl_manual = kl_w + kl_b
+
+    assert torch.allclose(kl_method, kl_manual, rtol=1e-4, atol=1e-6)
+
+
+def test_gaussian_likelihood_matches_normal_logprob():
+    """GaussianLikelihood should equal negative sum of Normal(preds, sigma).log_prob(target)."""
+    lik = GaussianLikelihood(init_log_sigma=-0.5)
+
+    for preds, target in [
+        (torch.tensor([1.0, 2.0]), torch.tensor([1.0, 2.0])),
+        (torch.tensor([[1.0], [2.0]]), torch.tensor([[1.0], [2.0]])),
+    ]:
+        preds = preds.float()
+        target = target.float()
+        loss = lik(preds, target)
+        sigma = F.softplus(lik.log_sigma) + 1e-3  # тензор shape [1]
+        var = sigma**2
+        expected = 0.5 * (torch.log(var) + (preds - target) ** 2 / var).sum()
+
+        assert torch.allclose(loss, expected, rtol=1e-6, atol=1e-6)
+
+
+def test_local_reparam_empirical_variance():
+    """
+    Checks local reparameterization trick.
+    """
+    torch.manual_seed(123)
+    in_f, out_f = 6, 4
+    batch = 8
+    layer = BayesianLinear(in_f, out_f, init_sigma=0.3)
+
+    with torch.no_grad():
+        layer.w_mu.normal_(mean=0.0, std=0.1)
+        layer.b_mu.normal_(mean=0.0, std=0.05)
+
+    x = torch.randn(batch, in_f)
+
+    w_sigma = F.softplus(layer.w_rho)
+    b_sigma = F.softplus(layer.b_rho)
+    delta = F.linear(x.pow(2), w_sigma.pow(2)) + b_sigma.pow(2)
+
+    layer.sampling = True
+    n_samples = 500
+    samples = []
+    for _ in range(n_samples):
+        samples.append(layer(x).unsqueeze(0))
+    all_samples = torch.cat(samples, dim=0)
+
+    emp_var = all_samples.var(dim=0, unbiased=False)
+
+    assert torch.allclose(emp_var, delta, rtol=0.18, atol=1e-2)
