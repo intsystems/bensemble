@@ -62,7 +62,7 @@ class LaplaceApproximation(BaseBayesianEnsemble):
         if not self.pretrained:
             if self.verbose:
                 print("Training model...")
-            # Сначала обучаем модель MAP оценке
+            # First train model for MAP estimation
             optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
             history["train_loss"] = []
 
@@ -119,7 +119,13 @@ class LaplaceApproximation(BaseBayesianEnsemble):
         print("Posterior computation completed!")
 
     def _register_hooks(self) -> None:
-        """Register forward hooks to capture activations and pre-activation Hessians."""
+        """
+        Register forward hooks to capture activations and pre-activation Hessians.
+        
+        Hooks are registered on all linear layers to store input activations
+        for computing the Q factor (covariance of input activations) in the
+        Kronecker factorization.
+        """
         self.activations = {}
         self.pre_activation_hessians = {}
 
@@ -139,7 +145,12 @@ class LaplaceApproximation(BaseBayesianEnsemble):
                 self.hook_handles.append(forward_handle)
 
     def _remove_hooks(self) -> None:
-        """Remove all registered hooks."""
+        """
+        Remove all registered hooks.
+        
+        Clears the hook handles list to ensure no hooks remain attached
+        after curvature estimation is complete.
+        """
         for handle in self.hook_handles:
             handle.remove()
         self.hook_handles.clear()
@@ -147,7 +158,18 @@ class LaplaceApproximation(BaseBayesianEnsemble):
     def _compute_pre_activation_hessian(self, output, target):
         """
         Compute the Hessian with respect to the final layer pre-activations.
-        This depends on the likelihood function.
+        
+        This depends on the likelihood function:
+        - For classification: Hessian = diag(p) - pp^T where p is softmax probability
+        - For regression: Hessian = identity matrix
+        
+        Args:
+            output: Model predictions (batch_size, output_dim)
+            target: Ground truth labels/targets
+            
+        Returns:
+            Pre-activation Hessian tensor of shape (batch_size, output_dim, output_dim) 
+            for classification or (batch_size, output_dim, output_dim) for regression
         """
         batch_size = output.shape[0]
 
@@ -174,8 +196,18 @@ class LaplaceApproximation(BaseBayesianEnsemble):
 
     def _backward_hessian(self, hessian_final):
         """
-        Correct recursive backpropagation of pre-activation Hessian.
-        Uses weights of the NEXT layer to compute Hessian for the CURRENT layer.
+        Recursively backpropagate the pre-activation Hessian through all layers.
+        
+        Uses weights of the NEXT layer to compute Hessian for the CURRENT layer
+        according to the recursive formula: H_λ = W_{λ+1}^T @ H_{λ+1} @ W_{λ+1} + D_λ
+        
+        For piecewise linear activations (ReLU), D_λ ≈ 0.
+        
+        Args:
+            hessian_final: Hessian for the final layer
+            
+        Returns:
+            Dictionary mapping layer names to their computed Hessian matrices
         """
         hessians = {}
 
@@ -221,6 +253,17 @@ class LaplaceApproximation(BaseBayesianEnsemble):
     ) -> None:
         """
         Estimate Kronecker factors using proper Hessian computation.
+        
+        Processes training data to compute:
+        1. Q factors: covariance of input activations
+        2. H factors: pre-activation Hessians
+        
+        These are then regularized with prior precision and scaled by dataset size
+        to form the posterior precision matrices in Kronecker-factored form.
+        
+        Args:
+            train_loader: DataLoader providing training data
+            num_samples: Maximum number of samples to use for estimation
         """
         self.model.eval()  # We want deterministic behavior for curvature estimation
 
@@ -346,7 +389,17 @@ class LaplaceApproximation(BaseBayesianEnsemble):
                 }
 
     def _matrix_sqrt(self, A: torch.Tensor) -> torch.Tensor:
-        """Compute matrix square root using eigen decomposition."""
+        """
+        Compute matrix square root using eigen decomposition.
+        
+        For a symmetric positive definite matrix A, computes L such that L @ L.T = A.
+        
+        Args:
+            A: Symmetric positive definite matrix
+            
+        Returns:
+            Matrix square root L where L @ L.T = A
+        """
         # Eigen decomposition for symmetric matrices
         L, V = torch.linalg.eigh(A)
         return V @ torch.diag(torch.sqrt(L)) @ V.T
@@ -356,15 +409,19 @@ class LaplaceApproximation(BaseBayesianEnsemble):
     ) -> List[nn.Module]:
         """
         Sample weight matrices from the matrix normal posterior.
-        Returns a list of dictionaries, where each dictionary contains
-        the complete set of weights for one sampled model.
-
+        
+        Samples models from the approximate posterior distribution using the
+        Kronecker-factored covariance structure. Each sample is generated as:
+        W_sample = M + temperature * L_V @ Z @ L_U.T
+        where M is the MAP estimate, L_U and L_V are matrix square roots of
+        the Kronecker factors, and Z is standard normal noise.
+        
         Args:
-            num_samples: Number of model samples to generate
-
+            n_models: Number of model samples to generate
+            temperature: Scaling factor for the noise (higher = more exploration)
+            
         Returns:
-            List of dictionaries, where each dict has layer names as keys
-            and sampled weight tensors as values
+            List of sampled neural network models with different weight configurations
         """
         samples = []
 
@@ -407,7 +464,20 @@ class LaplaceApproximation(BaseBayesianEnsemble):
         self, X: torch.Tensor, n_samples: int = 100, temperature: float = 1.0
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
-        Compute predictive distribution using sampled weights.
+        Compute predictive distribution using Monte Carlo sampling.
+        
+        For classification: returns mean class probabilities and predictive entropy
+        For regression: returns mean prediction and predictive variance
+        
+        Args:
+            X: Input tensor of shape (batch_size, input_features)
+            n_samples: Number of Monte Carlo samples to draw
+            temperature: Temperature scaling for posterior sampling
+            
+        Returns:
+            Tuple of (predictive mean, predictive uncertainty):
+            - For classification: (mean_probs, uncertainty)
+            - For regression: (mean, variance)
         """
         predictions = []
 
@@ -434,7 +504,12 @@ class LaplaceApproximation(BaseBayesianEnsemble):
             return mean, variance
 
     def _get_ensemble_state(self) -> Dict[str, Any]:
-        """Получение внутреннего состояния ансамбля"""
+        """
+        Get internal ensemble state for serialization.
+        
+        Returns:
+            Dictionary containing all internal state needed to restore the ensemble
+        """
         return {
             "model": self.model,
             "is_fitted": self.is_fitted,
@@ -449,7 +524,15 @@ class LaplaceApproximation(BaseBayesianEnsemble):
         }
 
     def _set_ensemble_state(self, state: Dict[str, Any]):
-        """Установка внутреннего состояния ансамбля"""
+        """
+        Set internal ensemble state from serialized dictionary.
+        
+        Args:
+            state: Dictionary containing ensemble state
+            
+        Raises:
+            ValueError: If the saved likelihood is not supported
+        """
         if state["likelihood"] in ["classification", "regression"]:
             self.likelihood = state["likelihood"]
         else:
