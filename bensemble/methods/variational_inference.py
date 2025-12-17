@@ -1,16 +1,26 @@
 import copy
+import math
 from typing import List, Optional, Tuple
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torch.nn.init as init
 import torch.optim as optim
+from torch.distributions import Normal, kl_divergence
 
 from ..core.base import BaseBayesianEnsemble
 
 
 class BayesianLinear(nn.Module):
-    def __init__(self, in_features, out_features, prior_sigma=1.0):
+    def __init__(
+        self,
+        in_features,
+        out_features,
+        prior_sigma=1.0,
+        init_sigma=0.1,
+        weight_init="kaiming",
+    ):
         super().__init__()
         self.in_features = in_features
         self.out_features = out_features
@@ -19,12 +29,30 @@ class BayesianLinear(nn.Module):
         # Флаг режима: True = сэмплируем шум (обучение/MC), False = используем среднее
         self.sampling = True
 
-        # Инициализация параметров
-        self.w_mu = nn.Parameter(torch.randn(out_features, in_features) * 0.1)
-        self.w_rho = nn.Parameter(torch.ones(out_features, in_features) * -3.0)
+        self.w_mu = nn.Parameter(torch.empty(out_features, in_features))
+        self.w_rho = nn.Parameter(torch.empty(out_features, in_features))
 
         self.b_mu = nn.Parameter(torch.zeros(out_features))
-        self.b_rho = nn.Parameter(torch.ones(out_features) * -3.0)
+        self.b_rho = nn.Parameter(torch.ones(out_features))
+
+        if weight_init == "kaiming":
+            init.kaiming_normal_(self.w_mu, nonlinearity="linear")
+        elif weight_init == "xavier":
+            init.xavier_normal_(self.w_mu)
+        else:
+            init.normal_(self.w_mu, mean=0.0, std=0.05)
+
+        init.zeros_(self.b_mu)
+
+        def inverse_softplus(s):
+            s = float(s)
+            if s <= 1e-6:
+                return math.log(math.exp(1e-6) - 1.0)
+            return math.log(math.exp(s) - 1.0)
+
+        rho_init = inverse_softplus(init_sigma)
+        self.w_rho.data.fill_(rho_init)
+        self.b_rho.data.fill_(rho_init)
 
     def forward(self, x):
         w_sigma = F.softplus(self.w_rho)
@@ -45,27 +73,31 @@ class BayesianLinear(nn.Module):
         w_sigma = F.softplus(self.w_rho)
         b_sigma = F.softplus(self.b_rho)
 
-        def kl_term(mu, sigma):
-            var_q = sigma.pow(2)
-            var_p = self.prior_sigma**2
-            return (
-                torch.log(self.prior_sigma / sigma)
-                + (var_q + mu.pow(2)) / (2 * var_p)
-                - 0.5
-            ).sum()
+        q_w = Normal(self.w_mu, w_sigma)
+        p_w = Normal(
+            torch.zeros_like(self.w_mu), torch.full_like(w_sigma, self.prior_sigma)
+        )
 
-        return kl_term(self.w_mu, w_sigma) + kl_term(self.b_mu, b_sigma)
+        q_b = Normal(self.b_mu, b_sigma)
+        p_b = Normal(
+            torch.zeros_like(self.b_mu), torch.full_like(b_sigma, self.prior_sigma)
+        )
+
+        kl_w = kl_divergence(q_w, p_w).sum()
+        kl_b = kl_divergence(q_b, p_b).sum()
+        return kl_w + kl_b
 
 
 class GaussianLikelihood(nn.Module):
     def __init__(self, init_log_sigma=-2.0):
         super().__init__()
         self.log_sigma = nn.Parameter(torch.tensor([init_log_sigma]))
+        self.loss_fn = nn.GaussianNLLLoss(reduction="sum", full=False)
 
     def forward(self, preds, target):
         sigma = F.softplus(self.log_sigma) + 1e-3
-        mse_term = 0.5 * (target - preds) ** 2 / sigma**2
-        return (mse_term + torch.log(sigma)).sum()
+        var = (sigma**2).expand_as(preds)
+        return self.loss_fn(preds, target, var)
 
     def get_noise_sigma(self):
         return (F.softplus(self.log_sigma) + 1e-3).item()
