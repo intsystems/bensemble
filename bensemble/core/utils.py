@@ -1,7 +1,20 @@
+import math
 from typing import Tuple
 
 import torch
 import torch.nn as nn
+
+_INV_SQRT_2PI = 1.0 / math.sqrt(2.0 * math.pi)
+
+
+def standard_normal_pdf(x: torch.Tensor) -> torch.Tensor:
+    """Standard normal probability density function ϕ(x)"""
+    return torch.exp(-0.5 * x * x) * _INV_SQRT_2PI
+
+
+def standard_normal_cdf(x: torch.Tensor) -> torch.Tensor:
+    """Standard normal cumulative distribution function Φ(x)"""
+    return 0.5 * (1.0 + torch.erf(x / math.sqrt(2.0)))
 
 
 def compute_uncertainty(predictions: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
