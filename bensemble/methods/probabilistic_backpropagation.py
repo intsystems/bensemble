@@ -5,25 +5,22 @@ import torch
 import torch.nn as nn
 
 from ..core.base import BaseBayesianEnsemble
-
-
-def phi(x: torch.Tensor) -> torch.Tensor:
-    return torch.exp(-0.5 * x * x) / math.sqrt(2.0 * math.pi)
-
-
-def Phi(x: torch.Tensor) -> torch.Tensor:
-    return 0.5 * (1.0 + torch.erf(x / math.sqrt(2.0)))
+from ..core.utils import standard_normal_cdf, standard_normal_pdf
 
 
 def relu_moments(
     m: torch.Tensor, v: torch.Tensor, eps: float = 1e-12
 ) -> Tuple[torch.Tensor, torch.Tensor]:
+    """
+    Moment matching for a ReLU applied to a Gaussian random variable.
+    """
     v = torch.clamp(v, min=eps)
     sigma = torch.sqrt(v)
     alpha = m / sigma
+    # Clamp the standardized mean for numerical stability in the PDF/CDF calls.
     alpha_eval = torch.clamp(alpha, min=-10.0, max=10.0)
-    pdf = phi(alpha_eval)
-    cdf = Phi(alpha_eval)
+    pdf = standard_normal_pdf(alpha_eval)
+    cdf = standard_normal_cdf(alpha_eval)
     mean = sigma * pdf + m * cdf
     second_moment = (v + m * m) * cdf + m * sigma * pdf
     var = torch.clamp(second_moment - mean * mean, min=eps)
@@ -31,7 +28,7 @@ def relu_moments(
 
 
 class ProbLinear(nn.Module):
-    """Линейный слой с параметрами среднего и дисперсии для PBP."""
+    """Linear layer storing mean/variance parameters for PBP."""
 
     def __init__(
         self,
@@ -45,7 +42,7 @@ class ProbLinear(nn.Module):
         self.out_features = out_features
         self.dtype = dtype
         self.device = device or torch.device("cpu")
-        d = self.in_features + 1  # +1 для bias
+        d = self.in_features + 1  # +1 for bias (implemented via input augmentation)
         h = self.out_features
         self.m = nn.Parameter(torch.randn(h, d, dtype=self.dtype, device=self.device))
         self.v = nn.Parameter(
@@ -54,7 +51,7 @@ class ProbLinear(nn.Module):
 
 
 class PBPNet(nn.Module):
-    """Сеть на основе ProbLinear с аналитическим распространением моментов."""
+    """Network built from ProbLinear layers with analytic moment propagation."""
 
     def __init__(
         self,
@@ -74,10 +71,18 @@ class PBPNet(nn.Module):
         self.device = device or torch.device("cpu")
 
     def forward_moments(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Propagate mean/variance through the network.
+
+        Returns:
+            (mz, vz): predictive mean and predictive variance of the network output,
+            under the current factorized Gaussian approximation over weights.
+        """
         x = x.to(device=self.device, dtype=self.dtype)
         assert x.dim() == 2 and x.shape[0] >= 1
         batch = x.shape[0]
 
+        # Represent bias as an extra constant input dimension.
         mz = torch.cat(
             [x, torch.ones(batch, 1, device=self.device, dtype=self.dtype)], dim=1
         )  # (B, D+1)
@@ -87,6 +92,7 @@ class PBPNet(nn.Module):
             d = layer.in_features + 1
             scale = 1.0 / math.sqrt(d)
 
+            # Linear transform with weight scaling; ma/va are pre-activation moments.
             ma = (mz @ layer.m.t()) * scale  # (B, H)
             term1 = vz @ (layer.m**2).t()
             term2 = (mz**2) @ layer.v.t()
@@ -95,6 +101,7 @@ class PBPNet(nn.Module):
 
             is_last = li == len(self.layers) - 1
             if not is_last:
+                # Nonlinearity is approximated by matching ReLU moments.
                 mb, vb = relu_moments(ma, va)
                 mz = torch.cat(
                     [mb, torch.ones(batch, 1, device=self.device, dtype=self.dtype)],
@@ -168,6 +175,13 @@ class ProbabilisticBackpropagation(BaseBayesianEnsemble):
         beta_g: torch.Tensor,
         eps: float = 1e-12,
     ) -> torch.Tensor:
+        """
+        Log-normalizer for a Gaussian likelihood with Gamma noise hyperprior.
+
+        The predictive distribution is approximated as:
+            y | f ~ N(f, sigma^2),   sigma^{-2} ~ Gamma(alpha_g, beta_g),
+        and f is approximated by a Gaussian with moments (mz, vz).
+        """
         alpha_g = torch.clamp(alpha_g, min=1.0 + 1e-6)
         sigma2_eff = beta_g / (alpha_g - 1.0) + vz
         sigma2_eff = torch.clamp(sigma2_eff, min=eps)
@@ -186,6 +200,7 @@ class ProbabilisticBackpropagation(BaseBayesianEnsemble):
         beta_old: torch.Tensor,
         clamp_eps: float = 1e-9,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """ADF update for Gamma(alpha, beta) using marginal likelihood ratios."""
         r1 = torch.exp(logZ1 - logZ)
         r2 = torch.exp(logZ2 - logZ)
 
@@ -204,7 +219,13 @@ class ProbabilisticBackpropagation(BaseBayesianEnsemble):
 
     def _single_datapoint_adf_step(
         self, x: torch.Tensor, y: torch.Tensor, step_clip: Optional[float] = 1.0
-    ) -> None:
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """
+        Perform one ADF update using a single training example.
+
+        This updates the approximate posterior parameters (m, v) for all layers.
+        Returns (logZ, logZ1, logZ2) needed for the noise hyperparameter update.
+        """
         for layer in self.model.layers:
             layer.m.requires_grad_(True)
             layer.v.requires_grad_(True)
@@ -252,6 +273,9 @@ class ProbabilisticBackpropagation(BaseBayesianEnsemble):
     def _prior_refresh_epoch(
         self, n_refresh: int = 1, step_clip: Optional[float] = None
     ) -> None:
+        """
+        Refresh the weight prior hyperparameters (alpha_l, beta_l).
+        """
         alpha_l = torch.clamp(self.alpha_l, min=1.0 + 1e-6)
         beta_l = self.beta_l
         for _ in range(n_refresh):
