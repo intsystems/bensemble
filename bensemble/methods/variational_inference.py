@@ -13,20 +13,36 @@ from ..core.base import BaseBayesianEnsemble
 
 
 class BayesianLinear(nn.Module):
+    """
+    Bayesian Linear layer implementing Variational Inference with the
+    Local Reparameterization Trick.
+
+    Weights and biases are modeled as Gaussian distributions with learnable
+    means and standard deviations (parametrized by rho).
+    """
+
     def __init__(
         self,
-        in_features,
-        out_features,
-        prior_sigma=1.0,
-        init_sigma=0.1,
-        weight_init="kaiming",
+        in_features: int,
+        out_features: int,
+        prior_sigma: float = 1.0,
+        init_sigma: float = 0.1,
+        weight_init: str = "kaiming",
     ):
+        """
+        Args:
+            in_features: Size of each input sample.
+            out_features: Size of each output sample.
+            prior_sigma: Standard deviation of the prior Gaussian distribution.
+            init_sigma: Initial standard deviation for the posterior.
+            weight_init: Initialization method for weight means ('kaiming', 'xavier', or 'normal').
+        """
         super().__init__()
         self.in_features = in_features
         self.out_features = out_features
         self.prior_sigma = prior_sigma
 
-        # Флаг режима: True = сэмплируем шум (обучение/MC), False = используем среднее
+        # Mode flag: True = sample noise (training/MC), False = use mean (deterministic)
         self.sampling = True
 
         self.w_mu = nn.Parameter(torch.empty(out_features, in_features))
@@ -54,7 +70,10 @@ class BayesianLinear(nn.Module):
         self.w_rho.data.fill_(rho_init)
         self.b_rho.data.fill_(rho_init)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Forward pass with Local Reparameterization Trick.
+        """
         w_sigma = F.softplus(self.w_rho)
         b_sigma = F.softplus(self.b_rho)
 
@@ -69,7 +88,10 @@ class BayesianLinear(nn.Module):
         else:
             return gamma + self.b_mu
 
-    def kl_divergence(self):
+    def kl_divergence(self) -> torch.Tensor:
+        """
+        Computes the KL divergence between the variational posterior and the prior.
+        """
         w_sigma = F.softplus(self.w_rho)
         b_sigma = F.softplus(self.b_rho)
 
@@ -89,21 +111,38 @@ class BayesianLinear(nn.Module):
 
 
 class GaussianLikelihood(nn.Module):
-    def __init__(self, init_log_sigma=-2.0):
+    """
+    Gaussian Likelihood with a learnable noise parameter (homoscedastic aleatoric uncertainty).
+    """
+
+    def __init__(self, init_log_sigma: float = -2.0):
         super().__init__()
         self.log_sigma = nn.Parameter(torch.tensor([init_log_sigma]))
         self.loss_fn = nn.GaussianNLLLoss(reduction="sum", full=False)
 
-    def forward(self, preds, target):
+    def forward(self, preds: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+        """
+        Computes the Negative Log Likelihood loss.
+        """
         sigma = F.softplus(self.log_sigma) + 1e-3
         var = (sigma**2).expand_as(preds)
         return self.loss_fn(preds, target, var)
 
-    def get_noise_sigma(self):
+    def get_noise_sigma(self) -> float:
+        """
+        Returns the current estimated noise standard deviation.
+        """
         return (F.softplus(self.log_sigma) + 1e-3).item()
 
 
 class VariationalEnsemble(BaseBayesianEnsemble):
+    """
+    Variational Inference Ensemble wrapper.
+
+    Converts a standard PyTorch model into a Bayesian Neural Network by replacing
+    Linear layers with BayesianLinear layers and optimizing using the ELBO objective.
+    """
+
     def __init__(
         self,
         model: nn.Module,
@@ -113,6 +152,14 @@ class VariationalEnsemble(BaseBayesianEnsemble):
         auto_convert: bool = True,
         **kwargs,
     ):
+        """
+        Args:
+            model: The base PyTorch model.
+            likelihood: Likelihood module (default: GaussianLikelihood).
+            learning_rate: Learning rate for the optimizer.
+            prior_sigma: Prior standard deviation for Bayesian layers.
+            auto_convert: If True, automatically converts Linear layers to BayesianLinear.
+        """
         self.prior_sigma = prior_sigma
         self.learning_rate = learning_rate
         self.likelihood = likelihood if likelihood else GaussianLikelihood()
@@ -124,7 +171,7 @@ class VariationalEnsemble(BaseBayesianEnsemble):
         super().__init__(model, **kwargs)
 
     def _set_sampling_mode(self, active: bool):
-        """Переключает флаг sampling во всех слоях BayesianLinear"""
+        """Toggles the sampling flag in all BayesianLinear layers."""
         for module in self.model.modules():
             if isinstance(module, BayesianLinear):
                 module.sampling = active
@@ -133,11 +180,21 @@ class VariationalEnsemble(BaseBayesianEnsemble):
         self,
         train_loader,
         val_loader=None,
-        epochs=100,
-        kl_weight=0.1,
-        verbose=True,
+        epochs: int = 100,
+        kl_weight: float = 0.1,
+        verbose: bool = True,
         **kwargs,
     ):
+        """
+        Trains the Bayesian model using Evidence Lower Bound (ELBO) maximization.
+
+        Args:
+            train_loader: DataLoader for training data.
+            val_loader: DataLoader for validation data (optional).
+            epochs: Number of training epochs.
+            kl_weight: Scaling factor for the KL divergence term (beta).
+            verbose: If True, prints training progress.
+        """
         device = next(self.model.parameters()).device
         if kwargs.get("device"):
             device = torch.device(kwargs["device"])
@@ -152,7 +209,7 @@ class VariationalEnsemble(BaseBayesianEnsemble):
 
         for epoch in range(epochs):
             self.model.train()
-            # включаем сэмплирование для обучения
+            # Enable sampling for training
             self._set_sampling_mode(True)
 
             total_loss = 0
@@ -161,7 +218,7 @@ class VariationalEnsemble(BaseBayesianEnsemble):
                 X, y = X.to(device), y.to(device)
                 self.optimizer.zero_grad()
 
-                # Вызов теперь без аргумента sample=True
+                # Call without sample=True argument (handled by internal state)
                 preds = self.model(X)
 
                 nll = self.likelihood(preds, y)
@@ -186,6 +243,16 @@ class VariationalEnsemble(BaseBayesianEnsemble):
     def predict(
         self, X: torch.Tensor, n_samples: int = 100
     ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Performs Monte Carlo prediction to estimate mean and uncertainty.
+
+        Args:
+            X: Input tensor.
+            n_samples: Number of MC samples to draw.
+
+        Returns:
+            Tuple containing (mean predictions, prediction standard deviation).
+        """
         if not self.is_fitted:
             raise RuntimeError("Model is not fitted yet.")
 
@@ -211,6 +278,15 @@ class VariationalEnsemble(BaseBayesianEnsemble):
         return mean.cpu(), std.cpu()
 
     def sample_models(self, n_models: int = 10) -> List[nn.Module]:
+        """
+        Samples specific deterministic models from the posterior distribution.
+
+        Args:
+            n_models: Number of models to sample.
+
+        Returns:
+            List of PyTorch models with fixed weights sampled from the posterior.
+        """
         if not self.is_fitted:
             raise RuntimeError("Model is not fitted yet.")
 
@@ -224,20 +300,20 @@ class VariationalEnsemble(BaseBayesianEnsemble):
                     w_sigma = F.softplus(module.w_rho)
                     b_sigma = F.softplus(module.b_rho)
 
-                    # Генерируем фиксированные веса
+                    # Generate fixed weights
                     w_sample = module.w_mu + w_sigma * torch.randn_like(module.w_mu)
                     b_sample = module.b_mu + b_sigma * torch.randn_like(module.b_mu)
 
                     module.w_mu.data = w_sample
                     module.b_mu.data = b_sample
 
-                    # Отключаем сэмплирование внутри слоя навсегда
+                    # Disable sampling within the layer permanently
                     module.sampling = False
 
             models.append(model_sample)
         return models
 
-    def _compute_recursive_kl(self, module):
+    def _compute_recursive_kl(self, module: nn.Module) -> torch.Tensor:
         kl = 0
         for child in module.children():
             if hasattr(child, "kl_divergence"):
@@ -247,6 +323,10 @@ class VariationalEnsemble(BaseBayesianEnsemble):
         return kl
 
     def _make_bayesian(self, model: nn.Module) -> nn.Module:
+        """
+        Recursively replaces standard Linear layers with BayesianLinear layers.
+        """
+
         def replace_layers(module):
             for name, child in module.named_children():
                 if isinstance(child, nn.Linear):
