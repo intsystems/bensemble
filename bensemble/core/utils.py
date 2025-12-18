@@ -18,17 +18,14 @@ def standard_normal_cdf(x: torch.Tensor) -> torch.Tensor:
 
 
 def compute_uncertainty(predictions: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-    """
-    Вычисление эпистемической и алеаторной неопределенности
-    """
-    # Эпистемическая неопределенность (вариация между моделями)
+    """Вычисление эпистемической и алеаторной неопределенности"""
+    """Calculation of epistemic and aleatory uncertainty"""
     epistemic_uncertainty = predictions.var(dim=0)
 
-    # Алеаторная неопределенность (средняя энтропия предсказаний)
-    if predictions.dim() > 2:  # Классификация
+    if predictions.dim() > 2:  
         mean_probs = predictions.mean(dim=0)
         aleatoric_uncertainty = -(mean_probs * torch.log(mean_probs + 1e-8)).sum(dim=-1)
-    else:  # Регрессия
+    else:  
         aleatoric_uncertainty = torch.zeros_like(epistemic_uncertainty)
 
     return epistemic_uncertainty, aleatoric_uncertainty
@@ -36,6 +33,7 @@ def compute_uncertainty(predictions: torch.Tensor) -> Tuple[torch.Tensor, torch.
 
 def enable_dropout(model: nn.Module):
     """Активация dropout слоев для MC Dropout"""
+    """Activating dropout layers for MC Dropout"""
     for module in model.modules():
         if isinstance(module, nn.Dropout):
             module.train()
@@ -43,6 +41,7 @@ def enable_dropout(model: nn.Module):
 
 class EarlyStopping:
     """Ранняя остановка для обучения"""
+    """Early stop for training"""
 
     def __init__(self, patience=10, delta=0):
         self.patience = patience

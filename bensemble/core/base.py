@@ -7,6 +7,7 @@ import torch.nn as nn
 
 class BaseBayesianEnsemble(abc.ABC):
     """Базовый класс для всех методов байесовского ансамблирования"""
+    '''The base class for all Bayesian ensembling methods'''
 
     def __init__(self, model: nn.Module, **kwargs):
         self.model = model
@@ -15,13 +16,13 @@ class BaseBayesianEnsemble(abc.ABC):
 
     @abc.abstractmethod
     def fit(
-        self,  #
+        self,  
         train_loader: torch.utils.data.DataLoader,
         val_loader: Optional[torch.utils.data.DataLoader] = None,
         **kwargs,
     ) -> Dict[str, List[float]]:
         """Обучение ансамбля"""
-        # Надо обсудить параметры и реализацию
+        """Ensemble training"""
         ...
 
     @abc.abstractmethod
@@ -29,7 +30,7 @@ class BaseBayesianEnsemble(abc.ABC):
         self, X: torch.Tensor, n_samples: int = 100
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Предсказание с оценкой неопределенности"""
-        # Надо обсудить параметры и реализацию
+        """Prediction with uncertainty estimation"""
         ...
 
     @abc.abstractmethod
@@ -37,13 +38,14 @@ class BaseBayesianEnsemble(abc.ABC):
         self, n_models: int = 10
     ) -> List[
         nn.Module
-    ]:  # Добавить онлайн-поддерживание сгенереированных моделей -> Поменять предикт
+    ]:  
         """Сэмплирование моделей из апостериорного распределения"""
-        # Надо обсудить параметры
+        """Sampling models from a posteriori distribution"""
         ...
 
-    def save(self, path: str):  # Сделать загрузку и выгрузку моделей через стэйт диктов
+    def save(self, path: str):  
         """Сохранение обученного ансамбля"""
+        """Saving a trained ensemble"""
         torch.save(
             {
                 "model_state_dict": self.model.state_dict(),
@@ -53,8 +55,9 @@ class BaseBayesianEnsemble(abc.ABC):
             path,
         )
 
-    def load(self, path: str):  # Сделать загрузку и выгрузку моделей через стэйт диктов
+    def load(self, path: str):  
         """Загрузка обученного ансамбля"""
+        """Loading a trained ensemble"""
         checkpoint = torch.load(path)
         self.model.load_state_dict(checkpoint["model_state_dict"])
         self._set_ensemble_state(checkpoint["ensemble_state"])
@@ -63,11 +66,11 @@ class BaseBayesianEnsemble(abc.ABC):
     @abc.abstractmethod
     def _get_ensemble_state(self) -> Dict[str, Any]:
         """Получение внутреннего состояния ансамбля"""
-        # Надо обсудить параметры
+        """Getting the internal state of the ensemble"""
         ...
 
     @abc.abstractmethod
     def _set_ensemble_state(self, state: Dict[str, Any]):
         """Установка внутреннего состояния ансамбля"""
-        # Надо обсудить параметры
+        """Setting the internal state of the ensemble"""
         ...
