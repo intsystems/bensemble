@@ -3,7 +3,6 @@ import torch
 import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader
 import torch.nn.functional as F
-from torch.distributions import Normal
 
 from bensemble.methods.variational_inference import (
     BayesianLinear,
@@ -292,7 +291,7 @@ def test_gaussian_likelihood_matches_normal_logprob():
         preds = preds.float()
         target = target.float()
         loss = lik(preds, target)
-        sigma = F.softplus(lik.log_sigma) + 1e-3  # тензор shape [1]
+        sigma = F.softplus(lik.log_sigma) + 1e-3
         var = sigma**2
         expected = 0.5 * (torch.log(var) + (preds - target) ** 2 / var).sum()
 

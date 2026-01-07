@@ -181,7 +181,6 @@ class VariationalEnsemble(BaseBayesianEnsemble):
         train_loader,
         val_loader=None,
         epochs: int = 100,
-        kl_weight: float = 0.1,
         verbose: bool = True,
         **kwargs,
     ):
@@ -192,7 +191,6 @@ class VariationalEnsemble(BaseBayesianEnsemble):
             train_loader: DataLoader for training data.
             val_loader: DataLoader for validation data (optional).
             epochs: Number of training epochs.
-            kl_weight: Scaling factor for the KL divergence term (beta).
             verbose: If True, prints training progress.
         """
         device = next(self.model.parameters()).device
@@ -206,6 +204,8 @@ class VariationalEnsemble(BaseBayesianEnsemble):
         self.optimizer = optim.Adam(params, lr=self.learning_rate)
 
         history = {"train_loss": [], "nll": [], "kl": []}
+
+        kl_weight = 1.0 / len(train_loader)
 
         for epoch in range(epochs):
             self.model.train()
