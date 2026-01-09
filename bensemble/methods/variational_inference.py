@@ -185,8 +185,9 @@ class VariationalEnsemble(BensembleModule):
         learning_rate: float = 1e-3,
         prior_sigma: float = 1.0,
         optimizer_cls: torch.optim.Optimizer = torch.optim.Adam,
-        **optimizer_kwargs,
+        optimizer_kwargs: dict = None,
     ):
+        optimizer_kwargs = optimizer_kwargs or {}
         super().__init__(model)
         self.save_hyperparameters(ignore=["model"])
 
