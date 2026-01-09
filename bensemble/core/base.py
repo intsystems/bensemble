@@ -2,7 +2,7 @@ from typing import Tuple
 
 import torch
 import torch.nn as nn
-import pytorch.lightning as pl
+import lightning as pl
 
 
 class BensembleModule(pl.LightningModule):
@@ -24,3 +24,7 @@ class BensembleModule(pl.LightningModule):
         self, X: torch.Tensor, n_samples: int = 100
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         raise NotImplementedError("Must be implemented in child class.")
+
+
+# TODO: Change name in all methods
+BaseBayesianEnsemble = BensembleModule
