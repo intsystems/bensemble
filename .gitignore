@@ -69,3 +69,6 @@ dmypy.json
 !.dvc
 data/housing.data
 notebooks/adversarial_rmse.ipynb
+
+# --- Lightning logs ---
+lightning_logs/
