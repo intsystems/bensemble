@@ -43,27 +43,25 @@ class BayesianLinear(nn.Module):
         self.w_mu = nn.Parameter(torch.empty(out_features, in_features))
         self.w_rho = nn.Parameter(torch.empty(out_features, in_features))
 
-        self.b_mu = nn.Parameter(torch.zeros(out_features))
-        self.b_rho = nn.Parameter(torch.ones(out_features))
+        self.b_mu = nn.Parameter(torch.empty(out_features))
+        self.b_rho = nn.Parameter(torch.empty(out_features))
 
-        if weight_init == "kaiming":
-            init.kaiming_normal_(self.w_mu, nonlinearity="linear")
-        elif weight_init == "xavier":
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        if self.weight_init == "kaiming":
+            init.kaiming_normal_(self.w_mu, nonlinearity="relu")
+        elif self.weight_init == "xavier":
             init.xavier_normal_(self.w_mu)
         else:
-            init.normal_(self.w_mu, mean=0.0, std=0.05)
+            init.kaiming_uniform_(self.w_mu, a=math.sqrt(5))
 
         init.zeros_(self.b_mu)
 
-        def inverse_softplus(s):
-            s = float(s)
-            if s <= 1e-6:
-                return math.log(math.exp(1e-6) - 1.0)
-            return math.log(math.exp(s) - 1.0)
+        rho_init_val = math.log(math.exp(self.init_sigma) - 1.0)
 
-        rho_init = inverse_softplus(init_sigma)
-        self.w_rho.data.fill_(rho_init)
-        self.b_rho.data.fill_(rho_init)
+        self.w_rho.data.fill_(rho_init_val)
+        self.b_rho.data.fill_(rho_init_val)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
