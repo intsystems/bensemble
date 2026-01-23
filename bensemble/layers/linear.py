@@ -67,19 +67,17 @@ class BayesianLinear(nn.Module):
         """
         Forward pass with Local Reparameterization Trick.
         """
+        if not self.training:
+            return F.linear(x, self.w_mu, self.b_mu)
+
         w_sigma = F.softplus(self.w_rho)
         b_sigma = F.softplus(self.b_rho)
 
         gamma = F.linear(x, self.w_mu)
+        delta = F.linear(x.pow(2), w_sigma.pow(2)) + b_sigma.pow(2)
 
-        if self.sampling:
-            # Local Reparameterization Trick
-            delta = F.linear(x.pow(2), w_sigma.pow(2)) + b_sigma.pow(2)
-            eps = torch.randn_like(gamma)
-            out = gamma + eps * torch.sqrt(delta + 1e-8)
-            return out + self.b_mu
-        else:
-            return gamma + self.b_mu
+        eps = torch.randn_like(gamma)
+        return gamma + eps * torch.sqrt(delta + 1e-8) + self.b_mu
 
     def kl_divergence(self) -> torch.Tensor:
         """
