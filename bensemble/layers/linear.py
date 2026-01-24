@@ -36,6 +36,8 @@ class BayesianLinear(nn.Module):
         self.in_features = in_features
         self.out_features = out_features
         self.prior_sigma = prior_sigma
+        self.init_sigma = init_sigma
+        self.weight_init = weight_init
 
         self.w_mu = nn.Parameter(torch.empty(out_features, in_features))
         self.w_rho = nn.Parameter(torch.empty(out_features, in_features))
