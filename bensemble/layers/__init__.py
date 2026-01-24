@@ -1,3 +1,3 @@
-from linear import BayesianLinear
+from .linear import BayesianLinear
 
 __all__ = ["BayesianLinear"]
