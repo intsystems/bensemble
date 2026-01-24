@@ -37,9 +37,6 @@ class BayesianLinear(nn.Module):
         self.out_features = out_features
         self.prior_sigma = prior_sigma
 
-        # Mode flag: True = sample noise (training/MC), False = use mean (deterministic)
-        self.sampling = True
-
         self.w_mu = nn.Parameter(torch.empty(out_features, in_features))
         self.w_rho = nn.Parameter(torch.empty(out_features, in_features))
 
