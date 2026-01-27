@@ -22,10 +22,10 @@ def compute_uncertainty(predictions: torch.Tensor) -> Tuple[torch.Tensor, torch.
     """Calculation of epistemic and aleatory uncertainty"""
     epistemic_uncertainty = predictions.var(dim=0)
 
-    if predictions.dim() > 2:  
+    if predictions.dim() > 2:
         mean_probs = predictions.mean(dim=0)
         aleatoric_uncertainty = -(mean_probs * torch.log(mean_probs + 1e-8)).sum(dim=-1)
-    else:  
+    else:
         aleatoric_uncertainty = torch.zeros_like(epistemic_uncertainty)
 
     return epistemic_uncertainty, aleatoric_uncertainty
@@ -41,6 +41,7 @@ def enable_dropout(model: nn.Module):
 
 class EarlyStopping:
     """Ранняя остановка для обучения"""
+
     """Early stop for training"""
 
     def __init__(self, patience=10, delta=0):
@@ -60,3 +61,16 @@ class EarlyStopping:
         else:
             self.best_score = val_loss
             self.counter = 0
+
+
+def get_total_kl(model: nn.Module) -> torch.Tensor:
+    """
+    Calculates the sum of KL-divergence of all bayessian layers in the model.
+    """
+    total_kl = 0.0
+
+    for module in model.modules():
+        if hasattr(module, "kl_divergence"):
+            total_kl += module.kl_divergence()
+
+    return total_kl
