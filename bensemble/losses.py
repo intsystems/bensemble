@@ -1,6 +1,34 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import math
+
+
+class GaussianLikelihood(nn.Module):
+    """
+    Gaussian Likelihood with learnable homoscedastic uncertainty.
+
+    This layer learns a single global standard deviation (sigma) for the data noise.
+    It wraps `nn.GaussianNLLLoss` to compute the negative log likelihood.
+    """
+
+    def __init__(self, init_log_sigma: float = -2.0):
+        """
+        Args:
+            init_log_sigma (float): Initial value for the log of standard deviation.
+                                    Smaller values mean less initial noise assumption.
+        """
+
+        super().__init__()
+        self.log_sigma = nn.Parameter(torch.tensor([init_log_sigma]))
+        self.loss_fn = nn.GaussianNLLLoss(reduction="none")
+
+    def forward(self, preds: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+        sigma = F.softplus(self.log_sigma) + 1e-6
+        var = sigma.pow(2)
+        var_expanded = var.expand_as(preds)
+
+        return self.loss_fn(preds, target, var_expanded)
 
 
 class VariationalLoss(nn.Module):
