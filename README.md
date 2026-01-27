@@ -1,3 +1,8 @@
+# 🚧 Under Active Refactoring 🚧
+The library is currently undergoing a major rewrite. The API might be unstable. Check back soon!
+
+---
+
 # 😎 Bensemble: Bayesian Multimodeling Project
 
 [![Python](https://img.shields.io/badge/python-3.10%20|%203.11%20|%203.12%20|%203.13-blue.svg)](https://www.python.org/)
