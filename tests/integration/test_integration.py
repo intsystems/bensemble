@@ -2,7 +2,7 @@ import torch
 import torch.optim as optim
 from bensemble.layers import BayesianLinear
 from bensemble.losses import VariationalLoss, GaussianLikelihood
-from bensemble.core.utils import get_total_kl
+from bensemble.utils import get_total_kl
 
 
 def test_mlp_overfit_one_batch_elbo():
