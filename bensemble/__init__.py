@@ -10,14 +10,12 @@ __version__ = "0.1.0"
 
 
 from .methods import (
-    VariationalEnsemble,
     LaplaceApproximation,
     ProbabilisticBackpropagation,
     VariationalRenyi,
 )
 
 __all__ = [
-    "VariationalEnsemble",
     "LaplaceApproximation",
     "ProbabilisticBackpropagation",
     "VariationalRenyi",

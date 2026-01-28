@@ -1,7 +1,3 @@
-from .variational_inference import (
-    VariationalEnsemble,
-)
-
 from .laplace_approximation import (
     LaplaceApproximation,
 )
@@ -15,7 +11,6 @@ from .variational_renyi import (
 )
 
 __all__ = [
-    "VariationalEnsemble",
     "LaplaceApproximation",
     "ProbabilisticBackpropagation",
     "VariationalRenyi",
