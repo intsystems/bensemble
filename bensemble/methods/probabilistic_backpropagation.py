@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 
 from ..core.base import BaseBayesianEnsemble
-from ..core.utils import standard_normal_cdf, standard_normal_pdf
+from ..utils import standard_normal_cdf, standard_normal_pdf
 
 
 def relu_moments(
@@ -370,9 +370,8 @@ class ProbabilisticBackpropagation(BaseBayesianEnsemble):
         num_epochs: int = 100,
         step_clip: Optional[float] = 2.0,
         prior_refresh: int = 1,
-        **kwargs
+        **kwargs,
     ) -> Dict[str, List[float]]:
-
         history: Dict[str, List[float]] = {"train_rmse": [], "train_nlpd": []}
         if val_loader is not None:
             history["val_rmse"] = []
@@ -387,9 +386,7 @@ class ProbabilisticBackpropagation(BaseBayesianEnsemble):
             for idx in order.tolist():
                 x = X_full[idx]
                 y = y_full[idx]
-                logZ, logZ1, logZ2 = self._single_datapoint_adf_step(
-                    x, y, step_clip
-                )
+                logZ, logZ1, logZ2 = self._single_datapoint_adf_step(x, y, step_clip)
                 logZ_acc += logZ
                 logZ1_acc += logZ1
                 logZ2_acc += logZ2
@@ -404,9 +401,7 @@ class ProbabilisticBackpropagation(BaseBayesianEnsemble):
             )
 
             if prior_refresh > 0:
-                self._prior_refresh_epoch(
-                    n_refresh=prior_refresh, step_clip=step_clip
-                )
+                self._prior_refresh_epoch(n_refresh=prior_refresh, step_clip=step_clip)
 
             train_rmse, train_nlpd = self._evaluate_loader(train_loader)
             history["train_rmse"].append(train_rmse)
