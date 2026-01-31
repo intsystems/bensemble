@@ -12,7 +12,7 @@ The library is currently undergoing a major rewrite. The API might be unstable. 
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![image](https://img.shields.io/badge/uv-managed-a6c489)](https://github.com/astral-sh/uv)
 
-**Bensemble** is a comprehensive comparative study and a production-ready library for Bayesian Deep Learning. It integrates established  methods for neural network ensembling and uncertainty quantification under a unified PyTorch interface.
+**Bensemble** is a library for Bayesian Deep Learning which integrates established  methods for neural network ensembling and uncertainty quantification. Bensemble provides building blocks that slot directly into your existing PyTorch workflows.
 
 ---
 
@@ -29,9 +29,10 @@ The library is currently undergoing a major rewrite. The API might be unstable. 
 
 ## Features
 
-- **Unified API**: All methods share a consistent `fit` / `predict` interface (Scikit-learn style).
+- **PyTorch-Native**: All layers and methods compatible with standart PyTorch.
+- **Modularity**: BayesianLinear, BayesianConv2d with built-in Local Reparameterization Trick (LRT).
 - **Core Bayesian Methods**: Implements canonical algorithms from Variational Inference to Scalable Laplace approximations.
-- **Modern Stack**: Built with `uv`, fully typed, and tested with **98% code coverage**.
+- **Modern Stack**: Built with `uv`, fully typed, and tested.
 
 ---
 
@@ -48,6 +49,58 @@ Or, if you prefer using [uv](https://github.com/astral-sh/uv) for lightning-fast
 ```bash
 uv pip install bensemble
 ```
+
+---
+
+##  Quick Start
+
+Build a Bayesian Neural Network using our layers and write a standard PyTorch training loop.
+
+```python
+import torch
+import torch.nn as nn
+from torch.utils.data import DataLoader, TensorDataset
+
+# Import building blocks
+from bensemble.layers import BayesianLinear
+from bensemble.objectives import VariationalLoss, GaussianLikelihood
+from bensemble.utils import get_total_kl
+
+# 0. Prepare Dummy Data
+X_train = torch.randn(100, 10)
+y_train = torch.randn(100, 1)
+
+# 1. Define Model using Bayesian Layers
+model = nn.Sequential(
+    BayesianLinear(10, 50, prior_sigma=1.0),
+    nn.ReLU(),
+    BayesianLinear(50, 1, prior_sigma=1.0)
+)
+
+# 2. Define Objectives (Likelihood + Divergence)
+likelihood = GaussianLikelihood()
+criterion = VariationalLoss(likelihood, alpha=1.0)
+
+optimizer = torch.optim.Adam(list(model.parameters()) + list(likelihood.parameters()), lr=0.01)
+
+# 3. Train Model
+model.train()
+for x, y in train_loader:
+    optimizer.zero_grad()
+    
+    preds = model(x)
+    kl = get_total_kl(model)
+    
+    loss = criterion(preds, y, kl)
+    
+    loss.backward()
+    optimizer.step()
+
+# 4. Predict
+mean, std = likelihood.predict(model(x_test))
+```
+
+---
 
 ## Development Setup
 
@@ -68,50 +121,13 @@ uv pip install -e ".[dev]"
 
 ---
 
-##  Quick Start
-
-Here is how to turn a standard PyTorch model into a Bayesian one using **Variational Inference**:
-
-```python
-import torch
-import torch.nn as nn
-from torch.utils.data import DataLoader, TensorDataset
-
-from bensemble import VariationalEnsemble
-
-# 0. Prepare dummy data
-X_train = torch.randn(100, 10)
-y_train = torch.randn(100, 1)
-dataset = TensorDataset(X_train, y_train)
-train_loader = DataLoader(dataset, batch_size=32, shuffle=True)
-
-# 1. Define your standard PyTorch model
-model = nn.Sequential(nn.Linear(10, 50), nn.ReLU(), nn.Linear(50, 1))
-
-# 2. Wrap it with Bensemble
-# auto_convert=True automatically replaces Linear layers with BayesianLinear
-ensemble = VariationalEnsemble(model, auto_convert=True)
-
-# 3. Train (Fit)
-history = ensemble.fit(train_loader, epochs=50)
-
-# 4. Predict with Uncertainty
-# Returns mean prediction and standard deviation (uncertainty)
-X_test = torch.randn(5, 10)
-mean, std = ensemble.predict(X_test, n_samples=100)
-
-print(f"Prediction: {mean[0].item():.4f} ± {std[0].item():.4f}")
-```
-
----
-
 ##  Algorithms & Demos
 
 We have implemented four distinct approaches. Check out the interactive demos for each:
 
 | Method | Description | Demo |
 | :--- | :--- | :--- |
-| **Variational Inference** | Uses "Bayes By Backprop" with Local Reparameterization Trick. | [Open Notebook](https://github.com/intsystems/bensemble/blob/master/notebooks/pvi_demo.ipynb) |
+| **Variational Inference** | Approximates posterior using Gaussian distributions using [*Local Reparameterization Trick*](https://arxiv.org/abs/1506.02557) | [Open Notebook](https://github.com/intsystems/bensemble/blob/master/notebooks/pvi_demo.ipynb) |
 | **Laplace Approximation** | Fits a Gaussian around the MAP estimate using Kronecker-Factored Curvature (K-FAC). | [Open Notebook](https://github.com/intsystems/bensemble/blob/master/notebooks/laplace_demo.ipynb) |
 | **Variational Rényi** | Generalization of VI minimizing $\alpha$-divergence (Rényi). | [Open Notebook](https://github.com/intsystems/bensemble/blob/master/notebooks/variatinal_renyi_demo.ipynb) |
 | **Probabilistic Backprop** | Propagates moments through the network using Assumed Density Filtering (ADF). | [Open Notebook](https://github.com/intsystems/bensemble/blob/master/notebooks/pbp_probabilistic_backpropagation_test.ipynb) |
