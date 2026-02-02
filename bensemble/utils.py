@@ -74,3 +74,30 @@ def get_total_kl(model: nn.Module) -> torch.Tensor:
             total_kl += module.kl_divergence()
 
     return total_kl
+
+
+def predict_with_uncertainty(model: nn.Module, x: torch.Tensor, num_samples: int = 100):
+    """
+    Estimates prediction mean and uncertainty using MC Dropout.
+
+    Args:
+        model: the model for prediction.
+        x: the input for model.
+        num_samples: number of samples.
+
+    Returns:
+        mean: Predictive mean.
+        std: Predictive standard deviation.
+    """
+    was_training = model.training
+    model.eval()
+
+    with torch.no_grad():
+        preds = torch.stack([model(x) for _ in range(num_samples)])
+
+    mean = preds.mean(dim=0)
+    std = preds.std(dim=0, unbiased=True)
+
+    model.train(was_training)
+
+    return mean, std
