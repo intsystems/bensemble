@@ -1,3 +1,5 @@
+from bensemble.layers.conv import BayesianConv2d
+from bensemble.layers import BayesianLinear
 import math
 from typing import Tuple
 
@@ -91,6 +93,11 @@ def predict_with_uncertainty(model: nn.Module, x: torch.Tensor, num_samples: int
     """
     was_training = model.training
     model.eval()
+
+    for module in model.modules():
+        # TODO: implemenet base class so we can just check ifinstance(module, BaseClass)
+        if isinstance(module, BayesianLinear) or isinstance(module, BayesianConv2d):
+            module.train()
 
     with torch.no_grad():
         preds = torch.stack([model(x) for _ in range(num_samples)])
