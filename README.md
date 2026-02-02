@@ -63,41 +63,53 @@ from torch.utils.data import DataLoader, TensorDataset
 
 # Import building blocks
 from bensemble.layers import BayesianLinear
-from bensemble.objectives import VariationalLoss, GaussianLikelihood
-from bensemble.utils import get_total_kl
+from bensemble.losses import VariationalLoss, GaussianLikelihood
+from bensemble.utils import get_total_kl, predict_with_uncertainty
 
 # 0. Prepare Dummy Data
 X_train = torch.randn(100, 10)
 y_train = torch.randn(100, 1)
 
+X_test = torch.randn(5, 10)
+
+dataset = TensorDataset(X_train, y_train)
+train_loader = DataLoader(dataset, batch_size=10, shuffle=True)
+
 # 1. Define Model using Bayesian Layers
 model = nn.Sequential(
     BayesianLinear(10, 50, prior_sigma=1.0),
     nn.ReLU(),
-    BayesianLinear(50, 1, prior_sigma=1.0)
+    BayesianLinear(50, 1, prior_sigma=1.0),
 )
 
 # 2. Define Objectives (Likelihood + Divergence)
 likelihood = GaussianLikelihood()
 criterion = VariationalLoss(likelihood, alpha=1.0)
 
-optimizer = torch.optim.Adam(list(model.parameters()) + list(likelihood.parameters()), lr=0.01)
+optimizer = torch.optim.Adam(
+    list(model.parameters()) + list(likelihood.parameters()), lr=0.01
+)
 
 # 3. Train Model
 model.train()
-for x, y in train_loader:
-    optimizer.zero_grad()
-    
-    preds = model(x)
-    kl = get_total_kl(model)
-    
-    loss = criterion(preds, y, kl)
-    
-    loss.backward()
-    optimizer.step()
+for epoch in range(100):
+    for x, y in train_loader:
+        optimizer.zero_grad()
+
+        preds = model(x)
+        kl = get_total_kl(model)
+
+        loss = criterion(preds, y, kl)
+
+        loss.backward()
+        optimizer.step()
 
 # 4. Predict
-mean, std = likelihood.predict(model(x_test))
+mean, std = predict_with_uncertainty(model, X_test, num_samples=100)
+
+print(f"Prediction: {mean[0].item():.2f}")
+print(f"Uncertainty: ±{std[0].item():.2f}")
+
 ```
 
 ---
