@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from bensemble.core.utils import compute_uncertainty, enable_dropout, EarlyStopping
+from bensemble.utils import compute_uncertainty, enable_dropout, EarlyStopping
 
 
 def test_uncertainty_regression():
