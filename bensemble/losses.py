@@ -37,7 +37,11 @@ class GaussianLikelihood(nn.Module):
 
 class VariationalLoss(nn.Module):
     def __init__(
-        self, likelihood_model: nn.Module, alpha: float = 1.0, num_batches: int = 1
+        self,
+        likelihood_model: nn.Module,
+        alpha: float = 1.0,
+        num_batches: int = 1,
+        kl_weight: float = 1.0,
     ):
         """
         Args:
@@ -49,6 +53,7 @@ class VariationalLoss(nn.Module):
         self.likelihood_model = likelihood_model
         self.alpha = alpha
         self.num_batches = num_batches
+        self.kl_weight = kl_weight
 
     def forward(
         self, preds: torch.Tensor, target: torch.Tensor, kl_divergence: torch.Tensor
@@ -63,8 +68,8 @@ class VariationalLoss(nn.Module):
             log_likelihoods.sum(dim=1) if log_likelihoods.ndim > 1 else log_likelihoods
         )
 
-        kl_per_batch = kl_divergence / self.num_batches
-        log_weights = log_likelihoods - kl_per_batch
+        kl_scaled = (kl_divergence / self.num_batches) * self.kl_weight
+        log_weights = log_likelihoods - kl_scaled
 
         if abs(self.alpha - 1.0) < 1e-6:
             # ELBO case
