@@ -23,6 +23,10 @@ class GaussianLikelihood(nn.Module):
         self.log_sigma = nn.Parameter(torch.tensor([init_log_sigma]))
         self.loss_fn = nn.GaussianNLLLoss(reduction="none")
 
+    @property
+    def sigma(self) -> float:
+        return F.softplus(self.log_sigma).item() + 1e-6
+
     def forward(self, preds: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         sigma = F.softplus(self.log_sigma) + 1e-6
         var = sigma.pow(2)
