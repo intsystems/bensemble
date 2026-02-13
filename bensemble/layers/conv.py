@@ -6,8 +6,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.init as init
 
+from .base import BaseBayesianLayer
 
-class BayesianConv2d(nn.Module):
+
+class BayesianConv2d(BaseBayesianLayer):
     """
     Bayesian Convolutional Layer (2D) with Local Reparameterization Trick.
     """
@@ -27,6 +29,7 @@ class BayesianConv2d(nn.Module):
         super().__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
+        self.init_sigma = init_sigma
         self.kernel_size = (
             kernel_size
             if isinstance(kernel_size, tuple)
@@ -46,13 +49,13 @@ class BayesianConv2d(nn.Module):
         self.b_mu = nn.Parameter(torch.empty(out_channels))
         self.b_rho = nn.Parameter(torch.empty(out_channels))
 
-        self.reset_parameters(init_sigma)
+        self.reset_parameters()
 
-    def reset_parameters(self, init_sigma):
+    def reset_parameters(self):
         init.kaiming_normal_(self.w_mu, mode="fan_in", nonlinearity="relu")
         init.zeros_(self.b_mu)
 
-        rho_init = math.log(math.exp(init_sigma) - 1.0)
+        rho_init = math.log(math.exp(self.init_sigma) - 1.0)
         self.w_rho.data.fill_(rho_init)
         self.b_rho.data.fill_(rho_init)
 
@@ -97,23 +100,3 @@ class BayesianConv2d(nn.Module):
         out = conv_mu + eps * torch.sqrt(conv_var + 1e-8)
 
         return out + self.b_mu.view(1, -1, 1, 1)
-
-    def kl_divergence(self) -> torch.Tensor:
-        w_sigma = F.softplus(self.w_rho)
-        b_sigma = F.softplus(self.b_rho)
-
-        num_w = self.w_mu.numel()
-        num_b = self.b_mu.numel()
-
-        const_term = -0.5 * (num_w + num_b)
-        log_term = math.log(self.prior_sigma) * (num_w + num_b)
-
-        kl_w = -torch.log(w_sigma).sum() + (w_sigma**2 + self.w_mu**2).sum() / (
-            2 * self.prior_sigma**2
-        )
-
-        kl_b = -torch.log(b_sigma).sum() + (b_sigma**2 + self.b_mu**2).sum() / (
-            2 * self.prior_sigma**2
-        )
-
-        return kl_w + kl_b + log_term + const_term
