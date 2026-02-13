@@ -4,10 +4,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.init as init
-from torch.distributions import Normal, kl_divergence
+
+from .base import BaseBayesianLayer
 
 
-class BayesianLinear(nn.Module):
+class BayesianLinear(BaseBayesianLayer):
     """
     Bayesian Linear layer implementing Variational Inference with the
     Local Reparameterization Trick.
@@ -32,10 +33,9 @@ class BayesianLinear(nn.Module):
             init_sigma: Initial standard deviation for the posterior.
             weight_init: Initialization method for weight means ('kaiming', 'xavier', or 'normal').
         """
-        super().__init__()
+        super().__init__(prior_sigma=prior_sigma)
         self.in_features = in_features
         self.out_features = out_features
-        self.prior_sigma = prior_sigma
         self.init_sigma = init_sigma
         self.weight_init = weight_init
 
@@ -77,24 +77,3 @@ class BayesianLinear(nn.Module):
 
         eps = torch.randn_like(gamma)
         return gamma + eps * torch.sqrt(delta + 1e-8) + self.b_mu
-
-    def kl_divergence(self) -> torch.Tensor:
-        """
-        Computes the KL divergence between the variational posterior and the prior.
-        """
-        w_sigma = F.softplus(self.w_rho)
-        b_sigma = F.softplus(self.b_rho)
-
-        q_w = Normal(self.w_mu, w_sigma)
-        p_w = Normal(
-            torch.zeros_like(self.w_mu), torch.full_like(w_sigma, self.prior_sigma)
-        )
-
-        q_b = Normal(self.b_mu, b_sigma)
-        p_b = Normal(
-            torch.zeros_like(self.b_mu), torch.full_like(b_sigma, self.prior_sigma)
-        )
-
-        kl_w = kl_divergence(q_w, p_w).sum()
-        kl_b = kl_divergence(q_b, p_b).sum()
-        return kl_w + kl_b
