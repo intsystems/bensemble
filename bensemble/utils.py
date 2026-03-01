@@ -19,19 +19,6 @@ def standard_normal_cdf(x: torch.Tensor) -> torch.Tensor:
     return 0.5 * (1.0 + torch.erf(x / math.sqrt(2.0)))
 
 
-def compute_uncertainty(predictions: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-    """Calculation of epistemic and aleatory uncertainty"""
-    epistemic_uncertainty = predictions.var(dim=0)
-
-    if predictions.dim() > 2:
-        mean_probs = predictions.mean(dim=0)
-        aleatoric_uncertainty = -(mean_probs * torch.log(mean_probs + 1e-8)).sum(dim=-1)
-    else:
-        aleatoric_uncertainty = torch.zeros_like(epistemic_uncertainty)
-
-    return epistemic_uncertainty, aleatoric_uncertainty
-
-
 def enable_dropout(model: nn.Module):
     """Activating dropout layers for MC Dropout"""
     for module in model.modules():
