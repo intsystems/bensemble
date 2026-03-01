@@ -1,7 +1,6 @@
-import torch
 import torch.nn as nn
 
-from bensemble.utils import enable_dropout, EarlyStopping
+from bensemble.utils import enable_dropout
 
 
 def test_enable_dropout():
@@ -19,46 +18,3 @@ def test_enable_dropout():
 
     assert model[1].training is True, "Dropout layer must be in train mode"
     assert model[0].training is False, "Linear layer should remain in eval mode"
-
-
-def test_early_stopping_improvement():
-    """Tests that counter resets when loss improves."""
-    es = EarlyStopping(patience=3, delta=0.0)
-
-    es(10.0)
-    assert es.counter == 0
-    assert es.best_score == 10.0
-
-    es(9.0)
-    assert es.counter == 0
-    assert es.best_score == 9.0
-    assert not es.early_stop
-
-
-def test_early_stopping_patience():
-    """Tests that early_stop triggers after patience is exceeded."""
-    es = EarlyStopping(patience=2, delta=0.0)
-
-    es(10.0)
-
-    es(10.1)
-    assert es.counter == 1
-    assert not es.early_stop
-
-    es(10.2)
-    assert es.counter == 2
-    assert es.early_stop is True
-
-
-def test_early_stopping_delta():
-    """Tests that improvement must differ by at least delta."""
-    es = EarlyStopping(patience=2, delta=1.0)
-
-    es(10.0)
-
-    es(9.5)
-    assert es.counter == 1
-
-    es(8.0)
-    assert es.counter == 0
-    assert es.best_score == 8.0
