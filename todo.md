@@ -27,6 +27,9 @@ Resources: 4 developers
 ### Implement MC Dropout (Fedor Sobolevsky)
 todo
 
+### Implement Deep Neural Ensemble Search algorithm (Muhammadsharif Nabiev)
+Write two pool-construction strategies: random sampling (NES-RS) and regularized evolution (NES-RE). Architecture search be connected to the rest of library functionality. 
+
 ## Task Durations
   
 | Task | Min Time | Median Time | Max Time |
