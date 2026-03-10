@@ -24,6 +24,9 @@ Resources: 4 developers
   
 ## Detailed task overview:
 
+### Build the library's core architecture and analytical tools (Dmitrii Vasilenko)
+Create a unified interface for all methods and a naive wrapper for ensembles, implement algorithms to separate predictive uncertainty into aleatoric and epistemic implement ECE (Expected Calibration Error), Brier Score, and NLL to evaluate model trustworthiness and add post-hoc Temperature Scaling to fix overconfident predictions.
+
 ### Implement MC Dropout (Fedor Sobolevsky)
 Implement Monte-Carlo Dropout algorithm in its own class as described in _Dropout as a Bayesian Approximation: Representing Model Uncertainty in Deep Learning_, using the common bayesian ensembling method interface. Immediately do a sanity check for the code by performing basic tests.
 
