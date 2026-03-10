@@ -11,13 +11,13 @@ Resources: 4 developers
 1) Implement methods and algorithms
     - Implement base library functionality including base interfaces, calibration, uncertainty estimation and metrics
     - Create common interface for all ensembling methods
-    - Implement MC Dropout algorithm
-    - Implement Deep Neural Ensemble Search algorithm
-    - Implement Neural Ensemble Search via Bayesian Sampling algorithm
+    - Implement MC Dropout algorithm in corresponding class
+    - Implement Deep Neural Ensemble Search algorithm in corresponding class
+    - Implement Neural Ensemble Search via Bayesian Sampling algorithm in corresponding class
 2) Library deployment
     - Write tests for all algorithms with >90% coverage 
     - Debug methods after running tests until tests are all passed
-    - Implement benchmark for method 
+    - Implement benchmark for methods to 
     - Write documentation
     - Build library (write pyproject.toml)
     - Deploy library to pypi
@@ -25,7 +25,7 @@ Resources: 4 developers
 ## Detailed task overview:
 
 ### Implement MC Dropout (Fedor Sobolevsky)
-todo
+Implement Monte-Carlo Dropout algorithm in its own class as described in _Dropout as a Bayesian Approximation: Representing Model Uncertainty in Deep Learning_, using the common bayesian ensembling method interface. Immediately do a sanity check for the code by performing basic tests.
 
 ### Implement Deep Neural Ensemble Search algorithm (Muhammadsharif Nabiev)
 Write two pool-construction strategies: random sampling (NES-RS) and regularized evolution (NES-RE). Architecture search be connected to the rest of library functionality. 
