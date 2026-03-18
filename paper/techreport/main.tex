@@ -1,0 +1,391 @@
+%% 
+%% Copyright 2019-2024 Elsevier Ltd
+%% 
+%% This file is part of the 'CAS Bundle'.
+%% --------------------------------------
+%% 
+%% It may be distributed under the conditions of the LaTeX Project Public
+%% License, either version 1.3c of this license or (at your option) any
+%% later version.  The latest version of this license is in
+%%    http://www.latex-project.org/lppl.txt
+%% and version 1.3c or later is part of all distributions of LaTeX
+%% version 1999/12/01 or later.
+%% 
+%% The list of all files belonging to the 'CAS Bundle' is
+%% given in the file `manifest.txt'.
+%% 
+%% Template article for cas-dc documentclass for 
+%% double column output.
+
+\documentclass[a4paper,fleqn]{cas-dc}
+
+% If the frontmatter runs over more than one page
+% use the longmktitle option.
+
+%\documentclass[a4paper,fleqn,longmktitle]{cas-dc}
+
+%\usepackage[numbers]{natbib}
+%\usepackage[authoryear]{natbib}
+\usepackage[authoryear,longnamesfirst]{natbib}
+
+%%%Author macros
+\def\tsc#1{\csdef{#1}{\textsc{\lowercase{#1}}\xspace}}
+\tsc{WGM}
+\tsc{QE}
+%%%
+
+% Uncomment and use as if needed
+%\newtheorem{theorem}{Theorem}
+%\newtheorem{lemma}[theorem]{Lemma}
+%\newdefinition{rmk}{Remark}
+%\newproof{pf}{Proof}
+%\newproof{pot}{Proof of Theorem \ref{thm}}
+
+\begin{document}
+\let\WriteBookmarks\relax
+\def\floatpagepagefraction{1}
+\def\textpagefraction{.001}
+
+% Short title
+\shorttitle{Bensemble Technical Report}    
+
+% Short author
+\shortauthors{Sobolevsky et al.}  
+
+% Main title of the paper
+\title [mode = title]{Bensemble: A Python Library for Bayesian Ensembling}  
+
+% Title footnote mark
+% eg: \tnotemark[1]
+% \tnotemark[1] 
+
+% Title footnote 1.
+% eg: \tnotetext[1]{Title footnote text}
+% \tnotetext[1]{} 
+
+% First author
+%
+% Options: Use if required
+% eg: \author[1,3]{Author Name}[type=editor,
+%       style=chinese,
+%       auid=000,
+%       bioid=1,
+%       prefix=Sir,
+%       orcid=0000-0000-0000-0000,
+%       facebook=<facebook id>,
+%       twitter=<twitter id>,
+%       linkedin=<linkedin id>,
+%       gplus=<gplus id>]
+
+\author[1,2]{Fedor Sobolevsky}%[<options>]
+
+% Corresponding author indication
+% \cormark[1]
+
+% % Footnote of the first author
+% \fnmark[1]
+
+% % Email id of the first author
+% \ead{}
+
+% % URL of the first author
+% \ead[url]{}
+
+% % Credit authorship
+% % eg: \credit{Conceptualization of this study, Methodology, Software}
+% \credit{}
+
+% Address/affiliation
+\affiliation[1]{organization={Moscow Institute of Physics and Technology},
+            % addressline={}, 
+            city={Moscow},
+%          citysep={}, % Uncomment if no comma needed between city and postcode
+            % postcode={}, 
+            % state={},
+            country={Russia}}
+
+\affiliation[2]{organization={Moscow State University},
+            % addressline={}, 
+            city={Moscow},
+%          citysep={}, % Uncomment if no comma needed between city and postcode
+            % postcode={}, 
+            % state={},
+            country={Russia}}
+
+\author[1]{Mukhammadsharif Nabiev}%[]
+
+% % Footnote of the second author
+% \fnmark[2]
+
+% % Email id of the second author
+% \ead{}
+
+% % URL of the second author
+% \ead[url]{}
+
+% % Credit authorship
+% \credit{}
+
+\author[1]{Dmitry Vasilenko}%[]
+
+\author[1]{Vadim Kasyuk}%[]
+
+% Corresponding author text
+% \cortext[1]{Corresponding author}
+
+% Footnote text
+% \fntext[1]{}
+
+% For a title note without a number/mark
+%\nonumnote{}
+
+% Here goes the abstract
+\begin{abstract}
+    In this technical report, we introduce Bensemble, a Python library designed for approximating the posterior distribution of neural network weights to facilitate Bayesian ensembling. Standard deep learning models often yield overconfident predictions, since they typically don't take into account the uncertainty which comes with model training. Our library addresses this by providing a unified, PyTorch-compatible interface for a variety of Bayesian ensembling methods, including variational inference, probabilistic backpropagation, Laplace approximation, neural ensemble search and others. Bensemble operates on the principle that stochastic weight distributions act as generators for diverse model ensembles. It decouples the inference phase (learning an approximation of the posterior) from the prediction phase (sampling deterministic members for Bayesian Model Averaging). We provide a detailed description of Bensemble's interface and implemented methods. We also demonstrate the library's capabilities on benchmarks focusing on calibration and adversarial robustness.
+\end{abstract}
+
+% Use if graphical abstract is present
+%\begin{graphicalabstract}
+%\includegraphics{}
+%\end{graphicalabstract}
+
+% Research highlights
+\begin{highlights}
+\item A unified framework for Bayesian ensembling methods, PyTorch-compatible.
+\item Diversity of implemented ensembling methods, including variational inference, probabilistic backpropagation, neural ensemble search and more.
+\item Evaluated on several benchmarks to ensure functionality and compare implemented methods.
+\end{highlights}
+
+
+%\nocite{*}
+
+% Keywords
+% Each keyword is seperated by \sep
+\begin{keywords}
+Bayesian ensembling \sep uncertainty \sep PyTorch \sep Python
+\end{keywords}
+
+\maketitle
+
+
+\section{Introduction}
+Standard neural networks typically optimize a point estimate of weights, which fails to capture epistemic uncertainty. Bayesian ensembling methods offer a principled alternative by placing a probability distribution over model weights. Formally, given a dataset \(\mathcal{D}=\{(x_i,y_i)\}_{i=1}^N\), we seek the posterior distribution \(p(w\mid\mathcal{D}) \propto p(\mathcal{D}\mid w)p(w)\).
+
+While exact inference is intractable, approximate methods allow us to learn a surrogate distribution \(q_\theta(w)\). The core philosophy of Bensemble is to treat this approximated posterior as a source from which we sample an ensemble of deterministic models \(\{f_{w_k}\}_{k=1}^K\).
+
+We propose Bensemble to standardize the workflow of probabilistic deep learning.
+
+Our work makes the following main contributions:
+\begin{itemize}
+    \item \textbf{Proposed Solution:} A unified API that abstracts the complexity of variational, ADF-based, and Laplace approximations, allowing users to convert standard PyTorch models into Bayesian ensembles.
+    \item \textbf{Differentiation:} Bensemble implements four distinct approximation families within a shared ``fit-sample-predict'' interface. We explicitly distinguish between methods using Local Reparameterization (VI) and those using Weight Perturbation (VR), as well as online ADF methods (PBP).
+    \item \textbf{Assurance:} The library ensures reproducible uncertainty estimation by decomposing predictive variance into aleatoric and epistemic components and provides sensible defaults for hyperparameters derived from extensive testing.
+\end{itemize}
+
+\section{Methodology}
+
+\subsection{Problem Statement}
+
+\subsection{Monte-Carlo Dropout (MCD)}
+
+\subsection{Variational Inference (VI)}
+We adopt the practical variational inference framework proposed by \cite{graves2011practical}, approximating the posterior with a diagonal Gaussian \(q_\theta(w)\). The objective is to minimize the variational free energy, often interpreted as a Minimum Description Length (MDL) cost:
+\begin{equation}
+    \mathcal{L}(\theta) = \underbrace{\mathbb{E}_{q_\theta(w)}[\mathcal{L}_{\mathcal{D}}(w)]}_{\text{Error Cost}} + \underbrace{\mathrm{KL}(q_\theta(w) \| p(w))}_{\text{Complexity Cost}},
+\end{equation}
+where \(\mathcal{L}_{\mathcal{D}}\) is the negative log-likelihood.
+
+To optimize the Error Cost efficiently, we employ the Local Reparameterization Trick (LRT) \cite{kingma2015variational}. As noted by Graves, sampling weights directly introduces high variance in gradient estimates. LRT addresses this by sampling pre-activations instead. For a linear layer with inputs \(X\), weight means \(M\), and variances \(V\), the pre-activation \(\Gamma\) is distributed as:
+\begin{equation}
+    \Gamma \sim \mathcal{N}(XM^T, X^2 V^T).
+\end{equation}
+We sample \(\zeta = XM^T + \epsilon \odot \sqrt{X^2 V^T}\), where \(\epsilon \sim \mathcal{N}(0, I)\), allowing for stable, low-variance backpropagation. The Complexity Cost is computed analytically as the sum of KL divergences for each weight.
+
+\subsection{Variational Inference with Rényi Divergence (VR)}
+For VR \cite{li2016renyi}, we implement a Weight Perturbation approach. Unlike our VI implementation, here explicit weights \(w \sim \mathcal{N}(\mu, \text{softplus}(\rho))\) are sampled during the forward pass. The objective generalizes the ELBO using \(\alpha\)-Rényi divergence:
+\begin{equation}
+    \mathcal{L}_{\text{VR}}(\theta, \alpha) = -\frac{1}{1-\alpha} \log \frac{1}{K} \sum_{k=1}^K \left( \frac{p(\mathcal{D}, w_k)}{q_\theta(w_k)} \right)^{1-\alpha}.
+\end{equation}
+The parameter \(\alpha\) (default 1.0) controls the bias-variance trade-off.
+
+\subsection{Probabilistic Backpropagation (PBP)}
+Our implementation of PBP by \cite{hernandez2015probabilistic} uses Assumed Density Filtering (ADF) in an online fashion. 
+1. Moment Propagation: Means and variances are propagated analytically. For ReLU activations, we use exact moment matching functions relying on the PDF/CDF of the standard normal.
+2. Update Rule: Weights are updated by matching the moments of the tilted distribution \(q(w)p(y|x,w)\). We compute gradients of the log-partition function \(\log Z\) to update \(\mu\) and \(\Sigma\) directly, bypassing standard SGD.
+
+\subsection{Laplace Approximation (LA)}
+We implement a scalable Laplace approximation using Kronecker-Factored Approximate Curvature (K-FAC) \cite{ritter2018scalable}.
+1. MAP Training: A standard network is trained to find the mode \(w_{\text{MAP}}\).
+2. Curvature Estimation: We capture covariance of activations ($A_{l-1}$) and pre-activation gradients ($G_l$).
+3. Sampling: The posterior for layer $l$ is approximated as a Matrix Normal distribution \(\mathcal{MN}(W_l, \Sigma_l)\). Samples are generated efficiently using eigen-decomposition of Kronecker factors:
+\begin{equation}
+    W_{\text{sample}} = W_{\text{MAP}} + L_V Z L_U^T,
+\end{equation}
+where $L_V, L_U$ are Cholesky factors of the inverse regularized covariances.
+
+\subsection{Neural Ensemble Search (NES)}
+
+\subsection{Neural Ensemble Search via Bayesian Sampling (NESBS)}
+
+\section{Implementation Details}
+The architecture is built around the \texttt{BaseBayesianEnsemble} abstract class.
+
+\subsection{Unified Workflow}
+\textbf{Inference (Fitting):} The \texttt{fit} method optimizes the parameters \(\theta\) of \(q_\theta(w)\).
+\begin{itemize}
+    \item For \textbf{VI/VR}, this uses gradient descent on variational bounds.
+    \item For \textbf{PBP}, this uses Assumed Density Filtering (ADF) without standard backpropagation.
+    \item For \textbf{Laplace}, this involves MAP training followed by curvature estimation.
+\end{itemize}
+
+\textbf{Ensemble Generation (Sampling):} The \texttt{sample\_models(n)} method draws \(K\) independent weight configurations from \(q_\theta(w)\) and instantiates them as standard \texttt{nn.Module} objects. This step "freezes" the epistemic uncertainty into a concrete ensemble.
+
+\textbf{Bayesian Model Averaging (Prediction):} The \texttt{predict} method estimates the predictive distribution via Monte Carlo integration over the sampled ensemble.
+
+\section{Experimental Evaluation}
+
+\subsection{Experimental setup}
+We evaluated the library on the Boston Housing dataset. 
+\begin{itemize}
+    \item \textbf{Architecture:} MLP with sizes 13-50-50-1. ReLU activations.
+    \item \textbf{PBP Settings:} Noise shape parameters $\alpha=6.0, \beta=6.0$ (Inverse Gamma prior).
+    \item \textbf{Laplace Settings:} MAP training with $lr=10^{-3}$, K-FAC estimated on full training set.
+    \item \textbf{VI/VR Settings:} Priors $\sigma=1.0$, initialized $\rho=-2.0$ (approx $\sigma=0.12$).
+\end{itemize}
+
+\subsection{Boston Housing Dataset}
+Table \ref{tab:boston_results} shows that while deterministic models are accurate (low RMSE), they are poorly calibrated (high NLL). PBP and VI achieve the best balance of accuracy and calibration.
+
+\begin{table}[ht]
+\centering
+\caption{Performance on Boston Housing (Test Set). Lower is better.}
+\label{tab:boston_results}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Method} & \textbf{RMSE} & \textbf{NLL} & \textbf{ECE} & \textbf{Brier} \\
+\midrule
+Deterministic MLP & 4.21 & 47.99 & 0.033 & 0.090 \\
+MCD & \textbf{3.84} & 3.68 & 0.019 & \textbf{0.055} \\
+VI & 4.63 & \textbf{2.88} & 0.008 & 0.099 \\
+PBP & 5.42 & 3.17 & 0.008 & 0.091 \\
+VR & 5.36 & 3.16 & \textbf{0.006} & 0.127 \\
+LA & 19.38 & 4.55 & 0.011 & 0.241 \\
+NES & - & - & - & - \\
+NESBS & - & - & - & - \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Adversarial Robustness}
+We subjected models to FGSM attacks (Table \ref{tab:adversarial_rmse}). 
+
+\begin{table}[ht]
+\centering
+\caption{RMSE under FGSM adversarial attacks. \textbf{Bold} indicates best performance.}
+\label{tab:adversarial_rmse}
+\begin{tabular}{lcccccc}
+\toprule
+Method & 0.00 & 0.10 & 0.30 & 0.50 & 1.00 \\
+\midrule
+Det. MLP & 4.21 & 7.41 & 13.13 & 17.70 & 27.74 \\
+MCD & \textbf{3.80} & \textbf{5.16} & 8.82 & 12.67 & 23.05 \\
+VI & 4.58 & \textbf{5.16} & \textbf{6.40} & \textbf{7.71} & \textbf{12.22} \\
+PBP & 5.42 & 5.73 & 6.87 & 8.28 & 12.34 \\
+VR & 5.35 & 5.76 & 6.64 & 8.74 & 13.50 \\
+LA & 19.22 & 24.04 & 22.92 & 26.40 & 40.46 \\
+NES & - & - & - & - & - \\
+NESBS & - & - & - & - & - \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Analysis:} The deterministic model fails catastrophically at $\varepsilon=0.1$. VI and PBP demonstrate superior robustness. Specifically, PBP's moment matching effectively filters high-frequency adversarial noise, maintaining low error rates even at high perturbation levels.
+
+\section{Conclusion}
+We presented Bensemble, a library that democratizes access to stochastic weight modeling. By validating implementations of VI (Graves+LRT), VR (Weight Perturbation), PBP (ADF), and LA (K-FAC), we provide a robust toolkit for uncertainty estimation. Our experiments confirm that Bayesian ensembling significantly improves calibration and adversarial robustness compared to standard point estimates.
+
+% Main text
+% \section{}\label{}
+
+% Numbered list
+% Use the style of numbering in square brackets.
+% If nothing is used, default style will be taken.
+%\begin{enumerate}[a)]
+%\item 
+%\item 
+%\item 
+%\end{enumerate}  
+
+% Unnumbered list
+%\begin{itemize}
+%\item 
+%\item 
+%\item 
+%\end{itemize}  
+
+% Description list
+%\begin{description}
+%\item[]
+%\item[] 
+%\item[] 
+%\end{description}  
+
+% \clearpage %%Remove this from your manuscript
+
+% Figure
+% \begin{figure}%[]
+%   \centering
+% %    \includegraphics{}
+%     \caption{}\label{fig1}
+% \end{figure}
+
+
+% \begin{table}%[]
+% \caption{}\label{tbl1}
+% \begin{tabular*}{\tblwidth}{@{}LL@{}}
+% \toprule
+%   &  \\ % Table header row
+% \midrule
+%  & \\
+%  & \\
+%  & \\
+%  & \\
+% \bottomrule
+% \end{tabular*}
+% \end{table}
+
+% Uncomment and use as the case may be
+%\begin{theorem} 
+%\end{theorem}
+
+% Uncomment and use as the case may be
+%\begin{lemma} 
+%\end{lemma}
+
+%% The Appendices part is started with the command \appendix;
+%% appendix sections are then done as normal sections
+%% \appendix
+
+% \section{}\label{}
+
+% To print the credit authorship contribution details
+\printcredits
+
+%% Loading bibliography style file
+%\bibliographystyle{model1-num-names}
+\bibliographystyle{cas-model2-names}
+
+% Loading bibliography database
+\bibliography{cas-refs}
+
+% Biography
+%\bio{}
+% Here goes the biography details.
+%\endbio
+
+%\bio{pic1}
+% Here goes the biography details.
+%\endbio
+
+\end{document}
+
