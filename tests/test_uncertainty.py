@@ -1,6 +1,6 @@
 import torch
 import math
-from bensemble.uncertainty import (
+from bensemble.uncertainty.decomposition import (
     decompose_classification_uncertainty,
     decompose_regression_uncertainty,
 )

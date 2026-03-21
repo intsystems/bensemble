@@ -43,9 +43,9 @@ def decompose_regression_uncertainty(
 
     Returns:
         Tuple[torch.Tensor, torch.Tensor, torch.Tensor]: A tuple containing:
-            - total_unc (torch.Tensor): Total uncertainty (entropy of the mean). Shape: [Batch].
-            - aleatoric_unc (torch.Tensor): Aleatoric uncertainty (mean of entropies). Shape: [Batch].
-            - epistemic_unc (torch.Tensor): Epistemic uncertainty (mutual information). Shape: [Batch].
+            - total_unc (torch.Tensor): Total predictive variance. Shape:[Batch_size, Out_dim].
+            - aleatoric_unc (torch.Tensor): Aleatoric uncertainty (mean of variances). Shape: [Batch_size, Out_dim].
+            - epistemic_unc (torch.Tensor): Epistemic uncertainty (variance of means). Shape: [Batch_size, Out_dim].
     """
     aleatoric_unc = variances.mean(dim=0)
     epistemic_unc = means.var(dim=0, unbiased=False)
