@@ -2,6 +2,7 @@ import torch
 import torch.nn.functional as F
 
 from bensemble.calibration.scaling import TemperatureScaling
+from bensemble.calibration.scaling import VectorScaling
 
 
 def test_initialization():
@@ -63,4 +64,74 @@ def test_fit_optimization():
 
     assert final_loss < initial_loss, (
         "Calibration failed to improve the Negative Log-Likelihood."
+    )
+
+
+def test_vector_scaling_initialization():
+    """Vector Scaling initializes vectors correctly."""
+    num_classes = 3
+    scaler = VectorScaling(num_classes=num_classes)
+
+    assert scaler.a.shape == (3,)
+    assert scaler.b.shape == (3,)
+    assert torch.allclose(scaler.a, torch.ones(3))
+    assert torch.allclose(scaler.b, torch.zeros(3))
+
+
+def test_vector_scaling_forward_pass():
+    """The affine transformation (a * logits + b) works."""
+    scaler = VectorScaling(num_classes=2)
+
+    scaler.a.data = torch.tensor([2.0, 0.5])
+    scaler.b.data = torch.tensor([1.0, -1.0])
+
+    logits = torch.tensor([[10.0, 4.0], [2.0, -2.0]])
+
+    expected = torch.tensor([[21.0, 1.0], [5.0, -2.0]])
+
+    scaled_logits = scaler(logits)
+    assert torch.allclose(scaled_logits, expected)
+
+
+def test_vector_scaling_can_change_predictions():
+    """
+    Vector Scaling can change the argmax.
+    """
+    scaler = VectorScaling(num_classes=2)
+
+    logits = torch.tensor([[1.0, 1.5]])
+    original_preds = logits.argmax(dim=1)
+
+    scaler.a.data = torch.tensor([1.0, 1.0])
+    scaler.b.data = torch.tensor([5.0, 0.0])
+
+    scaled_logits = scaler(logits)
+    calibrated_preds = scaled_logits.argmax(dim=1)
+
+    assert not torch.equal(original_preds, calibrated_preds), (
+        "Vector Scaling should be able to change predictions, but it didn't."
+    )
+
+
+def test_vector_scaling_fit_optimization():
+    """Vector Scaling reduces NLL during fit."""
+    torch.manual_seed(42)
+    num_classes = 5
+
+    logits = torch.randn(200, num_classes) * 10.0
+    labels = torch.randint(0, num_classes, (200,))
+
+    scaler = VectorScaling(num_classes=num_classes)
+    initial_loss = F.cross_entropy(logits, labels).item()
+
+    scaler.fit(logits, labels, max_iter=20)
+
+    assert not torch.allclose(scaler.a, torch.ones(num_classes))
+    assert not torch.allclose(scaler.b, torch.zeros(num_classes))
+
+    calibrated_logits = scaler(logits)
+    final_loss = F.cross_entropy(calibrated_logits, labels).item()
+
+    assert final_loss < initial_loss, (
+        "Vector Scaling failed to improve the Negative Log-Likelihood."
     )
