@@ -29,10 +29,10 @@ The library is currently undergoing a major rewrite. The API might be unstable. 
 
 ## Features
 
-- **PyTorch-Native**: All layers and methods compatible with standart PyTorch.
-- **Modularity**: BayesianLinear, BayesianConv2d with built-in Local Reparameterization Trick (LRT).
-- **Core Bayesian Methods**: Implements canonical algorithms from Variational Inference to Scalable Laplace approximations.
-- **Modern Stack**: Built with `uv`, fully typed, and tested.
+- **PyTorch-Native**: No black-box `.fit()` wrappers. All layers and methods are fully compatible with standard PyTorch training loops.
+- **Unified Ensembling**: Seamlessly combine explicit models (Deep Ensembles, NAS) and implicit methods (MC Dropout) via a single `BaseEnsemble` interface.
+- **Uncertainty Analytics**: Principled decomposition of predictive uncertainty into *aleatoric* (data noise) and *epistemic* (model ignorance) components.
+- **Model Calibration**: Built-in tools like Temperature Scaling and Vector Scaling to fix overconfident neural networks.
 
 ---
 
