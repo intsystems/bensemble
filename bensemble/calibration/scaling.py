@@ -39,7 +39,7 @@ class TemperatureScaling(nn.Module):
         self, logits: torch.Tensor, labels: torch.Tensor, max_iter: int = 50
     ) -> "TemperatureScaling":
         """
-        Finds the optimal temperature $T$ using a validation set.
+        Finds the optimal temperature T using a validation set.
 
         Uses the L-BFGS optimizer, which is the standard and most efficient
         algorithm for this 1D convex optimization problem.
@@ -54,6 +54,63 @@ class TemperatureScaling(nn.Module):
         """
 
         optimizer = optim.LBFGS([self.temperature], lr=0.01, max_iter=max_iter)
+
+        def eval_loss():
+            optimizer.zero_grad()
+            scaled_logits = self.forward(logits)
+            loss = F.cross_entropy(scaled_logits, labels)
+            loss.backward()
+            return loss
+
+        optimizer.step(eval_loss)
+
+        return self
+
+
+class VectorScaling(nn.Module):
+    """
+    Vector Scaling (Multi-class extension of Platt Scaling).
+
+    Applies a per-class affine transformation to the uncalibrated logits:
+    calibrated_logits = logits * a + b
+    """
+
+    def __init__(self, num_classes: int):
+        """
+        Args:
+            num_classes (int): Number of classes in the classification task.
+        """
+        super().__init__()
+        self.a = nn.Parameter(torch.ones(num_classes))
+        self.b = nn.Parameter(torch.zeros(num_classes))
+
+    def forward(self, logits: torch.Tensor) -> torch.Tensor:
+        """
+        Applies the learned affine transformation to the logits.
+
+        Args:
+            logits (torch.Tensor): Raw uncalibrated logits of shape [Batch, Num_classes].
+
+        Returns:
+            torch.Tensor: Calibrated logits of the same shape.
+        """
+        return logits * self.a + self.b
+
+    def fit(
+        self, logits: torch.Tensor, labels: torch.Tensor, max_iter: int = 50
+    ) -> "VectorScaling":
+        """
+        Finds the optimal vectors 'a' and 'b' using a validation set.
+
+        Args:
+            logits (torch.Tensor): Unscaled logits from a hold-out validation set. Shape:[N, Num_classes].
+            labels (torch.Tensor): Ground truth class indices. Shape: [N].
+            max_iter (int, optional): Maximum number of L-BFGS iterations. Defaults to 50.
+
+        Returns:
+            PlattScaling: The fitted model itself.
+        """
+        optimizer = optim.LBFGS([self.a, self.b], lr=0.01, max_iter=max_iter)
 
         def eval_loss():
             optimizer.zero_grad()
