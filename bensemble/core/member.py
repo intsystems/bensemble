@@ -36,3 +36,21 @@ class ExplicitMembers(MemberAdapter):
     @property
     def modules(self):
         return list(self.models)
+
+
+class StochasticMembers(MemberAdapter):
+    """
+    Wraps a single model whose forward pass is stochastic.
+    """
+
+    ACTIVATORS = {
+        "bayesian": "_activate_bayesian",
+        "dropout": "_activate_dropout",
+        "both": "_activate_both",
+    }
+
+    def __init__(self, model: nn.Module, num_samples: int = 30, mode: str = "auto"):
+        super().__init__()
+        self.model = model
+        self.num_samples = num_samples
+        self.mode = mode if mode != "auto" else self._detect_mode()
