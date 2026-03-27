@@ -2,6 +2,7 @@ from abc import abstractmethod
 import torch.nn as nn
 import torch
 from types import MemberPredictions
+from .layers.base import BaseBayesianLayer
 
 
 class MemberAdapter(nn.Module):
@@ -54,3 +55,55 @@ class StochasticMembers(MemberAdapter):
         self.model = model
         self.num_samples = num_samples
         self.mode = mode if mode != "auto" else self._detect_mode()
+
+    def predict_all(self, x):
+        was_training = self.model.training
+        self._activate()
+        with torch.no_grad():
+            preds = torch.stack([self.model(x) for _ in range(self.num_samples)])
+        self.model.train(was_training)
+        return preds
+
+    @property
+    def size(self):
+        return self.num_samples
+
+    @property
+    def modules(self):
+        return [self.model]
+
+    def _activate(self):
+        activator = self.ACTIVATORS.get(self.mode)
+        if activator:
+            getattr(self, activator)()
+
+    def _activate_bayesian(self):
+        """Matches existing predict_with_uncertainty() pattern."""
+        self.model.eval()
+        for module in self.model.modules():
+            if isinstance(module, BaseBayesianLayer):
+                module.train()
+
+    def _activate_dropout(self):
+        """Matches existing enable_dropout() pattern."""
+        self.model.eval()
+        for module in self.model.modules():
+            if isinstance(module, nn.Dropout):
+                module.train()
+
+    def _activate_both(self):
+        self._activate_bayesian()
+        self._activate_dropout()
+
+    def _detect_mode(self):
+        has_bayesian = any(
+            isinstance(m, BaseBayesianLayer) for m in self.model.modules()
+        )
+        has_dropout = any(isinstance(m, nn.Dropout) for m in self.model.modules())
+        if has_bayesian and has_dropout:
+            return "both"
+        elif has_bayesian:
+            return "bayesian"
+        elif has_dropout:
+            return "dropout"
+        return "dropout"
