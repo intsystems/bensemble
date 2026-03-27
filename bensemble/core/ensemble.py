@@ -1,7 +1,7 @@
 import torch.nn as nn
 import torch
-from member import MemberAdapter
-from types import Predictions, MemberPredictions
+from member import MemberAdapter, ExplicitMembers, StochasticMembers
+from types import Predictions, MemberPredictions, PosteriorSource
 
 
 class Ensemble(nn.Module):
@@ -31,3 +31,27 @@ class Ensemble(nn.Module):
     def member_modules(self) -> list[nn.Module]:
         """Access underlying nn.Modules (for KL, parameters, etc.)."""
         return self.members.modules
+
+    @classmethod
+    def from_models(cls, models: list[nn.Module]) -> "Ensemble":
+        """Explicit ensemble from a list of independent models."""
+        return cls(members=ExplicitMembers(models))
+
+    @classmethod
+    def from_stochastic(
+        cls, model: nn.Module, num_samples: int = 30, mode: str = "auto"
+    ) -> "Ensemble":
+        """
+        Implicit ensemble from a model with stochastic forward passes.
+        """
+        return cls(members=StochasticMembers(model, num_samples, mode))
+
+    @classmethod
+    def from_posterior(
+        cls, source: PosteriorSource, n_members: int = 10, **kwargs
+    ) -> "Ensemble":
+        """
+        Sample an explicit ensemble from a fitted posterior approximation.
+        """
+        models = source.sample_models(n_members, **kwargs)
+        return cls(members=ExplicitMembers(models))
