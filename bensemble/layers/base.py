@@ -35,6 +35,50 @@ class BaseBayesianLayer(nn.Module):
 
         return total_kl
 
+    def get_pruning_masks(self, threshold: float = 0.83) -> dict:
+        """Returns binary masks for parameters satisfying the SNR threshold.
+
+        Implements Graves' pruning heuristic where weights with low
+        Signal-to-Noise Ratio are considered redundant and can be removed.
+
+        Args:
+            threshold (float, optional): The SNR threshold (|mu|/sigma).
+                Defaults to 0.83, the "safe" threshold suggested by Graves.
+
+        Returns:
+            dict[str, torch.Tensor]: A dictionary mapping parameter names to
+                binary masks (1.0 for keeping, 0.0 for pruning).
+        """
+        snr_dict = self._get_snr_dict()
+        return {name: (val > threshold).float() for name, val in snr_dict.items()}
+
+    def _get_snr_dict(self) -> dict[str, torch.Tensor]:
+        """Computes the Signal-to-Noise Ratio (SNR) for all Bayesian parameters.
+
+        SNR is defined as the absolute mean of the weight divided by its
+        standard deviation: SNR = |mu| / sigma.
+
+        Returns:
+            dict[str, torch.Tensor]: A dictionary containing SNR tensors
+                for each Bayesian parameter in the layer.
+        """
+        snr_dict = {}
+
+        for name, param in self.named_parameters():
+            if not name.endswith("_mu"):
+                continue
+
+            mu = param
+
+            rho_name = name.replace("_mu", "_rho")
+            rho = getattr(self, rho_name)
+
+            sigma = F.softplus(rho)
+
+            snr_dict[name] = torch.abs(mu) / sigma
+
+        return snr_dict
+
     def _compute_kl_for_param(
         self, mu: torch.Tensor, rho: torch.Tensor
     ) -> torch.Tensor:
