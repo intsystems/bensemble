@@ -19,10 +19,7 @@ class NESBayesianSampler:
         # models = [model1, model2, ...]
         # return Ensemble.from_models(models)
 
-    def sample_svgd(
-        self,
-        val_loader: DataLoader,
-    ) -> Ensemble:
+    def sample_svgd(self, val_loader: DataLoader) -> Ensemble:
         """
         Args:
             val_loader (DataLoader): Used to evaluate the architecture's loss/posterior.
