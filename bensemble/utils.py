@@ -1,7 +1,6 @@
 from bensemble.layers.conv import BayesianConv2d
 from bensemble.layers import BayesianLinear
 import math
-from typing import Tuple
 
 import torch
 import torch.nn as nn

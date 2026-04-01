@@ -5,9 +5,13 @@ import torch
 import torch.nn as nn
 
 
+# TODO: remove this, new class is in layers/base.py
+
+
 class BaseBayesianEnsemble(abc.ABC):
     """Базовый класс для всех методов байесовского ансамблирования"""
-    '''The base class for all Bayesian ensembling methods'''
+
+    """The base class for all Bayesian ensembling methods"""
 
     def __init__(self, model: nn.Module, **kwargs):
         self.model = model
@@ -16,7 +20,7 @@ class BaseBayesianEnsemble(abc.ABC):
 
     @abc.abstractmethod
     def fit(
-        self,  
+        self,
         train_loader: torch.utils.data.DataLoader,
         val_loader: Optional[torch.utils.data.DataLoader] = None,
         **kwargs,
@@ -34,16 +38,12 @@ class BaseBayesianEnsemble(abc.ABC):
         ...
 
     @abc.abstractmethod
-    def sample_models(
-        self, n_models: int = 10
-    ) -> List[
-        nn.Module
-    ]:  
+    def sample_models(self, n_models: int = 10) -> List[nn.Module]:
         """Сэмплирование моделей из апостериорного распределения"""
         """Sampling models from a posteriori distribution"""
         ...
 
-    def save(self, path: str):  
+    def save(self, path: str):
         """Сохранение обученного ансамбля"""
         """Saving a trained ensemble"""
         torch.save(
@@ -55,7 +55,7 @@ class BaseBayesianEnsemble(abc.ABC):
             path,
         )
 
-    def load(self, path: str):  
+    def load(self, path: str):
         """Загрузка обученного ансамбля"""
         """Loading a trained ensemble"""
         checkpoint = torch.load(path)

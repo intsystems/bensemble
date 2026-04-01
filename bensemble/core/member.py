@@ -1,8 +1,8 @@
 from abc import abstractmethod
 import torch.nn as nn
 import torch
-from types import MemberPredictions
-from .layers.base import BaseBayesianLayer
+from bensemble.core.types import MemberPredictions
+from bensemble.layers.base import BaseBayesianLayer
 
 
 class MemberAdapter(nn.Module):

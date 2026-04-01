@@ -1,7 +1,7 @@
 import torch.nn as nn
 import torch
-from member import MemberAdapter, ExplicitMembers, StochasticMembers
-from types import Predictions, MemberPredictions, PosteriorSource
+from bensemble.core.member import MemberAdapter, ExplicitMembers, StochasticMembers
+from bensemble.core.types import Predictions, MemberPredictions, PosteriorSource
 
 
 class Ensemble(nn.Module):
