@@ -13,8 +13,12 @@ from .methods import (
     LaplaceApproximation,
     ProbabilisticBackpropagation,
 )
+from .search import RandomSearcher, EvolutionarySearcher, SearchSpace
 
 __all__ = [
     "LaplaceApproximation",
     "ProbabilisticBackpropagation",
+    "RandomSearcher",
+    "EvolutionarySearcher",
+    "SearchSpace",
 ]
