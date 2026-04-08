@@ -53,6 +53,7 @@ class TemperatureScaling(nn.Module):
             TemperatureScaling: The fitted model itself.
         """
 
+        logits = logits.detach()
         optimizer = optim.LBFGS([self.temperature], lr=0.01, max_iter=max_iter)
 
         def eval_loss():
@@ -110,6 +111,7 @@ class VectorScaling(nn.Module):
         Returns:
             PlattScaling: The fitted model itself.
         """
+        logits = logits.detach()
         optimizer = optim.LBFGS([self.a, self.b], lr=0.01, max_iter=max_iter)
 
         def eval_loss():
