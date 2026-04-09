@@ -1,4 +1,5 @@
 from .nes import EvolutionarySearcher, RandomSearcher
+from .bayesian import NESBayesianSampler
 from .selection import (
     classification_nll_criterion,
     forward_select,
@@ -13,4 +14,5 @@ __all__ = [
     "regression_mse_criterion",
     "RandomSearcher",
     "EvolutionarySearcher",
+    "NESBayesianSampler",
 ]
