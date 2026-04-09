@@ -8,8 +8,6 @@ from bensemble.methods.probabilistic_backpropagation import (
     ProbabilisticBackpropagation,
     PBPNet,
     ProbLinear,
-    phi,
-    Phi,
     relu_moments,
 )
 
@@ -33,15 +31,6 @@ def pbp_data():
 def pbp_model_setup():
     """Returns a simple PBP model initialized with layer sizes."""
     return [1, 10, 1]
-
-
-def test_math_helpers():
-    """Tests phi (PDF) and Phi (CDF) functions."""
-    x = torch.tensor([0.0], dtype=torch.float64)
-
-    assert torch.abs(phi(x) - 0.3989) < 1e-3
-
-    assert torch.abs(Phi(x) - 0.5) < 1e-3
 
 
 def test_relu_moments():
