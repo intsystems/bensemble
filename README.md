@@ -1,9 +1,9 @@
 # 🚧 Under Active Refactoring 🚧
-The library is currently undergoing a major rewrite. The API might be unstable. Check back soon!
+The library is currently undergoing a major rewrite to become more modular and PyTorch-native. The API is stabilizing!
 
 ---
 
-# 😎 Bensemble: Bayesian Multimodeling Project
+# Bensemble: Modular Bayesian Deep Learning & Ensembling
 
 [![Python](https://img.shields.io/badge/python-3.10%20|%203.11%20|%203.12%20|%203.13-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -12,11 +12,11 @@ The library is currently undergoing a major rewrite. The API might be unstable. 
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![image](https://img.shields.io/badge/uv-managed-a6c489)](https://github.com/astral-sh/uv)
 
-**Bensemble** is a library for Bayesian Deep Learning which integrates established  methods for neural network ensembling and uncertainty quantification. Bensemble provides building blocks that slot directly into your existing PyTorch workflows.
+**Bensemble** is a production-ready, lightweight library for Bayesian Deep Learning and Neural Network Ensembling.
 
 ---
 
-##  Key Resources
+## Key Resources
 
 | Resource | Description |
 | :--- | :--- |
@@ -29,10 +29,11 @@ The library is currently undergoing a major rewrite. The API might be unstable. 
 
 ## Features
 
-- **PyTorch-Native**: No black-box `.fit()` wrappers. All layers and methods are fully compatible with standard PyTorch training loops.
-- **Unified Ensembling**: Seamlessly combine explicit models (Deep Ensembles, NAS) and implicit methods (MC Dropout) via a single `BaseEnsemble` interface.
+- **PyTorch-Native**: No hidden training loops. Use standard PyTorch to train your models, and use Bensemble for inference, ensembling, and analytics.
+- **Unified Ensembling API**: Seamlessly combine explicit models (Deep Ensembles, NAS) and implicit methods (MC Dropout) via a single `Ensemble` interface.
+- **Neural Ensemble Search (NES)**: State-of-the-art algorithms to automatically search for diverse architectures using NNI and Stein Variational Gradient Descent (SVGD).
 - **Uncertainty Analytics**: Principled decomposition of predictive uncertainty into *aleatoric* (data noise) and *epistemic* (model ignorance) components.
-- **Model Calibration**: Built-in tools like Temperature Scaling and Vector Scaling to fix overconfident neural networks.
+- **Model Calibration & Metrics**: Evaluate models using Expected Calibration Error (ECE), Brier Score, and NLL. Fix overconfident networks post-hoc with Temperature and Vector Scaling.
 
 ---
 
@@ -44,7 +45,7 @@ You can install `bensemble` using pip:
 pip install bensemble
 ```
 
-Or, if you prefer using [uv](https://github.com/astral-sh/uv) for lightning-fast installation:
+Or, using [uv](https://github.com/astral-sh/uv) for lightning-fast installation (recommended):
 
 ```bash
 uv pip install bensemble
@@ -52,28 +53,52 @@ uv pip install bensemble
 
 ---
 
-##  Quick Start
+## Quick Start
 
-Build a Bayesian Neural Network using our layers and write a standard PyTorch training loop.
+### Example 1: Ensembling, Calibration & Uncertainty (The Easy Way)
+Easily ensemble standard PyTorch models, calibrate them, and decompose their uncertainty to detect Out-Of-Distribution (OOD) data.
+
+```python
+import torch
+import torch.nn as nn
+from bensemble.core.ensemble import Ensemble
+from bensemble.calibration.scaling import TemperatureScaling
+from bensemble.uncertainty import decompose_classification_uncertainty
+from bensemble.metrics import expected_calibration_error
+
+# 1. Create a Deep Ensemble from standard trained PyTorch models
+models = [nn.Sequential(nn.Linear(10, 20), nn.ReLU(), nn.Linear(20, 3)) for _ in range(5)]
+ensemble = Ensemble.from_models(models)
+
+# 2. Calibrate the ensemble using a hold-out validation set
+val_logits, val_labels = torch.randn(100, 3), torch.randint(0, 3, (100,))
+scaler = TemperatureScaling(init_temp=1.5).fit(val_logits, val_labels)
+
+# 3. Predict on test data
+test_x = torch.randn(10, 10)
+# Returns shape: [5 models, 10 batch_size, 3 classes]
+logits = scaler(ensemble.predict_members(test_x)) 
+probs = torch.softmax(logits, dim=-1)
+
+# 4. Decompose Uncertainty & Evaluate
+total, aleatoric, epistemic = decompose_classification_uncertainty(probs)
+ece = expected_calibration_error(probs.mean(dim=0), val_labels[:10])
+
+print(f"Calibration Error (ECE): {ece:.4f}")
+print(f"Epistemic Uncertainty (OOD awareness): {epistemic.mean().item():.4f}")
+```
+
+### Example 2: Variational Inference (The "Lego" Way)
+Build a Bayesian Neural Network from scratch using our custom layers with the Local Reparameterization Trick.
 
 ```python
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 
-# Import building blocks
 from bensemble.layers import BayesianLinear
 from bensemble.losses import VariationalLoss, GaussianLikelihood
 from bensemble.utils import get_total_kl, predict_with_uncertainty
-
-# 0. Prepare Dummy Data
-X_train = torch.randn(100, 10)
-y_train = torch.randn(100, 1)
-
-X_test = torch.randn(5, 10)
-
-dataset = TensorDataset(X_train, y_train)
-train_loader = DataLoader(dataset, batch_size=10, shuffle=True)
 
 # 1. Define Model using Bayesian Layers
 model = nn.Sequential(
@@ -86,37 +111,44 @@ model = nn.Sequential(
 likelihood = GaussianLikelihood()
 criterion = VariationalLoss(likelihood, alpha=1.0)
 
-optimizer = torch.optim.Adam(
-    list(model.parameters()) + list(likelihood.parameters()), lr=0.01
-)
+optimizer = torch.optim.Adam(list(model.parameters()) + list(likelihood.parameters()), lr=0.01)
 
-# 3. Train Model
+# 3. Standard PyTorch Training Loop
 model.train()
-for epoch in range(100):
-    for x, y in train_loader:
-        optimizer.zero_grad()
+for epoch in range(50): # Dummy loop
+    x, y = torch.randn(10, 10), torch.randn(10, 1)
+    optimizer.zero_grad()
+    loss = criterion(model(x), y, get_total_kl(model))
+    loss.backward()
+    optimizer.step()
 
-        preds = model(x)
-        kl = get_total_kl(model)
-
-        loss = criterion(preds, y, kl)
-
-        loss.backward()
-        optimizer.step()
-
-# 4. Predict
-mean, std = predict_with_uncertainty(model, X_test, num_samples=100)
-
-print(f"Prediction: {mean[0].item():.2f}")
-print(f"Uncertainty: ±{std[0].item():.2f}")
-
+# 4. Predict with Uncertainty
+mean, std = predict_with_uncertainty(model, torch.randn(5, 10), num_samples=100)
+print(f"Prediction: {mean[0].item():.2f} ± {std[0].item():.2f}")
 ```
+
+---
+
+## Algorithms & Demos
+
+We implement a wide range of state-of-the-art Bayesian and Ensembling approaches. Check out the interactive demos in the `notebooks/` directory:
+
+| Method | Description |
+| :--- | :--- |
+| **Deep Ensembles** | Naive yet powerful ensembling of independent networks with explicit uncertainty decomposition. |
+| **Monte Carlo Dropout** | Implicit ensembling by keeping dropout active at test time. |
+| **Neural Ensemble Search (NES)** | Automatically searches for diverse architectures (NES-RS/NES-RE) using NNI. |
+| **NES via Bayesian Sampling** | Extracts diverse subnetworks from a Supernet using Stein Variational Gradient Descent (SVGD). |
+| **Variational Inference** | Approximates posterior using Gaussian distributions with the *Local Reparameterization Trick*. |
+| **Variational Rényi** | Generalization of VI minimizing $\alpha$-divergence (VR-VI) for better robustness. |
+| **Laplace Approximation** | Fits a Gaussian around the MAP estimate using Kronecker-Factored Curvature (K-FAC). |
+| **Probabilistic Backprop** | Propagates moments through the network using Assumed Density Filtering (ADF). |
 
 ---
 
 ## Development Setup
 
-If you want to contribute to `bensemble` or run tests, we recommend using **uv** to manage the environment.
+If you want to contribute to `bensemble` or run tests, we recommend using **uv**.
 
 ```bash
 # 1. Clone the repository
@@ -130,25 +162,6 @@ source .venv/bin/activate  # on Windows: .venv\Scripts\activate
 # 3. Install in editable mode with dev dependencies
 uv pip install -e ".[dev]"
 ```
-
----
-
-##  Algorithms & Demos
-
-We have implemented four distinct approaches. Check out the interactive demos for each:
-
-| Method | Description | Demo |
-| :--- | :--- | :--- |
-| **Variational Inference** | Approximates posterior using Gaussian distributions using [*Local Reparameterization Trick*](https://arxiv.org/abs/1506.02557) | [Open Notebook](https://github.com/intsystems/bensemble/blob/master/notebooks/pvi_demo.ipynb) |
-| **Laplace Approximation** | Fits a Gaussian around the MAP estimate using Kronecker-Factored Curvature (K-FAC). | [Open Notebook](https://github.com/intsystems/bensemble/blob/master/notebooks/laplace_demo.ipynb) |
-| **Variational Rényi** | Generalization of VI minimizing $\alpha$-divergence (Rényi). | [Open Notebook](https://github.com/intsystems/bensemble/blob/master/notebooks/variatinal_renyi_demo.ipynb) |
-| **Probabilistic Backprop** | Propagates moments through the network using Assumed Density Filtering (ADF). | [Open Notebook](https://github.com/intsystems/bensemble/blob/master/notebooks/pbp_probabilistic_backpropagation_test.ipynb) |
-
----
-
-##  Development & Testing
-
-The library is covered by a comprehensive test suite to ensure reliability.
 
 ### Run Tests
 ```bash
@@ -164,20 +177,17 @@ ruff format .
 
 ---
 
-##  Authors
+## Authors
 
 Developed by:
-* [**Fedor Sobolevsky**](https://github.com/TeoSable)
-* [**Muhammadsharif Nabiev**](https://github.com/mikhmed-nabiev)
-* [**Dmitrii Vasilenko**](https://github.com/Dimundel)
-* [**Vadim Kasyuk**](https://github.com/KasiukVadim)
+
+- [**Dmitrii Vasilenko**](https://github.com/Dimundel)
+- [**Muhammadsharif Nabiev**](https://github.com/mikhmed-nabiev)
+- [**Fedor Sobolevsky**](https://github.com/TeoSable)
+- [**Vadim Kasyuk**](https://github.com/KasiukVadim)
 
 ---
 
-##  License
-
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-
-
