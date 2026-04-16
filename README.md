@@ -1,4 +1,5 @@
 # 🚧 Under Active Refactoring 🚧
+
 The library is currently undergoing a major rewrite to become more modular and PyTorch-native. The API is stabilizing!
 
 ---
@@ -55,7 +56,8 @@ uv pip install bensemble
 
 ## Quick Start
 
-### Example 1: Ensembling, Calibration & Uncertainty (The Easy Way)
+### Example 1: Ensembling, Calibration & Uncertainty
+
 Easily ensemble standard PyTorch models, calibrate them, and decompose their uncertainty to detect Out-Of-Distribution (OOD) data.
 
 ```python
@@ -88,7 +90,8 @@ print(f"Calibration Error (ECE): {ece:.4f}")
 print(f"Epistemic Uncertainty (OOD awareness): {epistemic.mean().item():.4f}")
 ```
 
-### Example 2: Variational Inference (The "Lego" Way)
+### Example 2: Variational Inference
+
 Build a Bayesian Neural Network from scratch using our custom layers with the Local Reparameterization Trick.
 
 ```python
@@ -146,6 +149,36 @@ We implement a wide range of state-of-the-art Bayesian and Ensembling approaches
 
 ---
 
+## Structure
+
+```text
+bensemble/
+├── core/                  # Base protocols, ensemble abstractions, and adapters
+│   ├── ensemble.py        # Central `Ensemble` class
+│   └── member.py          # Adapters for explicit and stochastic models
+│
+├── layers/                # Bayesian Layers for Variational Inference
+│   ├── linear.py          # Bayesian Linear layer
+│   └── conv.py            # Bayesian Convolution layer
+│
+├── search/                # Neural Ensemble Search algorithms
+│   ├── nes.py             # NES-RS & NES-RE
+│   └── bayesian.py        # NES via Bayesian Sampling
+│
+├── diversity/             # Methods to induce ensemble variation
+│   └── dropout.py         # Monte Carlo Dropout wrapper
+│
+├── uncertainty/           # Uncertainty analysis
+│   └── decomposition.py   # Separation of Aleatoric and Epistemic uncertainty
+│
+├── calibration/           # Post-hoc model calibration tools
+│   └── scaling.py         # Temperature Scaling and Vector Scaling
+│
+└── metrics.py             # Scoring rules: ECE, NLL, Brier Score
+```
+
+---
+
 ## Development Setup
 
 If you want to contribute to `bensemble` or run tests, we recommend using **uv**.
@@ -164,12 +197,15 @@ uv pip install -e ".[dev]"
 ```
 
 ### Run Tests
+
 ```bash
 pytest tests/
 ```
 
 ### Linting
+
 We use `ruff` to keep code clean:
+
 ```bash
 ruff check .
 ruff format .
