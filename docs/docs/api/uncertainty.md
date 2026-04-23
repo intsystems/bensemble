@@ -1,3 +1,3 @@
 # Uncertainty
 
-::: bensemble.uncertainty
+::: bensemble.uncertainty.decomposition
