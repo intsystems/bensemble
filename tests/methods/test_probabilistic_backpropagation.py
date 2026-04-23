@@ -90,7 +90,7 @@ def test_fit_loop(pbp_data, pbp_model_setup):
     assert pbp.is_fitted
     assert "train_rmse" in history
 
-    assert pbp.alpha_g.item() != alpha_old or pbp.beta_g.item() != beta_old
+    assert pbp.alpha_g.item() != alpha_old and pbp.beta_g.item() != beta_old
 
 
 def test_prior_refresh(pbp_data, pbp_model_setup):
@@ -166,3 +166,31 @@ def test_predict_not_fitted(pbp_model_setup):
     X = torch.randn(5, 1)
     with pytest.raises(RuntimeError, match="Model not fitted"):
         pbp.predict(X)
+
+
+def test_relu_moments_positive_mean():
+    """Strongly positive mean: ReLU mostly passes through."""
+    mean = torch.tensor([5.0], dtype=torch.float64)
+    var = torch.tensor([1.0], dtype=torch.float64)
+    m_out, v_out = relu_moments(mean, var)
+    assert m_out.item() > 4.0
+
+
+def test_relu_moments_large_negative_mean():
+    """Deeply negative mean: output is near zero."""
+    mean = torch.tensor([-100.0], dtype=torch.float64)
+    var = torch.tensor([1.0], dtype=torch.float64)
+    m_out, v_out = relu_moments(mean, var)
+    assert m_out.item() < 1e-6
+    assert v_out.item() >= 0
+
+
+def test_relu_moments_small_variance_stability():
+    """Near-zero variance should not produce NaN or Inf."""
+    mean = torch.tensor([0.0], dtype=torch.float64)
+    var = torch.tensor([1e-30], dtype=torch.float64)
+    m_out, v_out = relu_moments(mean, var)
+    assert not torch.isnan(m_out)
+    assert not torch.isinf(m_out)
+    assert not torch.isnan(v_out)
+    assert not torch.isinf(v_out)
