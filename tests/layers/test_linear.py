@@ -1,8 +1,6 @@
 import torch
-import torch.nn.functional as F
 
 from bensemble.layers import BayesianLinear
-from bensemble.layers.base import BaseBayesianLayer
 
 
 def test_linear_shape(input_data):

@@ -61,7 +61,10 @@ def test_random_searcher_defaults():
 
 def test_random_searcher_custom_criterion():
     """Custom criterion is stored on the searcher."""
-    custom = lambda m, v, d: 0.0
+
+    def custom(m, v, d):
+        return 0.0
+
     searcher = RandomSearcher(space=_ToySpace(), train_fn=_noop_train, criterion=custom)
     assert searcher.criterion is custom
 

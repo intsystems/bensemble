@@ -9,7 +9,10 @@ from bensemble.layers import BayesianLinear
 def test_ensemble_custom_combiner_used():
     """Custom combiner replaces the default mean."""
     models = [nn.Linear(4, 2) for _ in range(3)]
-    combiner = lambda preds: preds.max(dim=0).values
+
+    def combiner(preds):
+        return preds.max(dim=0).values
+
     ensemble = Ensemble(ExplicitMembers(models), combiner=combiner)
     default_ensemble = Ensemble.from_models(models)
     x = torch.randn(8, 4)
