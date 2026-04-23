@@ -15,9 +15,21 @@ nav:
     - Core: api/core.md
     - Methods: api/methods.md
     - Additional Classes: api/additional-classes.md
+    - Metrics: api/metrics.md
+    - Uncertainty: api/uncertainty.md
+    - Calibration: api/calibration.md
 
 extra_javascript: 
   - https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML
 
 markdown_extensions:
   - mdx_math
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [".."]
+          options:
+            docstring_style: google
