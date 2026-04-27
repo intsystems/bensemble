@@ -245,7 +245,7 @@ Qualitatively, this gives a knob that controls how aggressive or conservative th
 
 ## Seeing the methods in action
 
-The math above is intentionally light; the interesting part is how these methods actually behave on real data. The project notebooks are easiest way to see that.
+The math above is intentionally light; the interesting part is how these methods actually behave on real data. The project notebooks are the easiest way to see that.
 
 The first is [demos](https://github.com/intsystems/bensemble/tree/master/notebooks), which focuse on library's interface and its capabilities.
 
