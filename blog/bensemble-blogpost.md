@@ -14,19 +14,19 @@ This blog is a guided tour of **Bensemble** - the library developed to implement
 
 - [Introduction](#introduction)
 - [Library interface](#library-interface)
-	- [[#Ensemble class]]
-	- [[#Uncertainty decomposition]]
+	- [Ensemble class](#ensemble-class)
+	- [Uncertainty decomposition](#uncertainty-decomposition)
 	- [Metrics](#metrics)
 - [Methods](#methods)
-	- [[#Monte-Carlo Dropout]]
-	- [[#Probabilistic Backpropagation]]
-	- [[#Laplace approximation]]
-	- [[#Practical variational inference]]
-	- [[#Variational Rényi inference]]
-	- [[#Neural Ensemble Search]]
-	- [[#NES via Bayesian sampling]]
-- [[#Seeing the methods in action]]
-- [[#Conclusion]]
+	- [Monte-Carlo Dropout](#monte-carlo-dropout)
+	- [Probabilistic Backpropagation](#probabilistic-backpropagation)
+	- [Laplace approximation](#laplace-approximation)
+	- [Practical variational inference](#practical-variational-inference)
+	- [Variational Rényi inference](#variational-rényi-inference)
+	- [Neural Ensemble Search](#neural-ensemble-search)
+	- [NES via Bayesian sampling](#nes-via-bayesian-sampling)
+- [Seeing the methods in action](#seeing-the-methods-in-action)
+- [Conclusion](#conclusion)
 
 
 ---
