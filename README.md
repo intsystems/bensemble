@@ -1,9 +1,3 @@
-# 🚧 Under Active Refactoring 🚧
-
-The library is currently undergoing a major rewrite to become more modular and PyTorch-native. The API is stabilizing!
-
----
-
 # Bensemble: Modular Bayesian Deep Learning & Ensembling
 
 [![Python](https://img.shields.io/badge/python-3.10%20|%203.11%20|%203.12%20|%203.13-blue.svg)](https://www.python.org/)
@@ -134,7 +128,7 @@ print(f"Prediction: {mean[0].item():.2f} ± {std[0].item():.2f}")
 
 ## Algorithms & Demos
 
-We implement a wide range of state-of-the-art Bayesian and Ensembling approaches. Check out the interactive demos in the `notebooks/` directory:
+We implement a wide range of Bayesian and Ensembling approaches. Check out the interactive demos in the `notebooks/` directory:
 
 | Method | Description |
 | :--- | :--- |
