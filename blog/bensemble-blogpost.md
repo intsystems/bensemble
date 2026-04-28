@@ -13,7 +13,7 @@ This blog is a guided tour of **Bensemble** - the library developed to implement
 ## Contents
 
 - [Introduction](#introduction)
-- [[#Library interface]]
+- [Library interface](#library-interface)
 	- [[#Ensemble class]]
 	- [[#Uncertainty decomposition]]
 	- [Metrics](#metrics)
