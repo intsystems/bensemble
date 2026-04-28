@@ -67,7 +67,7 @@ plugins:
             merge_init_into_class: true
             filters:
               - "!^_"
-  - minify:             # pip install mkdocs-minify-plugin
+  - minify:
       minify_html: true
 
 markdown_extensions:
