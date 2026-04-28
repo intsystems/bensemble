@@ -1,12 +1,39 @@
 site_name: bensemble
 site_url: https://intsystems.github.io/bensemble/
+repo_url: https://github.com/intsystems/bensemble
+repo_name: intsystems/bensemble
+edit_uri: edit/main/docs/
 
 theme:
   name: material
   palette:
-    scheme: slate
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
   features:
     - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.tooltips
+    - navigation.footer
+    - search.highlight
+    - search.suggest
+    - content.code.copy
+    - content.code.annotate
+    - content.tooltips
+    - toc.follow
 
 nav:
   - Home: index.md
@@ -25,7 +52,8 @@ nav:
   - References: references.md
 
 plugins:
-  - search
+  - search:
+      lang: en
   - mkdocstrings:
       handlers:
         python:
@@ -33,6 +61,14 @@ plugins:
           options:
             docstring_style: google
             show_root_heading: true
+            show_source: true
+            show_signature_annotations: true
+            separate_signature: true
+            merge_init_into_class: true
+            filters:
+              - "!^_"
+  - minify:             # pip install mkdocs-minify-plugin
+      minify_html: true
 
 markdown_extensions:
   - pymdownx.arithmatex:
@@ -46,3 +82,9 @@ extra_javascript:
   - javascripts/mathjax.js
   - https://polyfill.io/v3/polyfill.min.js?features=es6
   - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+  - https://unpkg.com/mermaid@10/dist/mermaid.min.js
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/intsystems/bensemble
