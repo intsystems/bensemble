@@ -11,7 +11,16 @@ from ..core.base import BaseBayesianEnsemble
 
 class LaplaceApproximation(BaseBayesianEnsemble):
     """
-    A scalable Laplace approximation for neural networks based on Kronecker-factored curvature.
+    Kronecker-factored Laplace approximation for neural networks.
+
+    Backwards-compatible with the old API:
+        fit(...)
+        compute_posterior(...)
+        sample_models(n_models=...)
+        predict(...)
+
+    Also compatible with posterior-source style APIs:
+        sample_models(n_members=...)
     """
 
     def __init__(
@@ -20,67 +29,81 @@ class LaplaceApproximation(BaseBayesianEnsemble):
         pretrained: bool = True,
         likelihood: str = "classification",
         verbose: bool = False,
+        damping: float = 1e-6,
+        regularization: str = "legacy",
     ):
+        super().__init__(model)
+
+        if likelihood not in ["classification", "regression"]:
+            raise ValueError(f"Unsupported likelihood: {likelihood}")
+        if regularization not in ["legacy", "paper"]:
+            raise ValueError(f"Unsupported regularization: {regularization}")
+
         self.model = model
         self.is_fitted = False
         self.device = next(model.parameters()).device
-        if likelihood in ["classification", "regression"]:
-            self.likelihood = likelihood
-        else:
-            raise ValueError(f"Unsupported likelihood: {likelihood}")
 
+        self.likelihood = likelihood
         self.pretrained = pretrained
-
-        # Storage for Kronecker factors
-        self.kronecker_factors = {}
-        self.sampling_factors = {}
-        self.dataset_size = 1
-
-        # Hook handles
-        self.hook_handles = []
-
         self.verbose = verbose
+        self.damping = damping
+        self.regularization = regularization
+
+        self.kronecker_factors: Dict[str, Dict[str, torch.Tensor]] = {}
+        self.sampling_factors: Dict[str, Dict[str, Any]] = {}
+        self.dataset_size = 1
+        self.prior_precision = 1.0
+
+        self.hook_handles = []
+        self.activations: Dict[str, torch.Tensor] = {}
+        self.pre_activation_hessians: Dict[str, torch.Tensor] = {}
 
     def toggle_verbose(self):
-        """
-        Turn verbose on or off.
-        """
         self.verbose = not self.verbose
         print("Verbose:", "on" if self.verbose else "off")
 
     def fit(
         self,
-        train_loader: torch.utils.data.DataLoader,
-        val_loader: Optional[torch.utils.data.DataLoader] = None,
+        train_loader: DataLoader,
+        val_loader: Optional[DataLoader] = None,
         num_epochs: int = 100,
         lr: float = 1e-3,
         prior_precision: float = 1.0,
         num_samples: int = 1000,
     ) -> Dict[str, List[float]]:
-        history = {}
+        history: Dict[str, List[float]] = {}
 
         if not self.pretrained:
             if self.verbose:
                 print("Training model...")
-            # First train model for MAP estimation
+
             optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
             history["train_loss"] = []
 
             for epoch in range(num_epochs):
                 self.model.train()
                 train_loss = 0.0
-                for batch_X, batch_y in train_loader:
-                    optimizer.zero_grad()
-                    output = self.model(batch_X)
+
+                for batch_x, batch_y in train_loader:
+                    batch_x = batch_x.to(self.device)
+                    batch_y = batch_y.to(self.device)
+
+                    optimizer.zero_grad(set_to_none=True)
+                    output = self.model(batch_x)
+
                     if self.likelihood == "classification":
-                        loss = F.cross_entropy(output, batch_y)
+                        loss = F.cross_entropy(output, batch_y.long())
                     else:
+                        batch_y = batch_y.to(output.dtype)
+                        if batch_y.shape != output.shape:
+                            batch_y = batch_y.view_as(output)
                         loss = F.mse_loss(output, batch_y)
+
                     loss.backward()
                     optimizer.step()
                     train_loss += loss.item()
 
-                total_loss = train_loss / len(train_loader)
+                total_loss = train_loss / max(1, len(train_loader))
                 history["train_loss"].append(total_loss)
 
                 if self.verbose:
@@ -89,185 +112,124 @@ class LaplaceApproximation(BaseBayesianEnsemble):
             self.pretrained = True
 
         self.compute_posterior(train_loader, prior_precision, num_samples)
-
         return history
 
     def compute_posterior(
         self,
         train_loader: DataLoader,
-        prior_precision: float = 0.0,
+        prior_precision: float = 1.0,
         num_samples: int = 1000,
     ) -> None:
-        """
-        Compute the Kronecker-factored Laplace approximation.
-        """
-        self.prior_precision = prior_precision
+        self.prior_precision = float(prior_precision)
         self.dataset_size = len(train_loader.dataset)
 
         if self.verbose:
             print("Registering hooks...")
+
         self._register_hooks()
 
-        if self.verbose:
-            print("Estimating Kronecker factors...")
-        self._estimate_kronecker_factors(train_loader, num_samples)
+        try:
+            if self.verbose:
+                print("Estimating Kronecker factors...")
+
+            self._estimate_kronecker_factors(train_loader, num_samples)
+        finally:
+            if self.verbose:
+                print("Removing hooks...")
+            self._remove_hooks()
+
+        self.is_fitted = True
 
         if self.verbose:
-            print("Removing hooks...")
-        self._remove_hooks()
-
-        print("Posterior computation completed!")
+            print("Posterior computation completed!")
 
     def _register_hooks(self) -> None:
-        """
-        Register forward hooks to capture activations and pre-activation Hessians.
-        
-        Hooks are registered on all linear layers to store input activations
-        for computing the Q factor (covariance of input activations) in the
-        Kronecker factorization.
-        """
+        self._remove_hooks()
         self.activations = {}
         self.pre_activation_hessians = {}
 
         def make_forward_hook(layer_name):
-            def forward_hook(module, input, output):
-                if isinstance(input, tuple):
-                    input = input[0]
-                # Store input activations for Q factor
-                self.activations[layer_name] = input.detach().clone()
-
+            def forward_hook(module, inputs, output):
+                x = inputs[0] if isinstance(inputs, tuple) else inputs
+                if x.dim() > 2:
+                    x = x.flatten(start_dim=1)
+                self.activations[layer_name] = x.detach()
             return forward_hook
 
-        # Register hooks for linear layers
         for name, module in self.model.named_modules():
             if isinstance(module, nn.Linear):
-                forward_handle = module.register_forward_hook(make_forward_hook(name))
-                self.hook_handles.append(forward_handle)
+                handle = module.register_forward_hook(make_forward_hook(name))
+                self.hook_handles.append(handle)
 
     def _remove_hooks(self) -> None:
-        """
-        Remove all registered hooks.
-        
-        Clears the hook handles list to ensure no hooks remain attached
-        after curvature estimation is complete.
-        """
         for handle in self.hook_handles:
             handle.remove()
         self.hook_handles.clear()
 
-    def _compute_pre_activation_hessian(self, output, target):
-        """
-        Compute the Hessian with respect to the final layer pre-activations.
-        
-        This depends on the likelihood function:
-        - For classification: Hessian = diag(p) - pp^T where p is softmax probability
-        - For regression: Hessian = identity matrix
-        
-        Args:
-            output: Model predictions (batch_size, output_dim)
-            target: Ground truth labels/targets
-            
-        Returns:
-            Pre-activation Hessian tensor of shape (batch_size, output_dim, output_dim) 
-            for classification or (batch_size, output_dim, output_dim) for regression
-        """
+    def _compute_pre_activation_hessian(
+        self,
+        output: torch.Tensor,
+        target: torch.Tensor,
+    ) -> torch.Tensor:
         batch_size = output.shape[0]
 
         if self.likelihood == "classification":
-            # For cross-entropy loss with softmax, the Hessian is:
-            # H = diag(p) - pp^T, where p is the softmax probabilities
             probs = F.softmax(output, dim=1)
-            eye = torch.eye(probs.size(1), device=self.device).unsqueeze(0)  # (1, C, C)
-            probs_outer = torch.einsum("bi,bj->bij", probs, probs)  # (B, C, C)
-            hessian = (
-                probs_outer - eye
-            )  # This is actually -H, but we'll account for sign later
-            return -hessian  # Return the negative Hessian of NLL
+            diag_p = torch.diag_embed(probs)
+            probs_outer = torch.einsum("bi,bj->bij", probs, probs)
+            return diag_p - probs_outer
 
-        else:  # self.likelihood == 'regression':
-            # For MSE loss, the Hessian is identity
-            output_dim = output.shape[1]
-            hessian = (
-                torch.eye(output_dim, device=self.device)
-                .unsqueeze(0)
-                .repeat(batch_size, 1, 1)
-            )
-            return hessian
+        output_dim = output.shape[1]
+        return (
+            torch.eye(output_dim, device=output.device, dtype=output.dtype)
+            .unsqueeze(0)
+            .repeat(batch_size, 1, 1)
+        )
 
-    def _backward_hessian(self, hessian_final):
-        """
-        Recursively backpropagate the pre-activation Hessian through all layers.
-        
-        Uses weights of the NEXT layer to compute Hessian for the CURRENT layer
-        according to the recursive formula: H_λ = W_{λ+1}^T @ H_{λ+1} @ W_{λ+1} + D_λ
-        
-        For piecewise linear activations (ReLU), D_λ ≈ 0.
-        
-        Args:
-            hessian_final: Hessian for the final layer
-            
-        Returns:
-            Dictionary mapping layer names to their computed Hessian matrices
-        """
-        hessians = {}
+    def _backward_hessian(
+        self,
+        hessian_final: torch.Tensor,
+    ) -> Dict[str, torch.Tensor]:
+        hessians: Dict[str, torch.Tensor] = {}
 
-        # Get all linear layers in forward order
-        linear_layers = []
-        for name, module in self.model.named_modules():
-            if isinstance(module, nn.Linear):
-                linear_layers.append((name, module))
+        linear_layers = [
+            (name, module)
+            for name, module in self.model.named_modules()
+            if isinstance(module, nn.Linear)
+        ]
 
-        # Initialize with the final layer Hessian
-        if hessian_final.dim() == 3:
-            current_hessian = hessian_final.mean(0)  # Average over batch
-        else:
-            current_hessian = hessian_final
+        if len(linear_layers) == 0:
+            return hessians
 
-        final_layer_name, final_layer = linear_layers[-1]
+        current_hessian = (
+            hessian_final.mean(0)
+            if hessian_final.dim() == 3
+            else hessian_final
+        )
+
+        final_layer_name, _ = linear_layers[-1]
         hessians[final_layer_name] = current_hessian
 
-        # Backpropagate through layers in REVERSE order (from output to input)
-        for i in range(
-            len(linear_layers) - 2, -1, -1
-        ):  # Start from second-to-last layer
-            current_layer_name, current_layer = linear_layers[i]
-            next_layer_name, next_layer = linear_layers[i + 1]
+        for i in range(len(linear_layers) - 2, -1, -1):
+            current_layer_name, _ = linear_layers[i]
+            _, next_layer = linear_layers[i + 1]
 
-            # The recursive formula: H_λ = W_{λ+1}^T @ H_{λ+1} @ W_{λ+1} + D_λ
-            # For piecewise linear activations (ReLU), D_λ ≈ 0
-            W_next = next_layer.weight  # Shape: (out_dim_{λ+1}, in_dim_{λ+1})
+            w_next = next_layer.weight.detach()
+            current_hessian = w_next.T @ current_hessian @ w_next
+            current_hessian = self._symmetrize(current_hessian)
 
-            # H_current = W_next^T @ H_next @ W_next
-            H_current = W_next.T @ current_hessian @ W_next
-
-            # Store the Hessian for this layer
-            hessians[current_layer_name] = H_current
-
-            # Update for next iteration
-            current_hessian = H_current
+            hessians[current_layer_name] = current_hessian
 
         return hessians
 
     def _estimate_kronecker_factors(
-        self, train_loader: DataLoader, num_samples: int
+        self,
+        train_loader: DataLoader,
+        num_samples: int,
     ) -> None:
-        """
-        Estimate Kronecker factors using proper Hessian computation.
-        
-        Processes training data to compute:
-        1. Q factors: covariance of input activations
-        2. H factors: pre-activation Hessians
-        
-        These are then regularized with prior precision and scaled by dataset size
-        to form the posterior precision matrices in Kronecker-factored form.
-        
-        Args:
-            train_loader: DataLoader providing training data
-            num_samples: Maximum number of samples to use for estimation
-        """
-        self.model.eval()  # We want deterministic behavior for curvature estimation
+        self.model.eval()
 
-        accumulators = {}
+        accumulators: Dict[str, Dict[str, Any]] = {}
         sample_count = 0
 
         if self.verbose:
@@ -277,239 +239,207 @@ class LaplaceApproximation(BaseBayesianEnsemble):
             if sample_count >= num_samples:
                 break
 
-            data, target = data.to(self.device), target.to(self.device)
+            data = data.to(self.device)
+            target = target.to(self.device)
+
+            remaining = num_samples - sample_count
+            if data.shape[0] > remaining:
+                data = data[:remaining]
+                target = target[:remaining]
+
             batch_size = data.shape[0]
 
-            # Forward pass
-            output = self.model(data)
-
-            # Compute pre-activation Hessian for the final layer
-            H_final = self._compute_pre_activation_hessian(output, target)
-
-            # Backpropagate Hessian through all layers
-            layer_hessians = self._backward_hessian(H_final)
-
-            # Process each layer
             with torch.no_grad():
+                output = self.model(data)
+                h_final = self._compute_pre_activation_hessian(output, target)
+                layer_hessians = self._backward_hessian(h_final)
+
                 for name, module in self.model.named_modules():
                     if (
                         isinstance(module, nn.Linear)
                         and name in self.activations
                         and name in layer_hessians
                     ):
-                        a = self.activations[name]  # input activations (B, in_dim)
-                        H = layer_hessians[
-                            name
-                        ]  # pre-activation Hessian (out_dim, out_dim)
+                        a = self.activations[name]
+                        h = layer_hessians[name]
 
                         if name not in accumulators:
                             in_dim = a.shape[1]
-                            out_dim = H.shape[0] if H.dim() == 2 else H.shape[1]
+                            out_dim = h.shape[0]
 
                             accumulators[name] = {
                                 "Q_sum": torch.zeros(
-                                    in_dim, in_dim, device=self.device
+                                    in_dim,
+                                    in_dim,
+                                    device=self.device,
+                                    dtype=a.dtype,
                                 ),
                                 "H_sum": torch.zeros(
-                                    out_dim, out_dim, device=self.device
+                                    out_dim,
+                                    out_dim,
+                                    device=self.device,
+                                    dtype=h.dtype,
                                 ),
                                 "count": 0,
                                 "in_dim": in_dim,
                                 "out_dim": out_dim,
                             }
 
-                        # Compute Q factor: covariance of input activations
-                        batch_Q = torch.einsum("bi,bj->ij", a, a) / batch_size
+                        batch_q = torch.einsum("bi,bj->ij", a, a) / batch_size
+                        batch_h = h.mean(0) if h.dim() == 3 else h
 
-                        # H factor is already computed from backpropagation
-                        # Average if we have multiple samples
-                        if H.dim() == 3:  # batch of Hessians
-                            batch_H = H.mean(0)
-                        else:
-                            batch_H = H
-
-                        accumulators[name]["Q_sum"] += batch_Q * batch_size
-                        accumulators[name]["H_sum"] += batch_H * batch_size
+                        accumulators[name]["Q_sum"] += batch_q * batch_size
+                        accumulators[name]["H_sum"] += batch_h * batch_size
                         accumulators[name]["count"] += batch_size
 
-                sample_count += batch_size
-                if sample_count % 1000 == 0 and self.verbose:
-                    print(f"Processed {sample_count} samples...")
+            sample_count += batch_size
 
-        # Compute final factors with proper regularization
+            if sample_count % 1000 == 0 and self.verbose:
+                print(f"Processed {sample_count} samples...")
+
         if self.verbose:
             print("Computing final Kronecker factors...")
+
         with torch.no_grad():
+            self.kronecker_factors.clear()
+            self.sampling_factors.clear()
+
             for name, acc in accumulators.items():
                 if acc["count"] == 0:
                     continue
 
-                # Expected Kronecker factors (Equation 7 in the paper)
-                Q = acc["Q_sum"] / acc["count"]  # E[Q_λ]
-                H = acc["H_sum"] / acc["count"]  # E[H_λ]
+                q = acc["Q_sum"] / acc["count"]
+                h = acc["H_sum"] / acc["count"]
 
-                # Add prior precision and scale by dataset size (Equation 9)
-                N = self.dataset_size
-                tau = self.prior_precision
+                q = self._symmetrize(q)
+                h = self._symmetrize(h)
 
-                # Posterior precision in the Kronecker-factored form:
-                # tau * I + N * (Q ⊗ H) -> factors become (N * Q + tau * I) and (N * H + tau * I)
-                Q_reg = N * Q + tau * torch.eye(acc["in_dim"], device=self.device)
-                H_reg = N * H + tau * torch.eye(acc["out_dim"], device=self.device)
+                n = float(self.dataset_size)
+                tau = float(self.prior_precision)
 
-                # Store the precision matrices for sampling
+                eye_q = torch.eye(acc["in_dim"], device=self.device, dtype=q.dtype)
+                eye_h = torch.eye(acc["out_dim"], device=self.device, dtype=h.dtype)
+
+                if self.regularization == "legacy":
+                    q_reg = n * q + tau * eye_q
+                    h_reg = n * h + tau * eye_h
+                else:
+                    q_reg = (n ** 0.5) * q + (tau ** 0.5) * eye_q
+                    h_reg = (n ** 0.5) * h + (tau ** 0.5) * eye_h
+
+                q_reg = self._stabilize_spd(q_reg)
+                h_reg = self._stabilize_spd(h_reg)
+
                 self.kronecker_factors[name] = {
-                    "Q": Q_reg,  # Precision for rows
-                    "H": H_reg,  # Precision for columns
+                    "Q": q_reg.detach().clone(),
+                    "H": h_reg.detach().clone(),
                 }
 
                 if self.verbose:
-                    print(
-                        f"Layer {name}:\nQ shape {Q_reg.shape}, H shape {H_reg.shape}"
-                    )
-                    Q_norm = torch.norm(Q_reg).item()
-                    H_norm = torch.norm(H_reg).item()
-                    print(f"  Q norm: {Q_norm:.6f}, H norm: {H_norm:.6f}")
-                    cond_Q = torch.linalg.cond(Q_reg)
-                    cond_H = torch.linalg.cond(H_reg)
-                    print(f"cond(Q)={cond_Q:.2e}, cond(H)={cond_H:.2e}")
+                    print(f"Layer {name}:")
+                    print(f"  Q shape: {q_reg.shape}, H shape: {h_reg.shape}")
+                    print(f"  Q norm: {torch.norm(q_reg).item():.6f}")
+                    print(f"  H norm: {torch.norm(h_reg).item():.6f}")
+                    print(f"  cond(Q): {torch.linalg.cond(q_reg).item():.2e}")
+                    print(f"  cond(H): {torch.linalg.cond(h_reg).item():.2e}")
 
-                # Convert to covariance matrices for sampling
-                U = torch.linalg.inv(Q_reg)  # Row covariance
-                V = torch.linalg.inv(H_reg)  # Column covariance
+                q_cov = torch.linalg.inv(q_reg)
+                h_cov = torch.linalg.inv(h_reg)
 
-                # Matrix sqrt for sampling
-                L_U = self._matrix_sqrt(U)
-                L_V = self._matrix_sqrt(V)
+                l_q = self._matrix_sqrt(q_cov)
+                l_h = self._matrix_sqrt(h_cov)
 
                 self.sampling_factors[name] = {
-                    "L_U": L_U,
-                    "L_V": L_V,
+                    "L_U": l_q,
+                    "L_V": l_h,
                     "weight_shape": (acc["out_dim"], acc["in_dim"]),
                 }
 
-    def _matrix_sqrt(self, A: torch.Tensor) -> torch.Tensor:
-        """
-        Compute matrix square root using eigen decomposition.
-        
-        For a symmetric positive definite matrix A, computes L such that L @ L.T = A.
-        
-        Args:
-            A: Symmetric positive definite matrix
-            
-        Returns:
-            Matrix square root L where L @ L.T = A
-        """
-        # Eigen decomposition for symmetric matrices
-        L, V = torch.linalg.eigh(A)
-        return V @ torch.diag(torch.sqrt(L)) @ V.T
+    def _matrix_sqrt(self, matrix: torch.Tensor) -> torch.Tensor:
+        matrix = self._stabilize_spd(self._symmetrize(matrix))
+        eigvals, eigvecs = torch.linalg.eigh(matrix)
+        eigvals = eigvals.clamp_min(self.damping)
+        return eigvecs @ torch.diag(torch.sqrt(eigvals)) @ eigvecs.T
 
     def sample_models(
-        self, n_models: int = 10, temperature: float = 1.0
+        self,
+        n_models: int = 10,
+        temperature: float = 1.0,
+        n_members: Optional[int] = None,
     ) -> List[nn.Module]:
-        """
-        Sample weight matrices from the matrix normal posterior.
-        
-        Samples models from the approximate posterior distribution using the
-        Kronecker-factored covariance structure. Each sample is generated as:
-        W_sample = M + temperature * L_V @ Z @ L_U.T
-        where M is the MAP estimate, L_U and L_V are matrix square roots of
-        the Kronecker factors, and Z is standard normal noise.
-        
-        Args:
-            n_models: Number of model samples to generate
-            temperature: Scaling factor for the noise (higher = more exploration)
-            
-        Returns:
-            List of sampled neural network models with different weight configurations
-        """
-        samples = []
+        if n_members is not None:
+            n_models = n_members
 
-        for i in range(n_models):
-            weight_sample = {}
+        if not self.is_fitted:
+            raise RuntimeError("LaplaceApproximation must be fitted before sampling.")
+
+        samples = []
+        modules = dict(self.model.named_modules())
+
+        for _ in range(n_models):
+            sampled_state = copy.deepcopy(self.model.state_dict())
 
             for name, factors in self.sampling_factors.items():
-                module = dict(self.model.named_modules())[name]
-                M = module.weight.data  # MAP estimate
+                module = modules[name]
 
-                L_V = factors["L_V"]  # Row precision (in_dim, in_dim)
-                L_U = factors["L_U"]  # Column precision (out_dim, out_dim)
+                mean_weight = module.weight.detach()
+                l_q = factors["L_U"].to(device=self.device, dtype=mean_weight.dtype)
+                l_h = factors["L_V"].to(device=self.device, dtype=mean_weight.dtype)
+
                 weight_shape = factors["weight_shape"]
+                z = torch.randn(weight_shape, device=self.device, dtype=mean_weight.dtype)
 
-                # Generate single sample for this layer
-                Z = torch.randn(weight_shape, device=self.device)
-                W_sample = M + temperature * L_V @ Z @ L_U.T
+                sampled_weight = mean_weight + temperature * (l_h @ z @ l_q.T)
+                sampled_state[f"{name}.weight"] = sampled_weight.detach().cpu()
 
-                # Store in the model sample dictionary
-                weight_sample[f"{name}.weight"] = W_sample.cpu()
-
-            # Also include bias terms if they exist
-            for name, module in self.model.named_modules():
-                if isinstance(module, nn.Linear) and module.bias is not None:
-                    # For bias, we can use a simple diagonal approximation
-                    # or sample from the appropriate marginal distribution
-                    if name in self.kronecker_factors:
-                        # The bias is typically part of the same layer's distribution
-                        # but for simplicity, we'll use the MAP estimate for bias
-                        weight_sample[f"{name}.bias"] = module.bias.data.clone()
+                if module.bias is not None:
+                    sampled_state[f"{name}.bias"] = module.bias.detach().cpu()
 
             model_sample = copy.deepcopy(self.model)
-            model_sample.load_state_dict(weight_sample)
-
+            model_sample.load_state_dict(sampled_state, strict=True)
+            model_sample.to(self.device)
+            model_sample.eval()
             samples.append(model_sample)
 
         return samples
 
     def predict(
-        self, X: torch.Tensor, n_samples: int = 100, temperature: float = 1.0
+        self,
+        X: torch.Tensor,
+        n_samples: int = 100,
+        temperature: float = 1.0,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
-        Compute predictive distribution using Monte Carlo sampling.
-        
-        For classification: returns mean class probabilities and predictive entropy
-        For regression: returns mean prediction and predictive variance
-        
-        Args:
-            X: Input tensor of shape (batch_size, input_features)
-            n_samples: Number of Monte Carlo samples to draw
-            temperature: Temperature scaling for posterior sampling
-            
-        Returns:
-            Tuple of (predictive mean, predictive uncertainty):
-            - For classification: (mean_probs, uncertainty)
-            - For regression: (mean, variance)
-        """
+        X = X.to(self.device)
         predictions = []
 
-        for _ in range(n_samples):
-            sampled_model = self.sample_models(n_models=1, temperature=temperature)[0]
-            sampled_model.to(self.device)
-
+        for sampled_model in self.sample_models(
+            n_models=n_samples,
+            temperature=temperature,
+        ):
+            sampled_model.eval()
             with torch.no_grad():
-                output = sampled_model(X)
-                predictions.append(output)
+                predictions.append(sampled_model(X))
 
-            sampled_model.cpu()
-
-        predictions = torch.stack(predictions)
+        predictions = torch.stack(predictions, dim=0)
 
         if self.likelihood == "classification":
             probs = F.softmax(predictions, dim=-1)
             mean_probs = probs.mean(dim=0)
-            uncertainty = -(mean_probs * torch.log(mean_probs + 1e-8)).sum(dim=-1)
+            uncertainty = -(
+                mean_probs * torch.log(mean_probs.clamp_min(1e-8))
+            ).sum(dim=-1)
             return mean_probs, uncertainty
-        else:
-            mean = predictions.mean(dim=0)
-            variance = predictions.var(dim=0)
-            return mean, variance
+
+        mean = predictions.mean(dim=0)
+        variance = predictions.var(dim=0, unbiased=False)
+        return mean, variance
+
+    def build_ensemble(self, n_members: int = 10, **kwargs):
+        from ..core.ensemble import Ensemble
+
+        return Ensemble.from_posterior(self, n_members=n_members, **kwargs)
 
     def _get_ensemble_state(self) -> Dict[str, Any]:
-        """
-        Get internal ensemble state for serialization.
-        
-        Returns:
-            Dictionary containing all internal state needed to restore the ensemble
-        """
         return {
             "model": self.model,
             "is_fitted": self.is_fitted,
@@ -519,24 +449,17 @@ class LaplaceApproximation(BaseBayesianEnsemble):
             "kronecker_factors": self.kronecker_factors,
             "sampling_factors": self.sampling_factors,
             "dataset_size": self.dataset_size,
-            "hook_handles": self.hook_handles,
+            "prior_precision": self.prior_precision,
+            "damping": self.damping,
+            "regularization": self.regularization,
             "verbose": self.verbose,
         }
 
     def _set_ensemble_state(self, state: Dict[str, Any]):
-        """
-        Set internal ensemble state from serialized dictionary.
-        
-        Args:
-            state: Dictionary containing ensemble state
-            
-        Raises:
-            ValueError: If the saved likelihood is not supported
-        """
         if state["likelihood"] in ["classification", "regression"]:
             self.likelihood = state["likelihood"]
         else:
-            raise ValueError(f"Unsupported likelihood: {state['']}")
+            raise ValueError(f"Unsupported likelihood: {state['likelihood']}")
 
         self.model = state["model"]
         self.is_fitted = state["is_fitted"]
@@ -545,5 +468,16 @@ class LaplaceApproximation(BaseBayesianEnsemble):
         self.kronecker_factors = state["kronecker_factors"]
         self.sampling_factors = state["sampling_factors"]
         self.dataset_size = state["dataset_size"]
-        self.hook_handles = state["hook_handles"]
-        self.verbose = state["verbose"]
+        self.prior_precision = state.get("prior_precision", 1.0)
+        self.damping = state.get("damping", 1e-6)
+        self.regularization = state.get("regularization", "legacy")
+        self.verbose = state.get("verbose", False)
+        self.hook_handles = []
+
+    def _stabilize_spd(self, matrix: torch.Tensor) -> torch.Tensor:
+        eye = torch.eye(matrix.shape[0], device=matrix.device, dtype=matrix.dtype)
+        return self._symmetrize(matrix) + self.damping * eye
+
+    @staticmethod
+    def _symmetrize(matrix: torch.Tensor) -> torch.Tensor:
+        return 0.5 * (matrix + matrix.T)
