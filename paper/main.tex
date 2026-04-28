@@ -112,6 +112,8 @@
             % state={},
             country={Russia}}
 
+\author[1]{Dmitrii Vasilenko}%[]
+
 \author[1]{Mukhammadsharif Nabiev}%[]
 
 % % Footnote of the second author
@@ -126,9 +128,9 @@
 % % Credit authorship
 % \credit{}
 
-\author[1]{Dmitry Vasilenko}%[]
 
 \author[1]{Vadim Kasyuk}%[]
+
 
 % Corresponding author text
 % \cortext[1]{Corresponding author}
@@ -141,7 +143,7 @@
 
 % Here goes the abstract
 \begin{abstract}
-    In this technical report, we introduce Bensemble, a Python library designed for approximating the posterior distribution of neural network weights to facilitate Bayesian ensembling. Standard deep learning models often yield overconfident predictions, since they typically don't take into account the uncertainty which comes with model training. Our library addresses this by providing a unified, PyTorch-compatible interface for a variety of Bayesian ensembling methods, including variational inference, probabilistic backpropagation, Laplace approximation, neural ensemble search and others. Bensemble operates on the principle that stochastic weight distributions act as generators for diverse model ensembles. It decouples the inference phase (learning an approximation of the posterior) from the prediction phase (sampling deterministic members for Bayesian Model Averaging). We provide a detailed description of Bensemble's interface and implemented methods. We also demonstrate the library's capabilities on benchmarks focusing on calibration and adversarial robustness.
+    In this technical report, we introduce Bensemble, a Python library designed for approximating the posterior distribution of neural network weights to facilitate Bayesian ensembling. Standard deep learning models often yield overconfident predictions, since they typically don't take into account the uncertainty which comes with model training. Our library addresses this by providing a unified, PyTorch- and Lightning-compatible interface for a variety of Bayesian ensembling methods, including variational inference, probabilistic backpropagation, Laplace approximation, neural ensemble search and others. Bensemble operates on the principle that stochastic weight distributions act as generators for diverse model ensembles. It decouples the inference phase (learning an approximation of the posterior) from the prediction phase (sampling deterministic members for Bayesian model averaging). We provide a detailed description of Bensemble's interface and implemented methods. We also demonstrate the library's capabilities on benchmarks focusing on calibration and adversarial robustness.
 \end{abstract}
 
 % Use if graphical abstract is present
@@ -169,92 +171,114 @@ Bayesian ensembling \sep uncertainty \sep PyTorch \sep Python
 
 
 \section{Introduction}
-Standard neural networks typically optimize a point estimate of weights, which fails to capture epistemic uncertainty. Bayesian ensembling methods offer a principled alternative by placing a probability distribution over model weights. Formally, given a dataset \(\mathcal{D}=\{(x_i,y_i)\}_{i=1}^N\), we seek the posterior distribution \(p(w\mid\mathcal{D}) \propto p(\mathcal{D}\mid w)p(w)\).
+Standard neural networks typically optimize a point estimate of their weights, which fails to capture epistemic uncertainty. Bayesian ensembling methods offer an alternative approach by approximating a probability distribution over model weights. This enables uncertainty estimation by averaging model predictions over the weight posterior. While exact inference is intractable, approximate methods allow us to learn a surrogate distribution over model weights. This approximated posterior can be treated as a source from which we sample an ensemble of deterministic models. Prediction and uncertainty estimation can then be done by aggregating predictions across this ensemble.  
 
-While exact inference is intractable, approximate methods allow us to learn a surrogate distribution \(q_\theta(w)\). The core philosophy of Bensemble is to treat this approximated posterior as a source from which we sample an ensemble of deterministic models \(\{f_{w_k}\}_{k=1}^K\).
-
-We propose Bensemble to standardize the workflow of probabilistic deep learning.
+Currently, there exists a wide variety of methods implementing different solutions to the problem of weight posterior approximation. These methods use different techniques and training/post-training procedure, and so far their implementations have been scattered across multiple interfaces and libraries. To solve this issue, we propose Bensemble, a library that implements a wide variety of Bayesian ensembling methods and standardizes the workflow of probabilistic deep learning.
 
 Our work makes the following main contributions:
-\begin{itemize}
-    \item \textbf{Proposed Solution:} A unified API that abstracts the complexity of variational, ADF-based, and Laplace approximations, allowing users to convert standard PyTorch models into Bayesian ensembles.
-    \item \textbf{Differentiation:} Bensemble implements four distinct approximation families within a shared ``fit-sample-predict'' interface. We explicitly distinguish between methods using Local Reparameterization (VI) and those using Weight Perturbation (VR), as well as online ADF methods (PBP).
-    \item \textbf{Assurance:} The library ensures reproducible uncertainty estimation by decomposing predictive variance into aleatoric and epistemic components and provides sensible defaults for hyperparameters derived from extensive testing.
-\end{itemize}
+\begin{enumerate}
+    \item We introduce Bensemble, a Python library with a unified API that abstracts the complexity of seven different Bayesian ensembling methods and their variations, allowing for standardized usage and convenient method comparison.
+    \item We provide a variety of helper methods in Bensemble useful for probabilistic deep learning and model ensembling, as well as PyTorch and Lightning compatibility.
+    \item We conduct extensive testing of all of Bensemble's methods to ensure quality implementations and provide sensible defaults for hyperparameters derived from testing.
+\end{enumerate}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{img/example.png}
+    \caption{An example of regression with uncertainty using VI}
+    \label{fig:example}
+\end{figure}
 
 \section{Methodology}
 
 \subsection{Problem Statement}
+Bensemble's core objective is weight posterior approximation for neural networks. Formally, given a dataset \(\mathcal{D}=\{(x_i,y_i)\}_{i=1}^N\) and a neural network with weights $w$, we seek the posterior distribution 
+$$
+p(w\mid\mathcal{D}) \propto p(\mathcal{D}\mid w)p(w).
+$$
+Since the exact posterior is intractable in the case of most neural networks, we apply a variety of different methods to approximate the true posterior with a parametric distribution $q_\theta(w)$. From this distribution, we can sample various sets of model weights to produce an ensemble of models $f_{w_i}$. Predictions are then made by averaging predictions of each member model from the ensemble:
+$$
+\hat{y} = \sum\limits_{i=1}^K f_{w_i}(x).
+$$
+Uncertainty of predictions can be then defined as the standard deviation of member predictions (see figure~\ref{fig:example}).
 
-\subsection{Monte-Carlo Dropout (MCD)}
+\subsection{Implemented methods}
+We will now briefly describe the methods implemented as part of Bensemble.
 
-\subsection{Variational Inference (VI)}
-We adopt the practical variational inference framework proposed by \cite{graves2011practical}, approximating the posterior with a diagonal Gaussian \(q_\theta(w)\). The objective is to minimize the variational free energy, often interpreted as a Minimum Description Length (MDL) cost:
-\begin{equation}
-    \mathcal{L}(\theta) = \underbrace{\mathbb{E}_{q_\theta(w)}[\mathcal{L}_{\mathcal{D}}(w)]}_{\text{Error Cost}} + \underbrace{\mathrm{KL}(q_\theta(w) \| p(w))}_{\text{Complexity Cost}},
-\end{equation}
+Following \cite{gal2016dropout}, we implement \textbf{Monte-Carlo dropout (MCD)} as a Bayesian ensembling method. For a neural network trained with dropout, this method works by leaving dropout on at the inference stage. This way, we get an ensemble of models, each with random weight subsamples from the original model.
+
+We adopt the \textbf{practical variational inference (PVI)} framework proposed by \cite{graves2011practical}, approximating the posterior with a diagonal Gaussian \(q_\theta(w)\). The objective is to minimize the variational free energy, often interpreted as a Minimum Description Length (MDL) cost:
+$$
+    \mathcal{L}(\theta) = \underbrace{\mathbb{E}_{q_\theta(w)}[\mathcal{L}_{\mathcal{D}}(w)]}_{\text{error cost}} + \underbrace{\mathrm{KL}(q_\theta(w) \| p(w))}_{\text{complexity cost}},
+$$
 where \(\mathcal{L}_{\mathcal{D}}\) is the negative log-likelihood.
 
-To optimize the Error Cost efficiently, we employ the Local Reparameterization Trick (LRT) \cite{kingma2015variational}. As noted by Graves, sampling weights directly introduces high variance in gradient estimates. LRT addresses this by sampling pre-activations instead. For a linear layer with inputs \(X\), weight means \(M\), and variances \(V\), the pre-activation \(\Gamma\) is distributed as:
-\begin{equation}
-    \Gamma \sim \mathcal{N}(XM^T, X^2 V^T).
-\end{equation}
-We sample \(\zeta = XM^T + \epsilon \odot \sqrt{X^2 V^T}\), where \(\epsilon \sim \mathcal{N}(0, I)\), allowing for stable, low-variance backpropagation. The Complexity Cost is computed analytically as the sum of KL divergences for each weight.
+To optimize the error cost efficiently, we employ the local reparameterization trick (LRT) \cite{kingma2015variational}. As noted by \cite{graves2011practical}, sampling weights directly introduces high variance in gradient estimates. LRT addresses this by sampling pre-activations instead. For a linear layer with inputs \(X\), weight means \(M\), and variances \(V\), the pre-activation \(\Gamma\) is distributed as:
+$$
+\Gamma \sim \mathcal{N}(XM^T, X^2 V^T).
+$$\
+We sample \(\zeta = XM^T + \varepsilon \odot \sqrt{X^2 V^T}\), where \(\varepsilon \sim \mathcal{N}(0, I)\), allowing for stable, low-variance backpropagation. The complexity cost is computed analytically as the sum of KL divergences for each weight.
 
-\subsection{Variational Inference with Rényi Divergence (VR)}
-For VR \cite{li2016renyi}, we implement a Weight Perturbation approach. Unlike our VI implementation, here explicit weights \(w \sim \mathcal{N}(\mu, \text{softplus}(\rho))\) are sampled during the forward pass. The objective generalizes the ELBO using \(\alpha\)-Rényi divergence:
-\begin{equation}
-    \mathcal{L}_{\text{VR}}(\theta, \alpha) = -\frac{1}{1-\alpha} \log \frac{1}{K} \sum_{k=1}^K \left( \frac{p(\mathcal{D}, w_k)}{q_\theta(w_k)} \right)^{1-\alpha}.
-\end{equation}
+For \textbf{variational inference with Rényi divergence (VR)}, introduced by \cite{li2016renyi}, we implement a weight perturbation approach. Unlike our VI implementation, here, explicit weights \(w \sim \mathcal{N}(\mu, \text{softplus}(\rho))\) are sampled during the forward pass. The objective generalizes the ELBO using \(\alpha\)-Rényi divergence:
+$$
+\mathcal{L}_{\text{VR}}(\theta, \alpha) = -\frac{1}{1-\alpha} \log \frac{1}{K} \sum_{k=1}^K \left( \frac{p(\mathcal{D}, w_k)}{q_\theta(w_k)} \right)^{1-\alpha}.
+$$
 The parameter \(\alpha\) (default 1.0) controls the bias-variance trade-off.
 
-\subsection{Probabilistic Backpropagation (PBP)}
-Our implementation of PBP by \cite{hernandez2015probabilistic} uses Assumed Density Filtering (ADF) in an online fashion. 
-1. Moment Propagation: Means and variances are propagated analytically. For ReLU activations, we use exact moment matching functions relying on the PDF/CDF of the standard normal.
-2. Update Rule: Weights are updated by matching the moments of the tilted distribution \(q(w)p(y|x,w)\). We compute gradients of the log-partition function \(\log Z\) to update \(\mu\) and \(\Sigma\) directly, bypassing standard SGD.
+Our implementation of \textbf{probabilistic backpropagation (PBP)} by \cite{hernandez2015probabilistic} uses assumed density filtering (ADF) in an online fashion. Means and variances are propagated analytically. For ReLU activations, we use exact moment matching functions relying on the PDF/CDF of the standard normal. Weights are updated by matching the moments of the tilted distribution \(q(w)p(y|x,w)\). We compute gradients of the log-partition function \(\log Z\) to update \(\mu\) and \(\Sigma\) directly, bypassing standard SGD.
 
-\subsection{Laplace Approximation (LA)}
-We implement a scalable Laplace approximation using Kronecker-Factored Approximate Curvature (K-FAC) \cite{ritter2018scalable}.
-1. MAP Training: A standard network is trained to find the mode \(w_{\text{MAP}}\).
-2. Curvature Estimation: We capture covariance of activations ($A_{l-1}$) and pre-activation gradients ($G_l$).
-3. Sampling: The posterior for layer $l$ is approximated as a Matrix Normal distribution \(\mathcal{MN}(W_l, \Sigma_l)\). Samples are generated efficiently using eigen-decomposition of Kronecker factors:
+We also implement a scalable \textbf{Laplace approximation (LA)} using Kronecker-factored approximate curvature as described in \cite{ritter2018scalable}. Since this is, unlike others, a post-hoc posterior approximation method, a standard network is first trained to find the mode \(W^{\text{MAP}}_l\). We then capture covariance of activations ($A_{l}$) and pre-activation gradients ($G_l$). The posterior for layer $l$ is then approximated as a matrix normal distribution \(\mathcal{MN}(W^{\text{MAP}}_l, A_l, G_l)\). Samples are generated efficiently using eigen-decomposition of Kronecker factors:
 \begin{equation}
     W_{\text{sample}} = W_{\text{MAP}} + L_V Z L_U^T,
 \end{equation}
-where $L_V, L_U$ are Cholesky factors of the inverse regularized covariances.
+where $L_V, L_U$ are Cholesky factors of the inverse regularized covariances and $Z$ is sampled from the standard matrix normal distribution.
 
-\subsection{Neural Ensemble Search (NES)}
+\textbf{Neural ensemble search (NES)}, introduced by \cite{zaidi2021neural}, employs neural architecture search in order to find an optimal ensemble of models with varying architectures. Formally, the method searches through model architectures $\alpha_i$ in a predefined architecture search space $\mathcal{A}$. To find the optimal ensemble, NES solves the following bilevel optimization problem:
+$$
+\min_{\alpha_1, \dots, \alpha_M \in \mathcal{A}} \mathcal{L}\!\left(\mathrm{Ensemble}(f_{\theta_1,\alpha_1}, \dots, f_{\theta_M,\alpha_M}),\, \mathcal{D}_{\mathrm{val}}\right)
+$$$$
+\text{s.t.} \quad \theta_i \in \operatorname*{arg\,min}_{\theta}\, \mathcal{L}(f_{\theta,\alpha_i}, \mathcal{D}_{\mathrm{train}}), \quad i = 1, \dots, M
+$$
+For architecture searching, we implement both strategies described in \cite{zaidi2021neural}~--- random searching (NES-RS) and regularized evolution (NES-RE). While the first strategy relies on a simple random searching procedure, the second one utilizes an evolutionary algorithm.
 
-\subsection{Neural Ensemble Search via Bayesian Sampling (NESBS)}
+Finally, we also implement \textbf{neural ensemble search via Bayesian sampling (NESBS)}, introduced by \cite{shu2022neural}, as an alternative to NES that aims to reduce the computational cost of NES. To do so, it utilizes training a supernet with uniform path sampling to share weights across different model architectures. Then, a variational posterior over architectures is introduced:
+$$
+p_{\alpha}(\mathcal{A})\approx p(\mathcal{A} | \mathcal{D}).
+$$
+The variational posterior is learned via evidence lower bound (ELBO) minimization: 
+$$
+\max_\alpha \mathbb{E}_{\mathcal{A}\sim p_{\alpha}(\mathcal{A})} [\log p(\mathcal{A}|\mathcal{D})] - KL[p_{\alpha}(\mathcal{A})|p(\mathcal{A})].
+$$
+Ensemble member architectures can then be sampled from the variational posterior via simple Monte-Carlo sampling or using Stein variational gradient descent with regularized diversity (SVGD-RD), i.\,e. via controlled optimization of the set of architectures with the following objective:
+$$
+q^* = \arg\min_{q\in\mathcal{Q}} \text{KL}(q\|p) + n\delta\mathbb{E}_{x, x' \sim q}[k(x, x')].
+$$
 
 \section{Implementation Details}
-The architecture is built around the \texttt{BaseBayesianEnsemble} abstract class.
+The architecture of Bensemble is built around the `Ensemble` class, incapsulating an ensemble of models or a stochastic ensemble (i.\e. an ensemble where model weights are sampled in an online fashion). Each of Bensemble's methods can be used to produce an instance of this base class, which then can be used to make predictions with uncertainty.
 
-\subsection{Unified Workflow}
-\textbf{Inference (Fitting):} The \texttt{fit} method optimizes the parameters \(\theta\) of \(q_\theta(w)\).
-\begin{itemize}
-    \item For \textbf{VI/VR}, this uses gradient descent on variational bounds.
-    \item For \textbf{PBP}, this uses Assumed Density Filtering (ADF) without standard backpropagation.
-    \item For \textbf{Laplace}, this involves MAP training followed by curvature estimation.
-\end{itemize}
+MCD, VR, VI and PBP are all implemented as stochastic ensemble generators. Notably, while we implement most of the methods as self-contained classes, VI is implemented via a Bayesian linear layer class. LA and NES variants are implemented as generators of model ensembles. We implement neural ensemble search algorithm via integration with the NNI library \cite{Microsoft_Neural_Network_Intelligence_2021}.
 
-\textbf{Ensemble Generation (Sampling):} The \texttt{sample\_models(n)} method draws \(K\) independent weight configurations from \(q_\theta(w)\) and instantiates them as standard \texttt{nn.Module} objects. This step "freezes" the epistemic uncertainty into a concrete ensemble.
+We also implement a variety of utilities for Bayesian machine learning in Bensemble, including but not limited to: uncertainty decomposition (into aleatoric and epistemic components), evaluation metrics (NLL, ECE, Brier score) and calibration for classification probabilities (temperature scaling and vector scaling). The library's full code is available at \texttt{github.com/intsystems/bensemble}.
 
-\textbf{Bayesian Model Averaging (Prediction):} The \texttt{predict} method estimates the predictive distribution via Monte Carlo integration over the sampled ensemble.
 
 \section{Experimental Evaluation}
 
 \subsection{Experimental setup}
-We evaluated the library on the Boston Housing dataset. 
-\begin{itemize}
-    \item \textbf{Architecture:} MLP with sizes 13-50-50-1. ReLU activations.
-    \item \textbf{PBP Settings:} Noise shape parameters $\alpha=6.0, \beta=6.0$ (Inverse Gamma prior).
-    \item \textbf{Laplace Settings:} MAP training with $lr=10^{-3}$, K-FAC estimated on full training set.
-    \item \textbf{VI/VR Settings:} Priors $\sigma=1.0$, initialized $\rho=-2.0$ (approx $\sigma=0.12$).
-\end{itemize}
+We evaluated the library on the Boston Housing dataset \cite{harrison1978hedonic}, as well as synthetic classification and regression datasets. The methods were applied to an MLP with a fixed architecture made of two hidden layers with size 50 and ReLU activations. MCD was used with adropout rate of 0.2. For PBP, we use an inverse Gamma prior with noise shape parameters $\alpha=6.0, \beta=6.0$. For Laplace, we perform MAP training with learning rate $\alpha=10^{-3}$ and K-FAC estimated on the full training set. VI and VR were tested with priors with $\sigma=1.0$, initialized by $\rho=-2.0$ (approximately $\sigma=0.12$). For NES, we used a simple search space with varying hidden layer counts, sizes and varying dropout rates. NESBS was used with temperature 0.8, 8 SVGD steps and a learning rate of 0.25 for SVGD.
 
-\subsection{Boston Housing Dataset}
-Table \ref{tab:boston_results} shows that while deterministic models are accurate (low RMSE), they are poorly calibrated (high NLL). PBP and VI achieve the best balance of accuracy and calibration.
+\subsection{Synthetic data}
+\begin{figure*}[ht]
+    \centering
+    \includegraphics[width=\textwidth]{img/benchmark_results.png}
+    \caption{Results on synthetic dataset}
+    \label{fig:benchmark_results}
+\end{figure*}
+
+Figure~\ref{fig:benchmark_results} presents the results of evaluation on synthetic classification and regression datasets. We can see that, overall, all methods perform well, with some exceeding others in accuracy and some leading in time performance.
+
+\subsection{Boston Housing dataset}
+Table \ref{tab:boston_results} shows the results of evaluation on the Boston Housing dataset. We can see that while deterministic models are accurate (low RMSE), they are poorly calibrated (high NLL). PBP and VI achieve the best balance of accuracy and calibration.
 
 \begin{table}[ht]
 \centering
@@ -270,15 +294,11 @@ VI & 4.63 & \textbf{2.88} & 0.008 & 0.099 \\
 PBP & 5.42 & 3.17 & 0.008 & 0.091 \\
 VR & 5.36 & 3.16 & \textbf{0.006} & 0.127 \\
 LA & 19.38 & 4.55 & 0.011 & 0.241 \\
-NES & - & - & - & - \\
-NESBS & - & - & - & - \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \subsection{Adversarial Robustness}
-We subjected models to FGSM attacks (Table \ref{tab:adversarial_rmse}). 
-
 \begin{table}[ht]
 \centering
 \caption{RMSE under FGSM adversarial attacks. \textbf{Bold} indicates best performance.}
@@ -293,16 +313,14 @@ VI & 4.58 & \textbf{5.16} & \textbf{6.40} & \textbf{7.71} & \textbf{12.22} \\
 PBP & 5.42 & 5.73 & 6.87 & 8.28 & 12.34 \\
 VR & 5.35 & 5.76 & 6.64 & 8.74 & 13.50 \\
 LA & 19.22 & 24.04 & 22.92 & 26.40 & 40.46 \\
-NES & - & - & - & - & - \\
-NESBS & - & - & - & - & - \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\textbf{Analysis:} The deterministic model fails catastrophically at $\varepsilon=0.1$. VI and PBP demonstrate superior robustness. Specifically, PBP's moment matching effectively filters high-frequency adversarial noise, maintaining low error rates even at high perturbation levels.
+We subjected models to FGSM attacks (Table \ref{tab:adversarial_rmse}). The deterministic model fails catastrophically at $\varepsilon=0.1$. VI and PBP demonstrate superior robustness. Specifically, PBP's moment matching effectively filters high-frequency adversarial noise, maintaining low error rates even at high perturbation levels.
 
 \section{Conclusion}
-We presented Bensemble, a library that democratizes access to stochastic weight modeling. By validating implementations of VI (Graves+LRT), VR (Weight Perturbation), PBP (ADF), and LA (K-FAC), we provide a robust toolkit for uncertainty estimation. Our experiments confirm that Bayesian ensembling significantly improves calibration and adversarial robustness compared to standard point estimates.
+We presented Bensemble, a library that democratizes access to stochastic weight modeling. We implemented a wide variety of Bayesian ensembling methods, applicable to different tasks and in various usage scenarios. By validating our implementations of these methods on a number of benchmarks, we ensure that Bensemble provides a robust toolkit for uncertainty estimation. Our experiments confirm that Bayesian ensembling noticeably improves calibration and adversarial robustness compared to standard point estimates.
 
 % Main text
 % \section{}\label{}
