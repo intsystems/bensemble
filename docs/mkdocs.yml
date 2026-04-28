@@ -1,23 +1,90 @@
 site_name: bensemble
 site_url: https://intsystems.github.io/bensemble/
-theme: readthedocs
+repo_url: https://github.com/intsystems/bensemble
+repo_name: intsystems/bensemble
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.tooltips
+    - navigation.footer
+    - search.highlight
+    - search.suggest
+    - content.code.copy
+    - content.code.annotate
+    - content.tooltips
+    - toc.follow
+
 nav:
   - Home: index.md
-  - Getting started: getting-started.md
-  - References: references.md
+  - Getting Started: getting-started.md
   - User Guide:
-    - Interface: user-guide/interface.md
-    - Variational Inference: user-guide/variational-inference.md
-    - Laplace Approximation: user-guide/laplace-approximation.md
-    - Renyi Divergence: user-guide/renyi-divergence.md
-    - Bayes by Backprop: user-guide/bayes-by-backprop.md
-  - API:
-    - Core: api/core.md
-    - Methods: api/methods.md
-    - Additional Classes: api/additional-classes.md
+      - Basic Concepts: user-guide/basic-concepts.md
+      - Building Ensembles: user-guide/building-ensembles.md
+      - Uncertainty Analysis: user-guide/uncertainty-analysis.md
+      - Calibration: user-guide/calibration.md
+  - API Reference:
+      - Core & Ensemble: api/core.md
+      - Layers: api/layers.md
+      - Search Algorithms: api/search.md
+      - Metrics: api/metrics.md
+      - Uncertainty Utils: api/uncertainty.md
+  - References: references.md
 
-extra_javascript: 
-  - https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML
+plugins:
+  - search:
+      lang: en
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [".."]
+          options:
+            docstring_style: google
+            show_root_heading: true
+            show_source: true
+            show_signature_annotations: true
+            separate_signature: true
+            merge_init_into_class: true
+            filters:
+              - "!^_"
+  - minify:
+      minify_html: true
 
 markdown_extensions:
-  - mdx_math
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://polyfill.io/v3/polyfill.min.js?features=es6
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+  - https://unpkg.com/mermaid@10/dist/mermaid.min.js
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/intsystems/bensemble

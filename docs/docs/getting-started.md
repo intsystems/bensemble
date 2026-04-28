@@ -4,7 +4,7 @@ To get started with Bensemble, all you'll need is Python with at least version 3
 
 ## Installation
 
-```
+```bash
 pip install bensemble
 ```
 
@@ -14,32 +14,36 @@ All Bensemble classes are built as wrappers around PyTorch models that are subcl
 
 ```python
 import torch
-from torch import nn
-from torch.utils.data import DataLoader
-from bensemble.methods.variational_inference import VariationalEnsemble
+import torch.nn as nn
+from torch.utils.data import DataLoader, TensorDataset
 
-# Create a model
+from bensemble.layers import BayesianLinear
+from bensemble.losses import VariationalLoss, GaussianLikelihood
+from bensemble.utils import get_total_kl, predict_with_uncertainty
+
+# 1. Define Model using Bayesian Layers
 model = nn.Sequential(
-    nn.Linear(1, 16),
+    BayesianLinear(10, 50, prior_sigma=1.0),
     nn.ReLU(),
-    nn.Linear(16, 1)
+    BayesianLinear(50, 1, prior_sigma=1.0),
 )
 
-# Choose your data
-train_data = ...
-test_data = ...
+# 2. Define Objectives (Likelihood + Divergence)
+likelihood = GaussianLikelihood()
+criterion = VariationalLoss(likelihood, alpha=1.0)
 
+optimizer = torch.optim.Adam(list(model.parameters()) + list(likelihood.parameters()), lr=0.01)
 
-# Create a DataLoader instance
-train_loader = DataLoader(data)
+# 3. Standard PyTorch Training Loop
+model.train()
+for epoch in range(50): # Dummy loop
+    x, y = torch.randn(10, 10), torch.randn(10, 1)
+    optimizer.zero_grad()
+    loss = criterion(model(x), y, get_total_kl(model))
+    loss.backward()
+    optimizer.step()
 
-# Create ensemble
-ensemble = VariationalEnsemble(model)
-
-# Train model and its posterior
-ensemble.fit(train_loader)
-
-# Make predictions
-for x in test_data:
-    print(ensemble.predict(x, n_samples=10))
+# 4. Predict with Uncertainty
+mean, std = predict_with_uncertainty(model, torch.randn(5, 10), num_samples=100)
+print(f"Prediction: {mean[0].item():.2f} ± {std[0].item():.2f}")
 ```
