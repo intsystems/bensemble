@@ -48,6 +48,11 @@ dev = [
     "autopep8",
     "ruff"
 ]
+docs = [
+    "mkdocs-material",
+    "mkdocstrings[python]",
+    "mkdocs-minify-plugin",
+]
 
 [project.urls]
 Homepage = "https://github.com/intsystems/bensemble"
