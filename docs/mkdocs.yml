@@ -42,13 +42,13 @@ nav:
       - Basic Concepts: user-guide/basic-concepts.md
       - Building Ensembles: user-guide/building-ensembles.md
       - Uncertainty Analysis: user-guide/uncertainty-analysis.md
-      - Calibration: user-guide/calibration.md
   - API Reference:
       - Core & Ensemble: api/core.md
       - Layers: api/layers.md
       - Search Algorithms: api/search.md
       - Metrics: api/metrics.md
       - Uncertainty Utils: api/uncertainty.md
+      - Calibration: api/calibration.md
   - References: references.md
 
 plugins:
