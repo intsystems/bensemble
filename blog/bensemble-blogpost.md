@@ -12,23 +12,21 @@ This blog is a guided tour of **Bensemble** - the library developed to implement
 
 ## Contents
 
-- Introduction
-	- Why Bayesian ensembling?
-	- A minimal Bayesian template
-- Library interface
-	- Common method interfaces
-	- Integration with PyTorch/Lightning
-	- Usage example
-- Methods
-	- Monte-Carlo dropout
-	- Probabilistic Backpropagation
-	- Laplace approximation
-	- Practical variational inference
-	- Variational Rényi inference
-	- Neural Ensemble Search
-	- NES via Bayesian sampling
-- Seeing the methods in action
-- Conclusion
+- [Introduction](#introduction)
+- [[#Library interface]]
+	- [[#Ensemble class]]
+	- [[#Uncertainty decomposition]]
+	- [Metrics](#metrics)
+- [Methods](#methods)
+	- [[#Monte-Carlo Dropout]]
+	- [[#Probabilistic Backpropagation]]
+	- [[#Laplace approximation]]
+	- [[#Practical variational inference]]
+	- [[#Variational Rényi inference]]
+	- [[#Neural Ensemble Search]]
+	- [[#NES via Bayesian sampling]]
+- [[#Seeing the methods in action]]
+- [[#Conclusion]]
 
 
 ---
@@ -65,6 +63,7 @@ p(y \mid \mathbf{x}, \mathcal{D})
 \approx \frac{1}{M} \sum_{m=1}^M p\bigl(y \mid \mathbf{x}, \boldsymbol{\theta}^{(m)}\bigr),
 $$
 with the uncertainty of the prediction being the variance of member predictions. Hence, the core theme of this project is the following: approximate posteriors over the weights of neural networks, sample model ensembles from each of them, and compare their uncertainty behavior in a controlled way. One can see this more clearly by this example. 
+
 ![Deterministic and uncertain comparison](figures/deterministic_uncertain_comp.png)
 
 ---
@@ -139,40 +138,36 @@ for i in range(10):
 
 While the metrics for regression tasks are fairly straightforward (MSE, MAE, etc.), metrics that assess predictions with uncertainty for classification tasks are a bit more sophisticated. Fortunately, Bensemble has you covered here.
 
-We implement the following metrics for classification evaluation:
+We implement the following metrics for classification evaluation in `bensemble.metrics`:
 
-### Calibration
+- **Negative log-likelihood (NLL)** is a self-explanatory metric — it's the mean of negative log-likelihoods for each classes probability. Lower is better. Implemented in `negative_log_likelihood`.
 
-For classification tasks, it is often useful to scale class probabilities to control the diversity of outputs. Thus, two scaling methods are implemented in `bensemble.calibration.scaling`:
+- The **Brier score** is the mean squared difference between the predicted probability distribution and the one-hot encoded true label. Lower is better. Implemented in `brier_score`.
 
-- **Temperature scaling**: all logits are scaled by a learnable temperature parameter. Implemented in the `TemperatureScaling` class.
+- **Expected calibration error (ECE)** divides the confidence space into `n_bins` and measures the weighted absolute difference between the model's accuracy and confidence in each bin. Lower is better (0.0 means perfectly calibrated). Implemented in `expected_calibration_error`.
 
-- **Vector scaling**: each logit is scaled by its own learnable scale and bias parameters. Implemented in the `VectorScaling` class.
-
-Let's see how to use scaling on model predictions:
+Here is an example on how to use these metrics with Bensemble:
 
 ```python
-from bensemble.calibration.scaling import TemperatureScaling
+from bensemble.metrics import expected_calibration_error, brier_score, negative_log_likelihood
 
 # Generate logits for prediction using ensemble
 with torch.no_grad():
     member_logits = ensemble.predict_members(x_test)
 ensemble_logits = member_logits.mean(dim=0)
 
-# Make predictions with uncalibrated logits
+# Make predictions with logits
 ensemble_probs = torch.softmax(ensemble_logits, dim=-1)
-ece_before = expected_calibration_error(ensemble_probs, y_test, n_bins=15)
-print(f"Expected Calibration Error before calibration: {ece_before:.4f}")
 
-# Fit scaler
-scaler = TemperatureScaling(init_temp=1.0)
-scaler.fit(ensemble_logits, y_test, max_iter=50)
+# Calculate metrics
+nll = negative_log_likelihood(ensemble_probs, y_test)
+print(f"Negative log-likelihood: {nll:.4f}")
 
-# Scale logits and make predictions using them
-calibrated_logits = scaler(ensemble_logits)
-calibrated_probs = torch.softmax(calibrated_logits, dim=-1)
-ece_after = expected_calibration_error(calibrated_probs, y_test, n_bins=15)
-print(f"Expected Calibration Error after calibration: {ece_after:.4f}")
+bs = brier_score(ensemble_probs, y_test)
+print(f"Brier score: {bs:.4f}")
+
+ece = expected_calibration_error(ensemble_probs, y_test, n_bins=15)
+print(f"Expected Calibration Error: {ece:.4f}")
 ```
 
 A more detailed demo of all of Bensemble's core methods and utilities can be found [here](https://github.com/intsystems/bensemble/blob/master/notebooks/deep_ensembles_tutorial.ipynb).
@@ -192,9 +187,9 @@ The methods we implemented in Bensemble are:
 
 All of the methods implemented as part of Bensemble target the same object $p(y \mid \mathbf{x}, \mathcal{D})$, but they approximate $p(\boldsymbol{\theta} \mid \mathcal{D})$ in very different ways.
 
-### [Monte-Carlo Dropout](https://proceedings.mlr.press/v48/gal16.pdf)
+### Monte-Carlo Dropout
 
-Monte-Carlo Dropout (MCD) is the simplest of Bensemble's methods, yet it proves to be a powerful tool in many tasks. Suppose that we train a neural network using dropout, i.e. each weight is randomly deactivated with a fixed probability $p$:
+[Monte-Carlo Dropout (MCD)](https://proceedings.mlr.press/v48/gal16.pdf) is the simplest of Bensemble's methods, yet it proves to be a powerful tool in many tasks. Suppose that we train a neural network using dropout, i.e. each weight is randomly deactivated with a fixed probability $p$:
 
 $$
 \tilde{w}_{ij} = w_{ij}\cdot \delta_{ij},\quad \delta_{ij}\sim \text{Bern}(p).
@@ -202,9 +197,10 @@ $$
 
 The key idea is simple: after training a neural network with dropout, why don't we leave dropout on during evaluation? When sampling predictions multiple times, we effectively get predictions of an ensemble of models, each with its own weights activated or deactivated. Each model of the ensemble uses different combinations of features, which in practice creates the diversity required for effective uncertainty estimation. Therefore, despite its simplicity, Monte-Carlo dropout proves to be at least a strong baseline for uncertainty estimation tasks.
 
-### [Practical variational inference](https://papers.nips.cc/paper_files/paper/2011/file/7eb3c8be3d411e8ebfab08eba5f49632-Paper.pdf)
+Monte-Carlo dropout is implemented in the `MCDropoutEnsembler` class in Bensemble. Visit our [MC dropout demo](https://github.com/intsystems/bensemble/blob/master/notebooks/mc_dropout_demo.ipynb) for an example on how to use it.
 
-The practical variational inference (PVI) component in the project follows the “Bayesian layers’’ approach: instead of treating the whole network as a single variational object, it replaces ordinary linear layers by Bayesian linear layers and adds a simple Gaussian likelihood on top.
+### Practical variational inference
+The [practical variational inference (PVI)](https://papers.nips.cc/paper_files/paper/2011/file/7eb3c8be3d411e8ebfab08eba5f49632-Paper.pdf) component in the project follows the “Bayesian layers’’ approach: instead of treating the whole network as a single variational object, it replaces ordinary linear layers by Bayesian linear layers and adds a simple Gaussian likelihood on top.
 
 Each weight in a linear layer is modeled as
 
@@ -239,9 +235,11 @@ where $p(\mathcal{D} \mid \boldsymbol{\theta})$ is a Gaussian likelihood with le
 
 After training, one can either keep sampling activations on the fly to get predictive distributions or freeze individual weight samples to obtain a more classical ensemble of deterministic networks.
 
-### [Variational Rényi inference](https://arxiv.org/pdf/1602.02311)
+Practical variational inference is implemented via the `BayesianLinear` layer class in Bensemble. Visit our [variational inference demo](https://github.com/intsystems/bensemble/blob/master/notebooks/intro_to_variational_inference.ipynb) for an example on how to use it.
 
-Variational Rényi inference (VR) follows the idea of standard variational inference but replaces the usual KL divergence by a whole family of divergences indexed by a parameter $\alpha$.
+### Variational Rényi inference
+
+[Variational Rényi inference (VR)](https://arxiv.org/pdf/1602.02311) follows the idea of standard variational inference but replaces the usual KL divergence by a whole family of divergences indexed by a parameter $\alpha$.
 
 Rényi’s $\alpha$-divergence between $p$ and $q$ is defined as
 
@@ -272,9 +270,11 @@ $$
 This is approximated by Monte Carlo using samples $\boldsymbol{\theta}^{(k)}$ drawn via the reparameterization trick. When $\alpha = 1$, the bound collapses to the usual evidence lower bound (ELBO); for $\alpha \neq 1$, we get a continuum of alternative objectives.
 
 Qualitatively, this gives a knob that controls how aggressive or conservative the variational approximation is. Once trained, sampling networks is as simple as drawing from the Gaussian $q(\boldsymbol{\theta})$ and plugging the sampled weights into the base model, just as in PVI.
-### [Laplace approximation](https://openreview.net/pdf?id=Skdvd2xAZ)
 
-Laplace approximation (LA) starts from a different point. Instead of designing a Bayesian method from scratch, you begin with a network that has already been trained in the usual deterministic way, with weight decay capturing the prior. Let
+Variational Rényi inference is implemented in the `VariationalRenyi` class in Bensemble. Visit our [variational Rényi demo](https://github.com/intsystems/bensemble/blob/master/notebooks/variatinal_renyi_demo.ipynb) for an example on how to use it.
+### Laplace approximation
+
+[Laplace approximation (LA)](https://openreview.net/pdf?id=Skdvd2xAZ) starts from a different point. Instead of designing a Bayesian method from scratch, you begin with a network that has already been trained in the usual deterministic way, with weight decay capturing the prior. Let
 
 $$
 \ell(\boldsymbol{\theta}) = -\log p(\boldsymbol{\theta} \mid \mathcal{D})
@@ -306,9 +306,11 @@ a Kronecker product of two much smaller matrices. This structure makes it feasib
 
 The attractive part is that no special training procedure is required: you can take any existing MLP, fit a Laplace approximation around its optimum, and immediately turn it into a Bayesian ensemble by drawing curvature-aware perturbations of its weights.
 
-### [Probabilistic Backpropagation](https://arxiv.org/pdf/1502.05336)
+Laplace approximation is implemented in the `LaplaceApproximation` class in Bensemble. For an example on how to use it, visit our [Laplace demo](https://github.com/intsystems/bensemble/blob/master/notebooks/laplace_demo.ipynb).
 
-Probabilistic Backpropagation (PBP) pushes the classical “uncertainty in weights” idea quite literally. Instead of a single value for each weight, PBP maintains a Gaussian
+### Probabilistic Backpropagation
+
+[Probabilistic Backpropagation (PBP)](https://arxiv.org/pdf/1502.05336) pushes the classical “uncertainty in weights” idea quite literally. Instead of a single value for each weight, PBP maintains a Gaussian
 
 $$
 w_i \sim \mathcal{N}(m_i, v_i),
@@ -333,9 +335,11 @@ $$
 
 The end result is a factorized Gaussian over weights plus Gamma distributions over hyperparameters. From that, sampling full networks is straightforward: draw weights from the Gaussians, plug them into a standard multilayer perceptron, and you have a concrete ensemble member.
 
-### [Neural Ensemble Search](https://proceedings.neurips.cc/paper_files/paper/2021/file/41a6fd31aa2e75c3c6d427db3d17ea80-Paper.pdf)
+PBP is implemented in the `ProbabilisticBackpropagation` class in Bensemble. For an example on how to use it, check out our [probabilistic backpropagation demo](https://github.com/intsystems/bensemble/blob/master/notebooks/pbp_probabilistic_backpropagation_test.ipynb).
 
-All of the methods above have one common limitation: the architecture of the model is always predefined. But what if we could approximate predictions across multiple architectures and, moreover, find optimal architectures automatically? This is exactly what Neural Ensemble Search (NES) offers.
+### Neural Ensemble Search
+
+All of the methods above have one common limitation: the architecture of the model is always predefined. But what if we could approximate predictions across multiple architectures and, moreover, find optimal architectures automatically? This is exactly what [Neural Ensemble Search (NES)](https://proceedings.neurips.cc/paper_files/paper/2021/file/41a6fd31aa2e75c3c6d427db3d17ea80-Paper.pdf) offers.
 
 The method is based on the idea of neural architecture search (NAS): searching for the optimal model architecture in a predefined search space $\mathcal{A}$. For each selected architecture $\alpha_i \in \mathcal{A}$, the corresponding model $f_{\boldsymbol{\theta}_i,\alpha_i}$ is trained on the training set $\mathcal{D}_\text{train}$ and then validated on the validation set $\mathcal{D}_\text{val}$ to determine its quality. NES follows the same approach, but with ensembles instead of single models. The optimization objective for NES can be written as
 $$
@@ -344,11 +348,13 @@ $$$$
 \text{s.t.} \quad \theta_i \in \operatorname*{arg\,min}_{\theta}\, \mathcal{L}(f_{\theta,\alpha_i}, \mathcal{D}_{\mathrm{train}}), \quad i = 1, \dots, M
 $$The strategies for architecture searching and selection may vary. Standard NES offers two methods: random search (NES-RS) and regularized evolution (NES-RE). The first strategy simply selects $M$ best architectures to add to the ensemble from a pool of $K$ randomly sampled ones, while the second method applies mutations to selected architectures in order to update the population from which the ensemble is selected. Both methods are parallelizable and allow for highly diverse architecture selection, which can noticeably improve results obtainable by fixed architecture methods.
 
-### [NES via Bayesian Sampling](https://proceedings.mlr.press/v180/shu22a/shu22a.pdf)
+NES-RS and NES-RE are implemented in the `RandomSearcher` and `EvolutionarySearcher` classes correspondingly in Bensemble. For examples on how to use them, visit our [NES-RS](http://github.com/intsystems/bensemble/blob/master/notebooks/nes_rs_demo.ipynb) and [NES-RE demos](https://github.com/intsystems/bensemble/blob/master/notebooks/nes_re_demo.ipynb).
+
+### NES via Bayesian Sampling
 
 Despite all of its advantages, NES has one core downside: the prohibitive cost of training each model from the search group. Moreover, searching over the whole architecture space is extremely costly, but simple strategies like random search are really chance-based and can miss optimal architectures. 
 
-NES via Bayesian Sampling (NESBS) aims to solve these problems. First, instead of training all models separately, it introduces a supernet that shares weights among all architectures in the search space. For training, the supernet uses uniform path sampling: in each training step, a single architecture is sampled from the net, and only its corresponding weights are updated. This provides a fair estimate of each architectures performance without separate training.
+[NES via Bayesian Sampling (NESBS)](https://proceedings.mlr.press/v180/shu22a/shu22a.pdf) aims to solve these problems. First, instead of training all models separately, it introduces a supernet that shares weights among all architectures in the search space. For training, the supernet uses uniform path sampling: in each training step, a single architecture is sampled from the net, and only its corresponding weights are updated. This provides a fair estimate of each architectures performance without separate training.
 
 To characterize ensemble diversity, NESBS introduces a variational posterior over architectures:
 
@@ -371,13 +377,17 @@ q^* = \arg\min_{q\in\mathcal{Q}} \text{KL}(q\|p) + n\delta\mathbb{E}_{x, x' \sim
 $$
 Applying all of these tricks in practice helps NESBS become a more efficient alternative to standard NES while achieving comparable performance.
 
+NESBS is implemented in the `NESBayesianSampler` class in Bensemble. Visit our [NESBS demo](https://github.com/intsystems/bensemble/blob/master/notebooks/NESBS_demo.ipynb) for an example on how to use it.
+
 ---
 
 ## Seeing the methods in action
 
-The math above is intentionally light; the interesting part is how these methods actually behave on real data. The project notebooks are easiest way to see that. You can try out our [demos](https://github.com/intsystems/bensemble/tree/master/notebooks), which demonstrate each method's interface and capabilities, or check out our [benchmark notebook](https://github.com/intsystems/bensemble/blob/master/notebooks/benchmarks_new_methods.ipynb), where all of Bensemble's methods are compared on the same data.
-![Reported Metrics](figures/report_metrics.jpg "Reported metrics")
-Overall, ensembling helps most methods early on and then quickly hit a plateau: a modest ensemble size already captures most of the benefit. The methods also trade off accuracy and uncertainty quality differently — some win on RMSE, others look better on NLL and calibration. 
+The math above is intentionally light; the interesting part is how these methods actually behave on real data. The project notebooks are easiest way to see that. You can try out our [demos](https://github.com/intsystems/bensemble/tree/master/notebooks), which demonstrate each method's interface and capabilities, or check out our [benchmark notebook](https://github.com/intsystems/bensemble/blob/master/notebooks/benchmarks_new_methods.ipynb), where all of Bensemble's methods are compared on the same data. Here is a figure summarizing our benchmark test for all of Bensemble's methods.
+
+![Reported Metrics](figures/benchmark_results.png "Reported metrics")
+
+Overall, different ensembling methods show their strengths in different applications, with some being generally more accurate while others being faster and simpler. Luckily, with Bensemble, you can easily try out multiple different methods for your task without having to change your code completely for each one of them.
 
 ---
 
