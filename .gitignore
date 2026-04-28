@@ -40,15 +40,16 @@ coverage.xml
 # --- Documentation ---
 site/
 docs/_build/
+docs/site
 
-# --- Environments (Virtual Envs) ---
+# --- Environments  ---
 .env
 .venv
 env/
 venv/
 ENV/
 
-# --- IDEs (Настройки редакторов не нужны в репо) ---
+# --- IDEs ---
 .vscode/
 .idea/
 .spyderproject
@@ -64,7 +65,6 @@ ENV/
 dmypy.json
 
 # --- Datasets & Big Files ---
-# (Чтобы случайно не залить датасет на 5Гб)
 *.csv
 !.dvc
 data/housing.data
