@@ -42,6 +42,14 @@ nav:
       - Basic Concepts: user-guide/basic-concepts.md
       - Building Ensembles: user-guide/building-ensembles.md
       - Uncertainty Analysis: user-guide/uncertainty-analysis.md
+  - Algorithms:
+      - Monte-Carlo Dropout: algorithms/mc-dropout.md
+      - Variational Inference: algorithms/variational-inference.md
+      - Variational Rényi: algorithms/variational-renyi.md
+      - Probabilistic Backprop: algorithms/pbp.md
+      - Laplace Approximation: algorithms/laplace.md
+      - Neural Ensemble Search: algorithms/nes.md
+      - NES via Bayesian Sampling: algorithms/nesbs.md
   - API Reference:
       - Core & Ensemble: api/core.md
       - Layers: api/layers.md
