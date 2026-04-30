@@ -42,6 +42,14 @@ nav:
       - Basic Concepts: user-guide/basic-concepts.md
       - Building Ensembles: user-guide/building-ensembles.md
       - Uncertainty Analysis: user-guide/uncertainty-analysis.md
+  - Algorithms:
+      - Monte-Carlo Dropout: algorithms/mc-dropout.md
+      - Variational Inference: algorithms/variational-inference.md
+      - Variational Rényi: algorithms/variational-renyi.md
+      - Probabilistic Backprop: algorithms/pbp.md
+      - Laplace Approximation: algorithms/laplace.md
+      - Neural Ensemble Search: algorithms/nes.md
+      - NES via Bayesian Sampling: algorithms/nesbs.md
   - API Reference:
       - Core & Ensemble: api/core.md
       - Layers: api/layers.md
@@ -77,10 +85,15 @@ markdown_extensions:
       anchor_linenums: true
   - pymdownx.inlinehilite
   - pymdownx.snippets
+  - pymdownx.superfences
+  - attr_list
+  - md_in_html
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
 
 extra_javascript:
   - javascripts/mathjax.js
-  - https://polyfill.io/v3/polyfill.min.js?features=es6
   - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
   - https://unpkg.com/mermaid@10/dist/mermaid.min.js
 
