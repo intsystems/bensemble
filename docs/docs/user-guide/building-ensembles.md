@@ -1,6 +1,6 @@
 # Building Ensembles
 
-Bensemble provides a unified way to create ensembles from various sources of diversity. Whether you have multiple independent models or a single stochastic model (like MC-Dropout), you wrap them in the `Ensemble` class to use our evaluation toolkit.
+Bensemble provides a unified way to create ensembles from various sources of diversity. Whether you have multiple independent models or a single stochastic model (like MC-Dropout), you wrap them in the `Ensemble` class to use the evaluation toolkit.
 
 There are three primary ways to build an ensemble.
 
@@ -96,4 +96,4 @@ Regardless of how you created the `ensemble` object, you now have access to the 
 member_outputs = ensemble.predict_members(x_test)
 ```
 
-This output can be passed directly to our [Uncertainty Analysis](uncertainty-analysis.md) and [Metrics](metrics.md) modules.
+This output can be passed directly to our [Uncertainty Analysis](uncertainty-analysis.md) and [Metrics](../api/metrics.md) modules.
