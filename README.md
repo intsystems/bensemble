@@ -1,11 +1,11 @@
 # Bensemble: Modular Bayesian Deep Learning & Ensembling
 
 [![Python](https://img.shields.io/badge/python-3.10%20|%203.11%20|%203.12%20|%203.13-blue.svg)](https://www.python.org/)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Coverage](https://img.shields.io/badge/coverage-98%25-brightgreen.svg)](tests/)
-[![Documentation](https://img.shields.io/badge/docs-online-blue)](https://intsystems.github.io/bensemble/)
+[![Tests](https://github.com/intsystems/bensemble/actions/workflows/test.yml/badge.svg)](https://github.com/intsystems/bensemble/actions)
+[![Codecov](https://codecov.io/gh/intsystems/bensemble/branch/master/graph/badge.svg)](https://codecov.io/gh/intsystems/bensemble)
+[![Docs](https://img.shields.io/badge/docs-online-blue.svg)](https://intsystems.github.io/bensemble/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-[![image](https://img.shields.io/badge/uv-managed-a6c489)](https://github.com/astral-sh/uv)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 **Bensemble** is a production-ready, lightweight library for Bayesian Deep Learning and Neural Network Ensembling.
 
@@ -26,7 +26,7 @@
 
 - **PyTorch-Native**: No hidden training loops. Use standard PyTorch to train your models, and use Bensemble for inference, ensembling, and analytics.
 - **Unified Ensembling API**: Seamlessly combine explicit models (Deep Ensembles, NAS) and implicit methods (MC Dropout) via a single `Ensemble` interface.
-- **Neural Ensemble Search (NES)**: State-of-the-art algorithms to automatically search for diverse architectures using NNI and Stein Variational Gradient Descent (SVGD).
+- **Neural Ensemble Search (NES)**: Algorithms to automatically search for diverse architectures using NNI and Stein Variational Gradient Descent (SVGD).
 - **Uncertainty Analytics**: Principled decomposition of predictive uncertainty into *aleatoric* (data noise) and *epistemic* (model ignorance) components.
 - **Model Calibration & Metrics**: Evaluate models using Expected Calibration Error (ECE), Brier Score, and NLL. Fix overconfident networks post-hoc with Temperature and Vector Scaling.
 
@@ -40,7 +40,7 @@ You can install `bensemble` using pip:
 pip install bensemble
 ```
 
-Or, using [uv](https://github.com/astral-sh/uv) for lightning-fast installation (recommended):
+Or, using [uv](https://github.com/astral-sh/uv) for lightning-fast installation:
 
 ```bash
 uv pip install bensemble
@@ -52,7 +52,7 @@ uv pip install bensemble
 
 ### Example 1: Ensembling, Calibration & Uncertainty
 
-Easily ensemble standard PyTorch models, calibrate them, and decompose their uncertainty to detect Out-Of-Distribution (OOD) data.
+Easily ensemble standard PyTorch models, calibrate them, and decompose their uncertainty to detect Out-Of-Distribution data.
 
 ```python
 import torch
