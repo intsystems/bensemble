@@ -2,50 +2,78 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://intsystems.github.io/bensemble/</loc>
-         <lastmod>2026-04-28</lastmod>
+         <lastmod>2026-04-30</lastmod>
     </url>
     <url>
          <loc>https://intsystems.github.io/bensemble/getting-started/</loc>
-         <lastmod>2026-04-28</lastmod>
+         <lastmod>2026-04-30</lastmod>
     </url>
     <url>
          <loc>https://intsystems.github.io/bensemble/references/</loc>
-         <lastmod>2026-04-28</lastmod>
+         <lastmod>2026-04-30</lastmod>
+    </url>
+    <url>
+         <loc>https://intsystems.github.io/bensemble/algorithms/laplace/</loc>
+         <lastmod>2026-04-30</lastmod>
+    </url>
+    <url>
+         <loc>https://intsystems.github.io/bensemble/algorithms/mc-dropout/</loc>
+         <lastmod>2026-04-30</lastmod>
+    </url>
+    <url>
+         <loc>https://intsystems.github.io/bensemble/algorithms/nes/</loc>
+         <lastmod>2026-04-30</lastmod>
+    </url>
+    <url>
+         <loc>https://intsystems.github.io/bensemble/algorithms/nesbs/</loc>
+         <lastmod>2026-04-30</lastmod>
+    </url>
+    <url>
+         <loc>https://intsystems.github.io/bensemble/algorithms/pbp/</loc>
+         <lastmod>2026-04-30</lastmod>
+    </url>
+    <url>
+         <loc>https://intsystems.github.io/bensemble/algorithms/variational-inference/</loc>
+         <lastmod>2026-04-30</lastmod>
+    </url>
+    <url>
+         <loc>https://intsystems.github.io/bensemble/algorithms/variational-renyi/</loc>
+         <lastmod>2026-04-30</lastmod>
     </url>
     <url>
          <loc>https://intsystems.github.io/bensemble/api/calibration/</loc>
-         <lastmod>2026-04-28</lastmod>
+         <lastmod>2026-04-30</lastmod>
     </url>
     <url>
          <loc>https://intsystems.github.io/bensemble/api/core/</loc>
-         <lastmod>2026-04-28</lastmod>
+         <lastmod>2026-04-30</lastmod>
     </url>
     <url>
          <loc>https://intsystems.github.io/bensemble/api/layers/</loc>
-         <lastmod>2026-04-28</lastmod>
+         <lastmod>2026-04-30</lastmod>
     </url>
     <url>
          <loc>https://intsystems.github.io/bensemble/api/metrics/</loc>
-         <lastmod>2026-04-28</lastmod>
+         <lastmod>2026-04-30</lastmod>
     </url>
     <url>
          <loc>https://intsystems.github.io/bensemble/api/search/</loc>
-         <lastmod>2026-04-28</lastmod>
+         <lastmod>2026-04-30</lastmod>
     </url>
     <url>
          <loc>https://intsystems.github.io/bensemble/api/uncertainty/</loc>
-         <lastmod>2026-04-28</lastmod>
+         <lastmod>2026-04-30</lastmod>
     </url>
     <url>
          <loc>https://intsystems.github.io/bensemble/user-guide/basic-concepts/</loc>
-         <lastmod>2026-04-28</lastmod>
+         <lastmod>2026-04-30</lastmod>
     </url>
     <url>
          <loc>https://intsystems.github.io/bensemble/user-guide/building-ensembles/</loc>
-         <lastmod>2026-04-28</lastmod>
+         <lastmod>2026-04-30</lastmod>
     </url>
     <url>
          <loc>https://intsystems.github.io/bensemble/user-guide/uncertainty-analysis/</loc>
-         <lastmod>2026-04-28</lastmod>
+         <lastmod>2026-04-30</lastmod>
     </url>
 </urlset>
