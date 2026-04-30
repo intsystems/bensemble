@@ -20,4 +20,4 @@ We sample $\zeta = XM^T + \varepsilon \odot \sqrt{X^2 V^T}$, where $\varepsilon 
 
 Alex Graves [*"Practical Variational Inference for Neural Networks"*](https://papers.nips.cc/paper_files/paper/2011/hash/7eb3c8be3d411e8ebfab08eba5f49632-Abstract.html) (2011)
 
-Diederik P. Kingma, Tim Salimans, Max Welling [*"Variational Dropout and the Local Reparameterization Trick"*]() (2015)
+Diederik P. Kingma, Tim Salimans, Max Welling [*"Variational Dropout and the Local Reparameterization Trick"*](https://arxiv.org/abs/1506.02557) (2015)
