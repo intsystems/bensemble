@@ -16,7 +16,7 @@
 | Resource | Description |
 | :--- | :--- |
 | 📘 **[Documentation](https://intsystems.github.io/bensemble/)** | Full API reference and user guides. |
-| 📝 **[Tech Report](https://github.com/intsystems/bensemble/blob/master/paper/techreport_draft/bensemble_tech_report.pdf)** | In-depth technical details and theoretical background. |
+| 📝 **[Tech Report](https://github.com/intsystems/bensemble/blob/master/paper/bensemble_tech_report.pdf)** | In-depth technical details and theoretical background. |
 | ✍️ **[Blog Post](https://github.com/intsystems/bensemble/blob/master/blog/bensemble-blogpost.md)** | Summary of the project and motivation. |
 | 📊 **[Benchmarks](https://github.com/intsystems/bensemble/blob/master/notebooks/benchmark.ipynb)** | Comparison of methods on standard datasets. |
 
