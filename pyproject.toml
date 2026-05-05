@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bensemble"
-version = "0.1.0"
-description = "Bayesian ensemble methods for neural networks"
+version = "0.2.0"
+description = "Library with implementations of various ensembling methods."
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
@@ -22,41 +22,39 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 
-authors = [
-  {name = "Соболевский Федор"},
-  {name = "Набиев Мухаммадшариф"},
-  {name = "Василенко Дмитрий"},
-  {name = "Касюк Вадим"}
+authors =[
+  {name = "Dmitrii Vasilenko"},
+  {name = "Fedor Sobolevsky"},
+  {name = "Muhammadsharif Nabiev"},
+  {name = "Vadim Kasyuk"}
 ]
 
 dependencies = [
     "torch>=2.9.1",
     "numpy>=2.2.6",
-    "scikit-learn>=1.7.2",
     "matplotlib>=3.10.7",
     "scipy>=1.15.3"
 ]
 
 [project.optional-dependencies]
-dev = [
+dev =[
     "pytest",
     "pytest-cov",
-    "black",
-    "isort",
     "nbqa",
     "mypy",
-    "autopep8",
     "ruff"
 ]
 docs = [
     "mkdocs-material",
     "mkdocstrings[python]",
     "mkdocs-minify-plugin",
+    "pymdown-extensions",
+    "python-markdown-math"
 ]
 
 [project.urls]
 Homepage = "https://github.com/intsystems/bensemble"
-Bug_Tracker = "https://github.com/intsystems/bensemble/issues"
+"Bug_Tracker" = "https://github.com/intsystems/bensemble/issues"
 Documentation = "https://github.com/intsystems/bensemble#readme"
 Source = "https://github.com/intsystems/bensemble"
 
