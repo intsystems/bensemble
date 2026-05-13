@@ -1,9 +1,3 @@
----
-layout: default
-title: Bayesian Ensembling in Practice
----
-# Bensemble: Bayesian Ensembling in Practice
-
 [Project](https://github.com/intsystems/bensemble/tree/master)
 
 This blog is a guided tour of **Bensemble** - the library developed to implement and compare Bayesian deep learning model ensembling methods.
