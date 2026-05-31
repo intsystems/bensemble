@@ -52,6 +52,40 @@ class BaseBayesianLayer(nn.Module):
         snr_dict = self._get_snr_dict()
         return {name: (val > threshold).float() for name, val in snr_dict.items()}
 
+    def apply_pruning(self, threshold: float = 0.83) -> float:
+        """
+        Applies pruning in-place: zeros out the means and minimizes the variance
+        for weights that fall below the SNR threshold.
+
+        Returns:
+            float: Sparsity of the layer (percentage of pruned weights, 0.0 to 1.0).
+        """
+        masks = self.get_pruning_masks(threshold)
+
+        total_weights = 0
+        pruned_weights = 0
+
+        with torch.no_grad():
+            for name, param in self.named_parameters():
+                if name.endswith("_mu"):
+                    mask = masks[name]
+
+                    total_weights += mask.numel()
+                    pruned_weights += (mask == 0.0).sum().item()
+                    param.data *= mask
+
+                    rho_name = name.replace("_mu", "_rho")
+                    if hasattr(self, rho_name):
+                        rho = getattr(self, rho_name)
+                        rho.data = torch.where(
+                            mask.bool(),
+                            rho.data,
+                            torch.tensor(-1e8, device=rho.device, dtype=rho.dtype),
+                        )
+
+        sparsity = pruned_weights / total_weights if total_weights > 0 else 0.0
+        return sparsity
+
     def _get_snr_dict(self) -> dict[str, torch.Tensor]:
         """Computes the Signal-to-Noise Ratio (SNR) for all Bayesian parameters.
 
