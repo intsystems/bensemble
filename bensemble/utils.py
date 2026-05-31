@@ -1,5 +1,6 @@
 from bensemble.layers.conv import BayesianConv2d
 from bensemble.layers import BayesianLinear
+from bensemble.layers.base import BaseBayesianLayer
 import math
 
 import torch
@@ -68,3 +69,32 @@ def predict_with_uncertainty(model: nn.Module, x: torch.Tensor, num_samples: int
     model.train(was_training)
 
     return mean, std
+
+
+def prune_model(model: torch.nn.Module, threshold: float = 0.83) -> float:
+    """
+    Applies Graves' SNR-based pruning to all Bayesian layers in the model.
+
+    Args:
+        model (nn.Module): The trained Bayesian model.
+        threshold (float): SNR threshold. Defaults to 0.83.
+
+    Returns:
+        float: Overall sparsity of the model (percentage of pruned weights).
+    """
+    total_weights = 0
+    total_pruned = 0
+
+    for module in model.modules():
+        if isinstance(module, BaseBayesianLayer):
+            # Считаем, сколько весов в слое всего и сколько мы обрезали
+            masks = module.get_pruning_masks(threshold)
+            for mask in masks.values():
+                total_weights += mask.numel()
+                total_pruned += (mask == 0.0).sum().item()
+
+            # Применяем прунинг к слою
+            module.apply_pruning(threshold)
+
+    overall_sparsity = total_pruned / total_weights if total_weights > 0 else 0.0
+    return overall_sparsity
