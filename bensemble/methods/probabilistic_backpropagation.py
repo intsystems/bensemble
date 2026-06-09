@@ -3,8 +3,9 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import torch
 import torch.nn as nn
+from torch.utils.data import DataLoader
 
-from ..core.base import BaseBayesianEnsemble
+from bensemble.core.ensemble import Ensemble
 from ..utils import standard_normal_cdf, standard_normal_pdf
 
 
@@ -118,9 +119,9 @@ class PBPNet(nn.Module):
         return mz, vz
 
 
-class ProbabilisticBackpropagation(BaseBayesianEnsemble):
+class PBPEngine:
     """
-    Probabilistic Backpropagation (PBP) for Bayesian regression with moment matching.
+    Probabilistic Backpropagation (PBP) Engine for Bayesian regression.
     """
 
     def __init__(
@@ -136,19 +137,18 @@ class ProbabilisticBackpropagation(BaseBayesianEnsemble):
     ):
         if model is None:
             if layer_sizes is None:
-                raise ValueError(
-                    "Specify either a ready PBP model or layer_sizes to construct it."
-                )
+                raise ValueError("Specify either a ready PBP model or layer_sizes.")
             model = PBPNet(layer_sizes, dtype=dtype, device=device)
+
         self.device = device or torch.device("cpu")
         self.dtype = dtype
-        super().__init__(model.to(self.device))
+        self.model = model.to(self.device)
+        self.is_fitted = False
 
         self.alpha_g = torch.tensor(noise_alpha, dtype=self.dtype, device=self.device)
         self.beta_g = torch.tensor(noise_beta, dtype=self.dtype, device=self.device)
         self.alpha_l = torch.tensor(weight_alpha, dtype=self.dtype, device=self.device)
         self.beta_l = torch.tensor(weight_beta, dtype=self.dtype, device=self.device)
-        # Initialize weights to match the stated Gaussian prior (before 1/sqrt(d) scaling).
         self._init_from_prior()
 
     def _init_from_prior(self) -> None:
@@ -365,8 +365,8 @@ class ProbabilisticBackpropagation(BaseBayesianEnsemble):
 
     def fit(
         self,
-        train_loader: torch.utils.data.DataLoader,
-        val_loader: Optional[torch.utils.data.DataLoader] = None,
+        train_loader: DataLoader,
+        val_loader: Optional[DataLoader] = None,
         num_epochs: int = 100,
         step_clip: Optional[float] = 2.0,
         prior_refresh: int = 1,
@@ -453,26 +453,14 @@ class ProbabilisticBackpropagation(BaseBayesianEnsemble):
         var = torch.clamp(noise_var + vz, min=1e-12)
         return mz, var
 
-    def predict(
-        self, X: torch.Tensor, n_samples: int = 100
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        if not self.is_fitted:
-            raise RuntimeError("Model not fitted. Call fit() first.")
-
-        mean, var = self._predictive_mean_var(
-            X.to(device=self.device, dtype=self.dtype)
-        )
-        std = torch.sqrt(torch.clamp(var, min=1e-12))
-        samples = mean.unsqueeze(0) + std.unsqueeze(0) * torch.randn(
-            (n_samples,) + mean.shape, device=self.device, dtype=self.dtype
-        )
-        return mean.detach(), samples.detach()
-
     def noise_variance(self) -> torch.Tensor:
         alpha = torch.clamp(self.alpha_g, min=1.0 + 1e-6)
         return self.beta_g / (alpha - 1.0)
 
-    def sample_models(self, n_models: int = 10) -> List[nn.Module]:
+    def sample_models(self, n_models: int = 10, **kwargs) -> List[nn.Module]:
+        if not self.is_fitted:
+            raise RuntimeError("PBPEngine not fitted. Call fit() first.")
+
         models = []
         for _ in range(n_models):
             model_copy = self._sample_single_model()
@@ -503,6 +491,9 @@ class ProbabilisticBackpropagation(BaseBayesianEnsemble):
         model = nn.Sequential(*layers)
         model.eval()
         return model
+
+    def build_ensemble(self, n_members: int = 10) -> Ensemble:
+        return Ensemble.from_posterior(self, n_members=n_members)
 
     def _get_ensemble_state(self) -> Dict[str, Any]:
         return {
