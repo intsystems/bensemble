@@ -87,13 +87,11 @@ def prune_model(model: torch.nn.Module, threshold: float = 0.83) -> float:
 
     for module in model.modules():
         if isinstance(module, BaseBayesianLayer):
-            # Считаем, сколько весов в слое всего и сколько мы обрезали
             masks = module.get_pruning_masks(threshold)
             for mask in masks.values():
                 total_weights += mask.numel()
                 total_pruned += (mask == 0.0).sum().item()
 
-            # Применяем прунинг к слою
             module.apply_pruning(threshold)
 
     overall_sparsity = total_pruned / total_weights if total_weights > 0 else 0.0
