@@ -11,13 +11,13 @@ __version__ = "0.1.0"
 
 from .methods import (
     LaplaceApproximation,
-    ProbabilisticBackpropagation,
+    PBPEngine,
 )
 from .search import RandomSearcher, EvolutionarySearcher, SearchSpace
 
 __all__ = [
     "LaplaceApproximation",
-    "ProbabilisticBackpropagation",
+    "PBPEngine",
     "RandomSearcher",
     "EvolutionarySearcher",
     "SearchSpace",
