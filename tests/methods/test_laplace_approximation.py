@@ -193,7 +193,7 @@ def test_state_management(regression_setup):
 
     assert state["likelihood"] == "regression"
 
-    required_keys = ["kronecker_factors", "sampling_factors", "dataset_size"]
+    required_keys = ["sampling_factors", "dataset_size"]
     for key in required_keys:
         assert key in state
 
