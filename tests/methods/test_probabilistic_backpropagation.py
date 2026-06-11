@@ -3,13 +3,14 @@ import torch
 import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader
 
-
 from bensemble.methods.probabilistic_backpropagation import (
-    ProbabilisticBackpropagation,
+    PBPEngine,
     PBPNet,
     ProbLinear,
     relu_moments,
 )
+
+from bensemble.core.ensemble import Ensemble
 
 
 @pytest.fixture
@@ -67,11 +68,11 @@ def test_pbp_net_forward():
 
 def test_initialization(pbp_model_setup):
     """Tests initialization of the PBP wrapper."""
-    pbp = ProbabilisticBackpropagation(layer_sizes=pbp_model_setup)
+    pbp = PBPEngine(layer_sizes=pbp_model_setup)
     assert isinstance(pbp.model, PBPNet)
 
     with pytest.raises(ValueError, match="Specify either"):
-        ProbabilisticBackpropagation(model=None, layer_sizes=None)
+        PBPEngine(model=None, layer_sizes=None)
 
 
 def test_fit_loop(pbp_data, pbp_model_setup):
@@ -80,7 +81,7 @@ def test_fit_loop(pbp_data, pbp_model_setup):
     Checks if parameters update and history is returned.
     """
     X, y, loader = pbp_data
-    pbp = ProbabilisticBackpropagation(layer_sizes=pbp_model_setup, dtype=torch.float64)
+    pbp = PBPEngine(layer_sizes=pbp_model_setup, dtype=torch.float64)
 
     alpha_old = pbp.alpha_g.item()
     beta_old = pbp.beta_g.item()
@@ -96,32 +97,30 @@ def test_fit_loop(pbp_data, pbp_model_setup):
 def test_prior_refresh(pbp_data, pbp_model_setup):
     """Tests the prior refresh mechanism (updating alpha_l, beta_l)."""
     _, _, loader = pbp_data
-    pbp = ProbabilisticBackpropagation(layer_sizes=pbp_model_setup, dtype=torch.float64)
+    pbp = PBPEngine(layer_sizes=pbp_model_setup, dtype=torch.float64)
     pbp.fit(loader, num_epochs=1, prior_refresh=1)
 
     assert isinstance(pbp.alpha_l, torch.Tensor)
 
 
-def test_predict(pbp_data, pbp_model_setup):
-    """Tests prediction output (mean and samples)."""
+def test_ensemble_integration(pbp_data, pbp_model_setup):
+    """Tests integration with the new Ensemble API."""
     X, y, loader = pbp_data
-    pbp = ProbabilisticBackpropagation(layer_sizes=pbp_model_setup, dtype=torch.float64)
+    pbp = PBPEngine(layer_sizes=pbp_model_setup, dtype=torch.float64)
     pbp.fit(loader, num_epochs=1)
 
-    mean, samples = pbp.predict(X, n_samples=5)
+    ensemble = Ensemble.from_posterior(pbp, n_members=5)
 
-    assert mean.shape == y.shape
+    with torch.no_grad():
+        member_preds = ensemble.predict_members(X)
 
-    assert samples.shape == (5,) + y.shape
-
-    noise_var = pbp.noise_variance()
-    assert noise_var > 0
+    assert member_preds.shape == (5, 20, 1)
 
 
 def test_sample_models(pbp_data, pbp_model_setup):
     """Tests sampling of PyTorch models from PBP posterior."""
     X, y, loader = pbp_data
-    pbp = ProbabilisticBackpropagation(layer_sizes=pbp_model_setup, dtype=torch.float64)
+    pbp = PBPEngine(layer_sizes=pbp_model_setup, dtype=torch.float64)
     pbp.fit(loader, num_epochs=1)
 
     models = pbp.sample_models(n_models=2)
@@ -136,7 +135,7 @@ def test_sample_models(pbp_data, pbp_model_setup):
 
 def test_state_management(pbp_model_setup):
     """Tests saving and loading ensemble state."""
-    pbp = ProbabilisticBackpropagation(layer_sizes=pbp_model_setup, dtype=torch.float64)
+    pbp = PBPEngine(layer_sizes=pbp_model_setup, dtype=torch.float64)
 
     state = pbp._get_ensemble_state()
 
@@ -152,7 +151,7 @@ def test_state_management(pbp_model_setup):
 def test_val_loader(pbp_data, pbp_model_setup):
     """Tests fit with validation loader."""
     X, y, loader = pbp_data
-    pbp = ProbabilisticBackpropagation(layer_sizes=pbp_model_setup, dtype=torch.float64)
+    pbp = PBPEngine(layer_sizes=pbp_model_setup, dtype=torch.float64)
 
     history = pbp.fit(loader, val_loader=loader, num_epochs=1)
 
@@ -161,11 +160,10 @@ def test_val_loader(pbp_data, pbp_model_setup):
 
 
 def test_predict_not_fitted(pbp_model_setup):
-    """Ensures predict raises error if not fitted."""
-    pbp = ProbabilisticBackpropagation(layer_sizes=pbp_model_setup)
-    X = torch.randn(5, 1)
-    with pytest.raises(RuntimeError, match="Model not fitted"):
-        pbp.predict(X)
+    """Ensures sample_models raises error if not fitted."""
+    pbp = PBPEngine(layer_sizes=pbp_model_setup)
+    with pytest.raises(RuntimeError, match="PBPEngine not fitted"):
+        pbp.sample_models(n_models=5)
 
 
 def test_relu_moments_positive_mean():

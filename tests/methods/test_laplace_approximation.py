@@ -3,7 +3,8 @@ import torch
 import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader
 
-from bensemble.methods import LaplaceApproximation
+from bensemble.methods.laplace_approximation import LaplaceApproximation
+from bensemble.core.ensemble import Ensemble
 
 
 @pytest.fixture
@@ -74,24 +75,18 @@ def test_verbose_toggle(regression_setup):
     assert laplace.verbose is False
 
 
-def test_fit_regression_no_pretrained(regression_setup):
+def test_compute_curvature_regression(regression_setup):
     """
-    Tests full pipeline for regression (MSE):
-    1. Training from scratch (pretrained=False).
-    2. Computing Laplace factors (K-FAC).
+    Tests full pipeline for regression:
     """
     model, loader, _, _ = regression_setup
 
-    laplace = LaplaceApproximation(
-        model, pretrained=False, likelihood="regression", verbose=True
-    )
+    laplace = LaplaceApproximation(model, likelihood="regression", verbose=True)
 
-    history = laplace.fit(loader, num_epochs=1, num_samples=10)
+    # Use the new method name
+    laplace.compute_curvature(loader, num_samples=10)
 
-    assert "train_loss" in history
-    assert len(history["train_loss"]) == 1
-    assert laplace.pretrained is True
-
+    assert laplace.is_fitted is True
     assert len(laplace.kronecker_factors) == 2
     assert len(laplace.sampling_factors) == 2
 
@@ -101,19 +96,15 @@ def test_fit_regression_no_pretrained(regression_setup):
         assert "weight_shape" in factors
 
 
-def test_fit_classification_pretrained(classification_setup):
+def test_compute_curvature_classification(classification_setup):
     """
-    Tests pipeline for classification (CrossEntropy):
-    1. Skips MAP training (pretrained=True).
-    2. Computes factors using CrossEntropy Hessian approximation.
+    Tests pipeline for classification:
     """
     model, loader, _, _ = classification_setup
 
-    laplace = LaplaceApproximation(
-        model, pretrained=True, likelihood="classification", verbose=False
-    )
+    laplace = LaplaceApproximation(model, likelihood="classification", verbose=False)
 
-    laplace.fit(loader, num_samples=10)
+    laplace.compute_curvature(loader, num_samples=10)
     assert len(laplace.kronecker_factors) > 0
 
     for name, factors in laplace.kronecker_factors.items():
@@ -121,51 +112,49 @@ def test_fit_classification_pretrained(classification_setup):
         assert not torch.isnan(factors["H"]).any()
 
 
-def test_predict_regression_shapes(regression_setup):
+def test_ensemble_integration_regression(regression_setup):
     """
-    Tests prediction output shapes and values for regression.
+    Tests integration for regression.
     """
     model, loader, X, y = regression_setup
     laplace = LaplaceApproximation(model, likelihood="regression")
-    laplace.fit(loader, num_epochs=0, num_samples=10)  # Fast fit
+    laplace.compute_curvature(loader, num_samples=10)
 
-    mean, var = laplace.predict(X, n_samples=5)
+    # Use the new API
+    ensemble = Ensemble.from_posterior(laplace, n_members=5)
 
-    assert mean.shape == y.shape
-    assert var.shape == y.shape
+    # Predict members directly
+    with torch.no_grad():
+        member_preds = ensemble.predict_members(X)
 
-    assert (var >= 0).all()
+    assert member_preds.shape == (5, 20, 1)
 
 
-def test_predict_classification_shapes(classification_setup):
+def test_ensemble_integration_classification(classification_setup):
     """
-    Tests prediction output shapes for classification.
-    Expects probabilities and entropy/uncertainty.
+    Tests integration for classification.
     """
     model, loader, X, _ = classification_setup
     laplace = LaplaceApproximation(model, likelihood="classification")
-    laplace.fit(loader, num_epochs=0, num_samples=10)
+    laplace.compute_curvature(loader, num_samples=10)
 
-    probs, uncertainty = laplace.predict(X, n_samples=5)
+    ensemble = Ensemble.from_posterior(laplace, n_members=5)
 
-    assert probs.shape == (20, 3)
+    with torch.no_grad():
+        member_preds = ensemble.predict_members(X)
 
-    sums = probs.sum(dim=1)
-    assert torch.allclose(sums, torch.ones_like(sums))
-
-    assert uncertainty.shape == (20,)
-    assert (uncertainty >= 0).all()
+    assert member_preds.shape == (5, 20, 3)
 
 
 def test_sample_models_diversity(regression_setup):
     """
     Ensures that sampled models are:
     1. Valid nn.Modules.
-    2. Have different weights (stochasticity).
+    2. Have different weights.
     """
     model, loader, _, _ = regression_setup
     laplace = LaplaceApproximation(model, likelihood="regression")
-    laplace.fit(loader, num_epochs=0, num_samples=10)
+    laplace.compute_curvature(loader, num_samples=10)
 
     samples = laplace.sample_models(n_models=2)
     assert len(samples) == 2
@@ -180,15 +169,14 @@ def test_sample_models_diversity(regression_setup):
 
 def test_hooks_cleanup(regression_setup):
     """
-    Ensures that PyTorch forward hooks are removed after fitting.
-    Leaving hooks can cause memory leaks or unexpected behavior.
+    Ensures that PyTorch forward hooks are removed after computing curvature.
     """
     model, loader, _, _ = regression_setup
     laplace = LaplaceApproximation(model, likelihood="regression")
 
     assert len(laplace.hook_handles) == 0
 
-    laplace.fit(loader, num_samples=5)
+    laplace.compute_curvature(loader, num_samples=5)
 
     assert len(laplace.hook_handles) == 0
 
@@ -196,22 +184,20 @@ def test_hooks_cleanup(regression_setup):
 def test_state_management(regression_setup):
     """
     Tests _get_ensemble_state and _set_ensemble_state.
-    Assumes bugs with empty keys have been fixed.
     """
     model, loader, _, _ = regression_setup
     laplace = LaplaceApproximation(model, likelihood="regression")
-    laplace.fit(loader, num_epochs=0, num_samples=5)
+    laplace.compute_curvature(loader, num_samples=5)
 
     state = laplace._get_ensemble_state()
 
     assert state["likelihood"] == "regression"
 
-    required_keys = ["kronecker_factors", "sampling_factors", "dataset_size"]
+    required_keys = ["sampling_factors", "dataset_size"]
     for key in required_keys:
         assert key in state
 
     new_laplace = LaplaceApproximation(model, likelihood="regression")
-
     new_laplace._set_ensemble_state(state)
 
     assert new_laplace.dataset_size == laplace.dataset_size
