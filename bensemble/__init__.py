@@ -6,7 +6,12 @@ Modules:
 - methods: implementation of variational and Bayesian ensemble methods
 """
 
-__version__ = "0.2.1"
+import importlib.metadata
+
+try:
+    __version__ = importlib.metadata.version("bensemble")
+except importlib.metadata.PackageNotFoundError:
+    __version__ = "unknown"
 
 from .methods import (
     LaplaceApproximation,
