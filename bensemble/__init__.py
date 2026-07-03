@@ -2,12 +2,11 @@
 bensemble: Bayesian ensemble methods for neural networks.
 
 Modules:
-- core: базовые классы и утилиты
-- methods: реализация методов вариационного и байесовского ансамбля
+- core: core classes and utilities
+- methods: implementation of variational and Bayesian ensemble methods
 """
 
-__version__ = "0.1.0"
-
+__version__ = "0.2.1"
 
 from .methods import (
     LaplaceApproximation,
