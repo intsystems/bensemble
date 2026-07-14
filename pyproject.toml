@@ -51,6 +51,15 @@ docs = [
     "pymdown-extensions",
     "python-markdown-math"
 ]
+benchmarks = [
+    "torchvision>=0.20",
+    "tqdm",
+    "pandas",
+    "tabulate",
+    "seaborn",
+    "scikit-learn",
+    "ucimlrepo"
+]
 
 [project.urls]
 Homepage = "https://github.com/intsystems/bensemble"
