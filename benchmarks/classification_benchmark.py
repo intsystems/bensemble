@@ -346,77 +346,82 @@ def evaluate(ens, loader):
     return torch.cat(probs_all), torch.cat(labels_all), torch.cat(epis_all)
 
 
-results = []
+def main():
+    results = []
 
-for name, fn in METHODS.items():
-    print(f"\n=== Running {name} ===")
-    set_seed(42)
+    for name, fn in METHODS.items():
+        print(f"\n=== Running {name} ===")
+        set_seed(42)
 
-    start_time = time.time()
-    ens = fn()
-    train_time = time.time() - start_time
+        start_time = time.time()
+        ens = fn()
+        train_time = time.time() - start_time
 
-    id_p, id_y, id_u = evaluate(ens, test_loader)
-    sh_p, sh_y, sh_u = evaluate(ens, noisy_loader)
-    ood_p, _, ood_u = evaluate(ens, ood_loader)
+        id_p, id_y, id_u = evaluate(ens, test_loader)
+        sh_p, sh_y, sh_u = evaluate(ens, noisy_loader)
+        ood_p, _, ood_u = evaluate(ens, ood_loader)
 
-    acc = (id_p.argmax(1) == id_y).float().mean().item()
-    ece = float(expected_calibration_error(id_p, id_y))
-    acc_sh = (sh_p.argmax(1) == sh_y).float().mean().item()
+        acc = (id_p.argmax(1) == id_y).float().mean().item()
+        ece = float(expected_calibration_error(id_p, id_y))
+        acc_sh = (sh_p.argmax(1) == sh_y).float().mean().item()
 
-    auroc = roc_auc_score(
-        np.concatenate([np.zeros(len(id_u)), np.ones(len(ood_u))]),
-        np.concatenate([id_u.numpy(), ood_u.numpy()]),
-    )
+        auroc = roc_auc_score(
+            np.concatenate([np.zeros(len(id_u)), np.ones(len(ood_u))]),
+            np.concatenate([id_u.numpy(), ood_u.numpy()]),
+        )
 
-    plot_ood_histogram(id_u, ood_u, name)
+        plot_ood_histogram(id_u, ood_u, name)
 
-    results.append(
-        {
-            "Method": name,
-            "ID Acc": acc,
-            "ID ECE": ece,
-            "Shift Acc": acc_sh,
-            "OOD AUROC": auroc,
-            "Time (s)": round(train_time, 1),
-        }
-    )
+        results.append(
+            {
+                "Method": name,
+                "ID Acc": acc,
+                "ID ECE": ece,
+                "Shift Acc": acc_sh,
+                "OOD AUROC": auroc,
+                "Time (s)": round(train_time, 1),
+            }
+        )
 
-# --- 6. SAVE RESULTS AND RADAR CHART ---
-df = pd.DataFrame(results)
-csv_path = RESULTS_DIR / "classification_benchmark_results.csv"
-df.to_csv(csv_path, index=False)
-print(f"\nResults saved to {csv_path}")
-print(df.to_markdown(index=False))
+    # --- 6. SAVE RESULTS AND RADAR CHART ---
+    df = pd.DataFrame(results)
+    csv_path = RESULTS_DIR / "benchmark_results.csv"
+    df.to_csv(csv_path, index=False)
+    print(f"\n✅ Results saved to {csv_path}")
+    print(df.to_markdown(index=False))
 
-methods_to_plot = [
-    "Single Net",
-    "Deep Ensemble",
-    "MC Dropout",
-    "VI (ELBO)",
-    "NESBS (SVGD)",
-    "NES-RS",
-    "NES-RE",
-]
-df_plot = df[df["Method"].isin(methods_to_plot)].reset_index(drop=True)
+    methods_to_plot = [
+        "Single Net",
+        "Deep Ensemble",
+        "MC Dropout",
+        "VI (ELBO)",
+        "NESBS (SVGD)",
+        "NES-RS",
+        "NES-RE",
+    ]
+    df_plot = df[df["Method"].isin(methods_to_plot)].reset_index(drop=True)
 
-labels = ["ID Acc", "Calibration (1-ECE)", "OOD AUROC", "Shift Acc"]
-angles = np.linspace(0, 2 * np.pi, len(labels), endpoint=False).tolist()
-angles += angles[:1]
+    labels = ["ID Acc", "Calibration (1-ECE)", "OOD AUROC", "Shift Acc"]
+    angles = np.linspace(0, 2 * np.pi, len(labels), endpoint=False).tolist()
+    angles += angles[:1]
 
-fig, ax = plt.subplots(figsize=(7, 7), subplot_kw=dict(polar=True))
-colors = sns.color_palette("husl", len(methods_to_plot))
+    fig, ax = plt.subplots(figsize=(7, 7), subplot_kw=dict(polar=True))
+    colors = sns.color_palette("husl", len(methods_to_plot))
 
-for i, (_, row) in enumerate(df_plot.iterrows()):
-    values = [row["ID Acc"], 1 - row["ID ECE"], row["OOD AUROC"], row["Shift Acc"]]
-    values += values[:1]
-    ax.plot(angles, values, linewidth=2, label=row["Method"], color=colors[i])
-    ax.fill(angles, values, alpha=0.1, color=colors[i])
+    for i, (_, row) in enumerate(df_plot.iterrows()):
+        values = [row["ID Acc"], 1 - row["ID ECE"], row["OOD AUROC"], row["Shift Acc"]]
+        values += values[:1]
+        ax.plot(angles, values, linewidth=2, label=row["Method"], color=colors[i])
+        ax.fill(angles, values, alpha=0.1, color=colors[i])
 
-ax.set_xticks(angles[:-1])
-ax.set_xticklabels(labels, fontweight="bold")
-ax.set_ylim(0, 1.0)
-plt.legend(loc="upper right", bbox_to_anchor=(1.3, 1.1))
-plt.title("Bensemble Method Comparison", pad=20, fontsize=14, fontweight="bold")
-plt.savefig(RESULTS_DIR / "radar_chart.png", bbox_inches="tight", dpi=300)
-print(f"Radar chart saved to {RESULTS_DIR / 'classification_radar_chart.png'}")
+    ax.set_xticks(angles[:-1])
+    ax.set_xticklabels(labels, fontweight="bold")
+    ax.set_ylim(0, 1.0)
+    plt.legend(loc="upper right", bbox_to_anchor=(1.3, 1.1))
+    plt.title("Bensemble Method Comparison", pad=20, fontsize=14, fontweight="bold")
+    plt.savefig(RESULTS_DIR / "radar_chart.png", bbox_inches="tight", dpi=300)
+    print(f"✅ Radar chart saved to {RESULTS_DIR / 'radar_chart.png'}")
+
+
+if __name__ == "__main__":
+    main()

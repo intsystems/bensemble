@@ -25,16 +25,11 @@ print(
     f"Running Bensemble Regression Benchmark on {DEVICE} (PBP itself always runs on CPU — see run_pbp)"
 )
 
-HIDDEN = 50  # single hidden layer, 50 units
+HIDDEN = 50
 N_SPLITS = 5
 TEST_FRACTION = 0.1
 NUM_EPOCHS = 40
 NUM_POSTERIOR_SAMPLES = 20
-
-# Prior settings – keep consistent across methods where possible.
-# For VI, BayesianLinear(prior_sigma=1.0) → prior variance = 1.0² = 1.0 → precision = 1.0.
-# LAPLACE_PRIOR_PRECISION is set to the same value, but note: if you change prior_sigma in VI,
-# you must update this as 1/(prior_sigma**2).
 LAPLACE_PRIOR_PRECISION = 1.0
 MAP_VAL_FRACTION = 0.1  # fraction of training data held out for noise estimation
 
@@ -156,7 +151,6 @@ def run_vi(Xtr, ytr, Xte, yte, epochs):
     ).to(DEVICE)
     likelihood = GaussianLikelihood().to(DEVICE)
     criterion = VariationalLoss(likelihood, alpha=1.0, num_batches=len(train_loader))
-    # Standard Adam, no LR scheduler for a fair comparison (same as Laplace/MAP).
     opt = torch.optim.Adam(
         list(model.parameters()) + list(likelihood.parameters()), lr=1e-2
     )
@@ -197,7 +191,6 @@ def run_laplace(Xtr, ytr, Xte, yte, epochs):
     - Observation noise estimated on a held-out validation subset.
     """
     D = Xtr.shape[1]
-    # Xtr is already shuffled by make_split; tail-slice gives an effectively random validation set.
     n_train = Xtr.shape[0]
     n_val = max(1, int(n_train * MAP_VAL_FRACTION))
     Xtr_train, ytr_train = Xtr[:-n_val], ytr[:-n_val]
@@ -249,11 +242,9 @@ def run_laplace(Xtr, ytr, Xte, yte, epochs):
 
 def run_map(Xtr, ytr, Xte, yte, epochs):
     """
-    Plain MAP baseline (no Bayesian posterior). Same architecture and MLE training as Laplace,
-    with noise variance estimated on the same held-out validation split.
+    Plain MAP baseline (no Bayesian posterior).
     """
     D = Xtr.shape[1]
-    # Xtr is already shuffled by make_split; tail-slice is random.
     n_train = Xtr.shape[0]
     n_val = max(1, int(n_train * MAP_VAL_FRACTION))
     Xtr_train, ytr_train = Xtr[:-n_val], ytr[:-n_val]
