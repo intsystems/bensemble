@@ -35,7 +35,7 @@ research and decision-making settings — medical imaging, autonomous systems,
 scientific measurement — knowing how uncertain a model is matters as much as
 the prediction itself. `bensemble` is a Python library, built directly on top
 of PyTorch, that provides a unified interface for quantifying and using this
-uncertainty. It brings together several distinct families of methods —
+uncertainty. It brings together several distinct families of methods:
 explicit ensembling (Deep Ensembles [@lakshminarayanan2017simple]),
 implicit/stochastic ensembling (Monte Carlo Dropout [@gal2016dropout],
 variational Bayesian layers optimized via the standard evidence lower bound
@@ -46,7 +46,7 @@ approximations (Laplace approximation with Kronecker-factored curvature
 [@hernandez2015probabilistic]), and ensemble/architecture search (Neural
 Ensemble Search [@zaidi2021neural] via random search, regularized evolution,
 and a sampler inspired by Stein Variational Gradient Descent
-[@liu2016stein]) — behind a single `Ensemble` abstraction. On top of this,
+[@liu2016stein]) behind a single `Ensemble` abstraction. On top of this,
 `bensemble` provides tools to decompose predictive uncertainty into
 aleatoric and epistemic components, calibrate probabilistic predictions
 (temperature and vector scaling), and evaluate calibration quality (Expected
@@ -58,11 +58,11 @@ framework.
 # Statement of need
 
 Uncertainty quantification (UQ) for deep learning is an active and
-fragmented research area. Individual methods — Deep Ensembles
+fragmented research area. Individual methods like Deep Ensembles
 [@lakshminarayanan2017simple], MC Dropout [@gal2016dropout], variational
 inference with the local reparameterization trick [@kingma2015variational],
 Laplace approximations [@ritter2018scalable], and Neural Ensemble Search
-[@zaidi2021neural] — are each associated with their own reference
+[@zaidi2021neural] are each associated with their own reference
 implementation, typically released as a standalone research artifact tied to
 a single paper, with inconsistent APIs, inconsistent assumptions about
 training loops, and little support for combining or comparing methods
@@ -109,7 +109,7 @@ ensemble diversity or posterior sampling. Relative to this landscape,
 implicit/stochastic ensembling, posterior-based sampling, and
 ensemble-aware architecture search behind one shared abstraction with
 matching calibration and uncertainty-decomposition utilities, without
-requiring a Lightning-style training routine — a narrower but more
+requiring a Lightning-style training routine, a narrower but more
 lightweight alternative to `torch-uncertainty` for researchers who want to
 keep their existing PyTorch training code unchanged.
 
@@ -118,16 +118,16 @@ keep their existing PyTorch training code unchanged.
 ![Bensemble architecture](figures/bensemble-architecture.svg)
 
 The central design decision in `bensemble` is the separation between an
-`Ensemble` — a thin, always-present wrapper exposing `predict_members` and a
-combination rule — and a `MemberAdapter`, which encapsulates how member
+`Ensemble`, a thin, always-present wrapper exposing `predict_members` and a
+combination rule, and a `MemberAdapter`, which encapsulates how member
 predictions are produced. Two adapters are provided: `ExplicitMembers`,
 which wraps a list of independently-parameterized `nn.Module` instances
 (Deep Ensembles, Laplace/PBP posterior samples, NES-selected ensembles), and
 `StochasticMembers`, which wraps a single stochastic model and produces
 multiple samples via repeated forward passes (MC Dropout, variational
 layers). This split was chosen over a single "list of models" abstraction
-because several UQ methods — most notably MC Dropout and variational
-inference — do not have a natural list of independent models at all; forcing
+because several UQ methods, most notably MC Dropout and variational
+inference, do not have a natural list of independent models at all; forcing
 them into that shape would require materializing many redundant copies of
 the same network. The trade-off is that code consuming an `Ensemble` must
 not assume that `member_modules` always corresponds one-to-one with the
@@ -166,10 +166,10 @@ As a concrete demonstration of correctness and maturity, we validated
 and three Neural Ensemble Search variants) on a shared image-classification
 and out-of-distribution-detection setup (CIFAR-10 vs. SVHN), training every
 method under matched compute budgets. This process surfaced and fixed
-several subtle correctness issues that are easy to miss in a UQ library —
+several subtle correctness issues that are easy to miss in a UQ library,
 most notably, that our `ExplicitMembers` adapter did not itself manage
 train/eval mode, causing BatchNorm statistics to leak between ensemble
-members at inference time — issues we have since covered with regression
+members at inference time, issues we have since covered with regression
 tests. We view this kind of methodologically careful, cross-method
 validation, which is uncommon among single-method UQ reference
 implementations, as itself a research-relevant contribution: it makes
@@ -185,8 +185,7 @@ Generative AI tools (Claude, Anthropic) were used during two phases of this
 project. First, during early method prototyping, AI assistance was used to
 draft initial prototypes of some methods. These implementations were
 subsequently reviewed, refactored, and rewritten by the authors over the
-following weeks — in some cases substantially, once numerical or interface
-issues were found by hand or via the test suite. No AI-drafted code was
+following weeks. No AI-drafted code was
 merged without a human author verifying it against the relevant published
 method description and against automated tests.
 Second, AI assistance was used during preparation of the cross-method
