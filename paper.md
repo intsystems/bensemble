@@ -32,7 +32,7 @@ bibliography: paper.bib
 Modern deep learning models are typically trained to produce a single point
 prediction, with no indication of how much to trust that prediction. In many
 research and decision-making settings — medical imaging, autonomous systems,
-scientific measurement — knowing *how uncertain* a model is matters as much as
+scientific measurement — knowing how uncertain a model is matters as much as
 the prediction itself. `bensemble` is a Python library, built directly on top
 of PyTorch, that provides a unified interface for quantifying and using this
 uncertainty. It brings together several distinct families of methods —
@@ -66,9 +66,9 @@ Laplace approximations [@ritter2018scalable], and Neural Ensemble Search
 implementation, typically released as a standalone research artifact tied to
 a single paper, with inconsistent APIs, inconsistent assumptions about
 training loops, and little support for combining or comparing methods
-side-by-side. A researcher who wants to ask a simple applied question —
+side-by-side. A researcher who wants to ask a simple applied question
 "which UQ method gives the best calibrated, best-separated in-distribution
-vs. out-of-distribution uncertainty for my model, at what compute cost?" —
+vs. out-of-distribution uncertainty for my model, at what compute cost?",
 currently has to reimplement or glue together several independent codebases,
 each with different conventions for what a "member," a "sample," or a
 "posterior" is.
@@ -119,7 +119,7 @@ keep their existing PyTorch training code unchanged.
 
 The central design decision in `bensemble` is the separation between an
 `Ensemble` — a thin, always-present wrapper exposing `predict_members` and a
-combination rule — and a `MemberAdapter`, which encapsulates *how* member
+combination rule — and a `MemberAdapter`, which encapsulates how member
 predictions are produced. Two adapters are provided: `ExplicitMembers`,
 which wraps a list of independently-parameterized `nn.Module` instances
 (Deep Ensembles, Laplace/PBP posterior samples, NES-selected ensembles), and
@@ -131,8 +131,7 @@ inference — do not have a natural list of independent models at all; forcing
 them into that shape would require materializing many redundant copies of
 the same network. The trade-off is that code consuming an `Ensemble` must
 not assume that `member_modules` always corresponds one-to-one with the
-number of predictive samples (`num_members`); this is documented but is an
-area we are actively improving (see Acknowledgements).
+number of predictive samples (`num_members`).
 
 Search algorithms (`NESBayesianSampler`, `RandomSearcher`,
 `EvolutionarySearcher`) are implemented against the same `SearchSpace`
@@ -174,7 +173,7 @@ members at inference time — issues we have since covered with regression
 tests. We view this kind of methodologically careful, cross-method
 validation, which is uncommon among single-method UQ reference
 implementations, as itself a research-relevant contribution: it makes
-`bensemble` a more trustworthy basis for researchers who want to *compare*
+`bensemble` a more trustworthy basis for researchers who want to compare
 UQ methods rather than reimplement one in isolation.
 
 The project also includes automated unit tests and continuous integration to
@@ -189,8 +188,7 @@ subsequently reviewed, refactored, and rewritten by the authors over the
 following weeks — in some cases substantially, once numerical or interface
 issues were found by hand or via the test suite. No AI-drafted code was
 merged without a human author verifying it against the relevant published
-method description (e.g. Lakshminarayanan et al. 2017 for Deep Ensembles;
-Zaidi et al. 2021 for Neural Ensemble Search) and against automated tests.
+method description and against automated tests.
 Second, AI assistance was used during preparation of the cross-method
 benchmark described in the Research impact statement, specifically to help
 identify methodological issues and to help draft this manuscript. All AI-suggested code
