@@ -115,7 +115,7 @@ keep their existing PyTorch training code unchanged.
 
 # Software design
 
-![Bensemble architecture](figures/bensemble-architecture.png)
+![Bensemble architecture](figures/bensemble-architecture.png){height="300pt"}
 
 The central design decision in `bensemble` is the separation between an
 `Ensemble`, a thin, always-present wrapper exposing `predict_members` and a
