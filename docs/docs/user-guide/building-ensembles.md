@@ -70,9 +70,9 @@ Bensemble also provides **Neural Ensemble Search (NES)**. Instead of manually pi
 ```python
 from bensemble.search.nes import EvolutionarySearcher
 
-searcher = EvolutionarySearcher(search_space, pool_size=50)
+searcher = EvolutionarySearcher(search_space, train_fn=my_trainer, pool_size=50, ensemble_size=5)
 # Returns a ready-to-use Ensemble object
-ensemble = searcher.search(train_fn=my_trainer, val_loader=val_loader)
+ensemble = searcher.search(val_loader)
 ```
 
 ### Bayesian Sampling (NESBS)
@@ -80,9 +80,9 @@ ensemble = searcher.search(train_fn=my_trainer, val_loader=val_loader)
 ```python
 from bensemble.search.bayesian import NESBayesianSampler
 
-sampler = NESBayesianSampler(trained_supernet)
-# Samples an ensemble from the supernet using SVGD
-ensemble = sampler.sample_svgd(val_loader, n_models=5)
+sampler = NESBayesianSampler(search_space, train_fn=my_trainer, pool_size=50, ensemble_size=5)
+# Samples a diverse ensemble from the candidate pool using SVGD
+ensemble = sampler.sample_svgd(val_loader)
 ```
 
 ---
