@@ -24,7 +24,7 @@ affiliations:
     name: "Moscow Institute of Physics and Technology"
   - index: 2
     name: "Skolkovo Institute of Science and Technology"
-date: "14 July 2026"
+date: "24 July 2026"
 bibliography: paper.bib
 ---
 
@@ -46,7 +46,7 @@ approximations (Laplace approximation with Kronecker-factored curvature
 [@ritter2018scalable], Probabilistic Backpropagation
 [@hernandez2015probabilistic]), and ensemble/architecture search (Neural
 Ensemble Search [@zaidi2021neural] via random search, regularized evolution,
-and a discrete, pool-based sampler named after and inspired by Neural
+and a discrete, pool-based sampler inspired by Neural
 Ensemble Search via Bayesian Sampling [@shu2022neural] and Stein
 Variational Gradient Descent [@liu2016stein]) behind a single `Ensemble`
 abstraction. On top of this,
@@ -168,30 +168,27 @@ and iterative software engineering process, including versioned PyPI releases,
 automated testing, documentation, and a pull-request-based workflow.
 
 As a concrete demonstration of correctness and maturity, we validated
-`bensemble` end-to-end by running all eight supported ensembling/UQ methods
-(Deep Ensembles, MC Dropout, variational inference, Laplace approximation,
-and three Neural Ensemble Search variants) on a shared image-classification
-and out-of-distribution-detection setup (CIFAR-10 vs. SVHN), training every
+`bensemble` end-to-end by running eight implemented classification methods, including
+a deterministic baseline (Single Net), classical UQ methods (Deep Ensembles, MC Dropout,
+variational inference, and Laplace approximation), and three Neural Ensemble Search variants on a shared image-classification and
+out-of-distribution-detection setup (CIFAR-10 vs. SVHN), training every
 method under matched compute budgets. This process surfaced and fixed
 several subtle correctness issues that are easy to miss in a UQ library,
 most notably, that our `ExplicitMembers` adapter did not itself manage
 train/eval mode, causing BatchNorm statistics to leak between ensemble
 members at inference time, issues we have since covered with regression
 tests. We view this kind of methodologically careful, cross-method
-validation, which is uncommon among single-method UQ reference
-implementations, as itself a research-relevant contribution: it makes
-`bensemble` a more trustworthy basis for researchers who want to compare
-UQ methods rather than reimplement one in isolation.
+validation as useful for researchers who want to compare UQ methods
+rather than reimplement one in isolation.
 
 The project also includes automated unit tests and continuous integration to
-help ensure correctness and compatibility across supported Python versions.
+help ensure correctness and compatibility across Python versions 3.10–3.13.
 
 ## Benchmarks
 
 Beyond unit and integration tests, we validated `bensemble` end-to-end by
-running every supported method on a shared, realistic workload: all eight
-classification/UQ methods (Single Net, Deep Ensembles, MC Dropout, VI,
-Laplace, and the three Neural Ensemble Search variants) on CIFAR-10 versus
+running eight classification methods on a shared, realistic workload
+(Single Neural Network baseline, Deep Ensembles, MC Dropout, VI, Laplace, and the three Neural Ensemble Search variants) on CIFAR-10 versus
 SVHN, and all four regression methods (PBP, VI, Laplace, and a plain MAP
 baseline) across four UCI datasets, over five random train/test splits per
 dataset. As a sanity check, rather than a comparison of which method
@@ -227,17 +224,17 @@ reported in the `benchmarks/` directory.
 
 # AI usage disclosure
 
-Generative AI tools (Claude, Anthropic) were used during two phases of this
+Generative AI tools (Claude by Anthropic) were used during two phases of this
 project. First, during early method prototyping, AI assistance was used to
-draft initial prototypes of some methods. These implementations were
-subsequently reviewed, refactored, and rewritten by the authors over the
-following weeks. No AI-drafted code was
-merged without a human author verifying it against the relevant published
-method description and against automated tests.
+help develop initial prototypes of some methods. These implementations
+were subsequently reviewed, refactored, and rewritten by the authors over
+the following weeks. No AI-assisted code was merged without a human author
+verifying it against the relevant published method description and against
+automated tests.
 Second, AI assistance was used during preparation of the cross-method
 benchmark described in the Research impact statement, specifically to help
-identify methodological issues and to help draft this manuscript. All AI-suggested code
-changes were manually reviewed, tested against the library's existing test
+identify methodological issues and to help draft this manuscript. All AI-assisted code changes
+were manually reviewed, tested against the library's existing test
 suite, and checked against the relevant library source code before being
 committed.
 
