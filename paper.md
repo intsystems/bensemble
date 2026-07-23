@@ -9,6 +9,7 @@ tags:
   - neural architecture search
 authors:
   - name: Dmitrii Vasilenko
+    orcid: 0009-0005-6593-7392
     affiliation: '1'
   - name: Muhammadsharif Nabiev
     affiliation: '1'
@@ -45,15 +46,17 @@ approximations (Laplace approximation with Kronecker-factored curvature
 [@ritter2018scalable], Probabilistic Backpropagation
 [@hernandez2015probabilistic]), and ensemble/architecture search (Neural
 Ensemble Search [@zaidi2021neural] via random search, regularized evolution,
-and a sampler inspired by Stein Variational Gradient Descent
-[@liu2016stein]) behind a single `Ensemble` abstraction. On top of this,
+and a discrete, pool-based sampler named after and inspired by Neural
+Ensemble Search via Bayesian Sampling [@shu2022neural] and Stein
+Variational Gradient Descent [@liu2016stein]) behind a single `Ensemble`
+abstraction. On top of this,
 `bensemble` provides tools to decompose predictive uncertainty into
-aleatoric and epistemic components, calibrate probabilistic predictions
-(temperature and vector scaling), and evaluate calibration quality (Expected
-Calibration Error, Brier score, negative log-likelihood). Researchers can
-train models using ordinary PyTorch code and use `bensemble` for
-inference-time uncertainty analysis without adopting a new training
-framework.
+aleatoric and epistemic components [@kendall2017uncertainties], calibrate probabilistic predictions
+(temperature and vector scaling [@guo2017calibration]), and evaluate
+calibration quality (Expected Calibration Error, Brier score, negative
+log-likelihood). Researchers can train models using ordinary PyTorch code
+and use `bensemble` for inference-time uncertainty analysis without
+adopting a new training framework.
 
 # Statement of need
 
@@ -103,6 +106,7 @@ implementation of Laplace approximations for PyTorch models. `Uncertainty
 Toolbox` [@chung2021uncertainty] provides assessment, visualization, and
 recalibration utilities for regression uncertainty, but is not itself a
 model-training or ensembling library. NNI (Neural Network Intelligence)
+[@nni2021]
 supports general neural architecture search but has no built-in notion of
 ensemble diversity or posterior sampling. Relative to this landscape,
 `bensemble`'s contribution is combining explicit ensembling,
@@ -139,7 +143,11 @@ protocol and the same `Ensemble.from_models` constructor as the non-search
 methods, so a searched ensemble is, from the calibration/uncertainty
 tooling's point of view, indistinguishable from a hand-built Deep Ensemble.
 This lets users swap in a search-based ensembling strategy without touching
-any downstream evaluation code.
+any downstream evaluation code. `NESBayesianSampler` operates over a
+discrete pool of already-trained candidate models rather than a continuous
+architecture parameterization, so it should be read as a discrete,
+pool-based heuristic inspired by its namesake rather than a faithful
+reproduction of it.
 
 For variational Bayesian layers, `bensemble` also provides pruning
 utilities (`prune_model`, `apply_pruning`) that remove weights whose
@@ -155,9 +163,9 @@ practical recommendations in the documentation.
 
 # Research impact statement
 
-`bensemble` has developed since September 2025 by a four-person student
-team through an iterative development process, including versioned PyPI
-releases, automated testing, documentation, and a
+`bensemble` has been developed since September 2025 by a four-person
+student team through an iterative development process, including
+versioned PyPI releases, automated testing, documentation, and a
 pull-request-based workflow.
 
 As a concrete demonstration of correctness and maturity, we validated
@@ -178,6 +186,45 @@ UQ methods rather than reimplement one in isolation.
 
 The project also includes automated unit tests and continuous integration to
 help ensure correctness and compatibility across supported Python versions.
+
+## Benchmarks
+
+Beyond unit and integration tests, we validated `bensemble` end-to-end by
+running every supported method on a shared, realistic workload: all eight
+classification/UQ methods (Single Net, Deep Ensembles, MC Dropout, VI,
+Laplace, and the three Neural Ensemble Search variants) on CIFAR-10 versus
+SVHN, and all four regression methods (PBP, VI, Laplace, and a plain MAP
+baseline) across four UCI datasets, over five random train/test splits per
+dataset. As a sanity check, rather than a comparison of which method
+performs best, \autoref{tab:sanity} confirms that all eight classification
+methods completed training successfully and reached a consistent,
+reasonable accuracy range on CIFAR-10, with no method failing outright or
+producing degenerate predictions.
+
+| Method | ID Accuracy |
+|---|---|
+| Single Net | 92.7% |
+| Deep Ensemble | 93.8% |
+| MC Dropout | 92.9% |
+| VI | 92.9% |
+| Laplace (K-FAC) | 92.8% |
+| NESBS (SVGD) | 93.7% |
+| NES-RS | 93.9% |
+| NES-RE | 93.8% |
+
+In-distribution accuracy on CIFAR-10 for all eight classification
+methods, from a single training run each (see `benchmarks/` for full
+metrics including calibration and out-of-distribution detection results,
+and for the regression benchmark). \label{tab:sanity}
+
+All four regression methods likewise completed successfully across all
+four UCI datasets; per-dataset RMSE and NLPD for every method, along with
+a written discussion of methodology and several caveats we encountered
+while building this benchmark (matched-budget fairness across search-based
+and non-search methods, a train/eval-mode handling bug that leaked
+BatchNorm statistics between ensemble members, and differing rates of
+noise-hyperparameter recalibration across the regression methods), are
+reported in the `benchmarks/` directory.
 
 # AI usage disclosure
 
