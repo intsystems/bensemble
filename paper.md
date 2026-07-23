@@ -163,10 +163,9 @@ practical recommendations in the documentation.
 
 # Research impact statement
 
-`bensemble` has been developed since September 2025 by a four-person
-student team through an iterative development process, including
-versioned PyPI releases, automated testing, documentation, and a
-pull-request-based workflow.
+`bensemble` has been actively developed since September 2025 through a rigorous
+and iterative software engineering process, including versioned PyPI releases,
+automated testing, documentation, and a pull-request-based workflow.
 
 As a concrete demonstration of correctness and maturity, we validated
 `bensemble` end-to-end by running all eight supported ensembling/UQ methods
