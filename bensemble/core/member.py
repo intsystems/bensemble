@@ -28,7 +28,13 @@ class ExplicitMembers(MemberAdapter):
         self.models = nn.ModuleList(models)
 
     def predict_all(self, x):
-        return torch.stack([m(x) for m in self.models])
+        was_training = [m.training for m in self.models]
+        for m in self.models:
+            m.eval()
+        preds = torch.stack([m(x) for m in self.models])
+        for m, mode in zip(self.models, was_training):
+            m.train(mode)
+        return preds
 
     @property
     def size(self):
