@@ -26,7 +26,7 @@
 
 - **PyTorch-Native**: No hidden training loops. Use standard PyTorch to train your models, and use Bensemble for inference, ensembling, and analytics.
 - **Unified Ensembling API**: Seamlessly combine explicit models (Deep Ensembles, NAS) and implicit methods (MC Dropout) via a single `Ensemble` interface.
-- **Neural Ensemble Search (NES)**: Algorithms to automatically search for diverse architectures using NNI and Stein Variational Gradient Descent (SVGD).
+- **Neural Ensemble Search (NES)**: Algorithms to automatically search for diverse architectures using Stein Variational Gradient Descent (SVGD).
 - **Uncertainty Analytics**: Principled decomposition of predictive uncertainty into *aleatoric* (data noise) and *epistemic* (model ignorance) components.
 - **Model Calibration & Metrics**: Evaluate models using Expected Calibration Error (ECE), Brier Score, and NLL. Fix overconfident networks post-hoc with Temperature and Vector Scaling.
 
@@ -134,7 +134,7 @@ We implement a wide range of Bayesian and Ensembling approaches. Check out the i
 | :--- | :--- |
 | **Deep Ensembles** | Naive yet powerful ensembling of independent networks with explicit uncertainty decomposition. |
 | **Monte Carlo Dropout** | Implicit ensembling by keeping dropout active at test time. |
-| **Neural Ensemble Search (NES)** | Automatically searches for diverse architectures (NES-RS/NES-RE) using NNI. |
+| **Neural Ensemble Search (NES)** | Automatically searches for diverse architectures (NES-RS/NES-RE). |
 | **NES via Bayesian Sampling** | Extracts diverse subnetworks from a Supernet using Stein Variational Gradient Descent (SVGD). |
 | **Variational Inference** | Approximates posterior using Gaussian distributions with the *Local Reparameterization Trick*. |
 | **Variational Rényi** | Generalization of VI minimizing $\alpha$-divergence (VR-VI) for better robustness. |
@@ -149,26 +149,36 @@ We implement a wide range of Bayesian and Ensembling approaches. Check out the i
 bensemble/
 ├── core/                  # Base protocols, ensemble abstractions, and adapters
 │   ├── ensemble.py        # Central `Ensemble` class
-│   └── member.py          # Adapters for explicit and stochastic models
+│   ├── member.py          # Adapters for explicit and stochastic models
+│   └── types.py           # Protocols: Predictor, KLProvider, PosteriorSource
 │
 ├── layers/                # Bayesian Layers for Variational Inference
+│   ├── base.py            # BaseBayesianLayer: KL divergence, SNR-based pruning
 │   ├── linear.py          # Bayesian Linear layer
 │   └── conv.py            # Bayesian Convolution layer
 │
+├── methods/               # Standalone posterior-approximation engines
+│   ├── laplace_approximation.py    # Laplace with K-FAC curvature
+│   └── probabilistic_backpropagation.py  # PBP (ADF-based)
+│
 ├── search/                # Neural Ensemble Search algorithms
-│   ├── nes.py             # NES-RS & NES-RE
-│   └── bayesian.py        # NES via Bayesian Sampling
+│   ├── nes.py              # NES-RS & NES-RE (RandomSearcher, EvolutionarySearcher)
+│   ├── bayesian.py         # NESBS (discrete, SVGD-inspired sampler)
+│   ├── selection.py        # Greedy forward selection, scoring criteria
+│   └── space.py            # SearchSpace protocol
 │
-├── diversity/             # Methods to induce ensemble variation
-│   └── dropout.py         # Monte Carlo Dropout wrapper
+├── diversity/              # Methods to induce ensemble variation
+│   └── dropout.py          # Monte Carlo Dropout wrapper
 │
-├── uncertainty/           # Uncertainty analysis
-│   └── decomposition.py   # Separation of Aleatoric and Epistemic uncertainty
+├── uncertainty/            # Uncertainty analysis
+│   └── decomposition.py    # Separation of Aleatoric and Epistemic uncertainty
 │
-├── calibration/           # Post-hoc model calibration tools
-│   └── scaling.py         # Temperature Scaling and Vector Scaling
+├── calibration/            # Post-hoc model calibration tools
+│   └── scaling.py          # Temperature Scaling and Vector Scaling
 │
-└── metrics.py             # Scoring rules: ECE, NLL, Brier Score
+├── losses.py                # VariationalLoss, GaussianLikelihood
+├── utils.py                 # get_total_kl, predict_with_uncertainty, etc.
+└── metrics.py                # Scoring rules: ECE, NLL, Brier Score
 ```
 
 ---
