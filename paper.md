@@ -208,7 +208,7 @@ producing degenerate predictions.
 | NES-RS | 93.9% |
 | NES-RE | 93.8% |
 
-In-distribution accuracy on CIFAR-10 for all eight classification
+: In-distribution accuracy on CIFAR-10 for all eight classification
 methods, from a single training run each (see `benchmarks/` for full
 metrics including calibration and out-of-distribution detection results,
 and for the regression benchmark). \label{tab:sanity}
