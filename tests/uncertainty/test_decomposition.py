@@ -1,5 +1,7 @@
-import torch
 import math
+
+import torch
+
 from bensemble.uncertainty.decomposition import (
     decompose_classification_uncertainty,
     decompose_regression_uncertainty,
@@ -13,7 +15,6 @@ def test_uncertainty_decomposition_shapes(ensemble_probs, ensemble_size):
     batch_size = ensemble_probs.shape[1]
     for tensor in (total, aleatoric, epistemic):
         assert tensor.shape == (batch_size,)
-
 
 
 def test_perfect_disagreement():

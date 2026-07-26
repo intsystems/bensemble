@@ -1,5 +1,7 @@
+from typing import ClassVar
+
 import torch
-import torch.nn as nn
+from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
 
 from bensemble.core.ensemble import Ensemble
@@ -9,7 +11,7 @@ from bensemble.search.space import SearchSpace
 
 
 class _ToySpace(SearchSpace):
-    _logits = [
+    _logits: ClassVar[list] = [
         torch.tensor([2.5, 0.2]),
         torch.tensor([2.2, 0.3]),
         torch.tensor([0.2, 2.4]),

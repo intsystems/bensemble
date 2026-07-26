@@ -2,28 +2,28 @@ import random
 import time
 from pathlib import Path
 
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
 import torch
-import torch.nn as nn
+from sklearn.metrics import roc_auc_score
+from torch import nn
 from torch.utils.data import DataLoader, Subset
 from torchvision import datasets, transforms
 from torchvision.models import resnet18
-import numpy as np
-import pandas as pd
 from tqdm import tqdm
-from sklearn.metrics import roc_auc_score
-import matplotlib.pyplot as plt
-import seaborn as sns
 
 from bensemble.core.ensemble import Ensemble
 from bensemble.layers import BayesianLinear
-from bensemble.uncertainty.decomposition import decompose_classification_uncertainty
-from bensemble.metrics import expected_calibration_error
 from bensemble.losses import VariationalLoss
-from bensemble.utils import get_total_kl
 from bensemble.methods.laplace_approximation import LaplaceApproximation
-from bensemble.search.nes import RandomSearcher, EvolutionarySearcher
+from bensemble.metrics import expected_calibration_error
 from bensemble.search.bayesian import NESBayesianSampler
+from bensemble.search.nes import EvolutionarySearcher, RandomSearcher
 from bensemble.search.space import SearchSpace
+from bensemble.uncertainty.decomposition import decompose_classification_uncertainty
+from bensemble.utils import get_total_kl
 
 # --- 1. GLOBAL CONFIG & SEED ---
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -358,8 +358,8 @@ def main():
         train_time = time.time() - start_time
 
         id_p, id_y, id_u = evaluate(ens, test_loader)
-        sh_p, sh_y, sh_u = evaluate(ens, noisy_loader)
-        ood_p, _, ood_u = evaluate(ens, ood_loader)
+        sh_p, sh_y, _sh_u = evaluate(ens, noisy_loader)
+        _ood_p, _, ood_u = evaluate(ens, ood_loader)
 
         acc = (id_p.argmax(1) == id_y).float().mean().item()
         ece = float(expected_calibration_error(id_p, id_y))
@@ -405,7 +405,7 @@ def main():
     angles = np.linspace(0, 2 * np.pi, len(labels), endpoint=False).tolist()
     angles += angles[:1]
 
-    fig, ax = plt.subplots(figsize=(7, 7), subplot_kw=dict(polar=True))
+    _fig, ax = plt.subplots(figsize=(7, 7), subplot_kw={"polar": True})
     colors = sns.color_palette("husl", len(methods_to_plot))
 
     for i, (_, row) in enumerate(df_plot.iterrows()):

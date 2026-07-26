@@ -1,7 +1,8 @@
 import torch
-import torch.optim as optim
+from torch import optim
+
 from bensemble.layers import BayesianLinear
-from bensemble.losses import VariationalLoss, GaussianLikelihood
+from bensemble.losses import GaussianLikelihood, VariationalLoss
 from bensemble.utils import get_total_kl
 
 

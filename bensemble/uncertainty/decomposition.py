@@ -1,10 +1,9 @@
-from typing import Tuple
 import torch
 
 
 def decompose_classification_uncertainty(
     probs: torch.Tensor, eps: float = 1e-8
-) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """
     Decomposes total predictive uncertainty for classification into aleatoric and epistemic components.
 
@@ -31,7 +30,7 @@ def decompose_classification_uncertainty(
 
 def decompose_regression_uncertainty(
     means: torch.Tensor, variances: torch.Tensor
-) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """
     Decomposes total predictive uncertainty for regression into aleatoric and epistemic components.
 

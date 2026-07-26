@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable, Optional
 
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
+from torch import nn
 from torch.utils.data import DataLoader
 
 from bensemble.core.ensemble import Ensemble
@@ -19,8 +19,8 @@ class _Candidate:
     score: float
     probs: torch.Tensor
 
+
 class NESBayesianSampler:
-    
     """Neural Ensemble Search via Bayesian Sampling (NESBS, Shu et al., UAI 2022).
     This implementation follows the paper's practical recipe:
     1) build a candidate model pool from a search space;
@@ -40,10 +40,9 @@ class NESBayesianSampler:
         diversity_weight: float = 0.5,
         svgd_steps: int = 20,
         svgd_lr: float = 0.1,
-        device: Optional[torch.device] = None,
-        criterion: Optional[
-            Callable[[list[nn.Module], DataLoader, torch.device], float]
-        ] = None,
+        device: torch.device | None = None,
+        criterion: Callable[[list[nn.Module], DataLoader, torch.device], float]
+        | None = None,
     ) -> None:
         if pool_size < 1:
             raise ValueError("pool_size must be >= 1.")
@@ -81,7 +80,7 @@ class NESBayesianSampler:
                 logits = model(x)
                 probs_batches.append(F.softmax(logits, dim=-1).cpu())
         return torch.cat(probs_batches, dim=0)
-    
+
     def _build_pool(self, val_loader: DataLoader) -> list[_Candidate]:
         candidates: list[_Candidate] = []
         for _ in range(self.pool_size):
@@ -124,7 +123,6 @@ class NESBayesianSampler:
         )
         models = [candidates[idx].model for idx in chosen.tolist()]
         return Ensemble.from_models(models)
-
 
     def sample_svgd(self, val_loader: DataLoader) -> Ensemble:
         """

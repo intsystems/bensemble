@@ -1,5 +1,5 @@
 import torch
-import torch.nn as nn
+from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
 
 from bensemble.core.ensemble import Ensemble
@@ -84,6 +84,7 @@ def test_nes_bayesian_sampler_svgd_returns_ensemble_of_expected_size():
 def test_init_invalid_pool_size():
     """pool_size <= 0 raises ValueError."""
     import pytest
+
     with pytest.raises(ValueError, match="pool_size"):
         NESBayesianSampler(space=_ToySearchSpace(), train_fn=_train_noop, pool_size=0)
 
@@ -91,13 +92,17 @@ def test_init_invalid_pool_size():
 def test_init_invalid_ensemble_size():
     """ensemble_size <= 0 raises ValueError."""
     import pytest
+
     with pytest.raises(ValueError, match="ensemble_size"):
-        NESBayesianSampler(space=_ToySearchSpace(), train_fn=_train_noop, ensemble_size=0)
+        NESBayesianSampler(
+            space=_ToySearchSpace(), train_fn=_train_noop, ensemble_size=0
+        )
 
 
 def test_init_ensemble_gt_pool():
     """ensemble_size > pool_size raises ValueError."""
     import pytest
+
     with pytest.raises(ValueError, match="ensemble_size"):
         NESBayesianSampler(
             space=_ToySearchSpace(), train_fn=_train_noop, pool_size=3, ensemble_size=10
@@ -107,6 +112,7 @@ def test_init_ensemble_gt_pool():
 def test_init_invalid_temperature():
     """temperature <= 0 raises ValueError."""
     import pytest
+
     with pytest.raises(ValueError, match="temperature"):
         NESBayesianSampler(space=_ToySearchSpace(), train_fn=_train_noop, temperature=0)
 
@@ -114,6 +120,7 @@ def test_init_invalid_temperature():
 def test_init_invalid_svgd_steps():
     """svgd_steps <= 0 raises ValueError."""
     import pytest
+
     with pytest.raises(ValueError, match="svgd_steps"):
         NESBayesianSampler(space=_ToySearchSpace(), train_fn=_train_noop, svgd_steps=0)
 
@@ -130,7 +137,10 @@ def test_posterior_probs_sum_to_one():
         temperature=1.0,
     )
     dummy_probs = torch.softmax(torch.randn(8, 2), dim=-1)
-    candidates = [_Candidate(model=nn.Linear(1, 1), score=float(i), probs=dummy_probs) for i in range(4)]
+    candidates = [
+        _Candidate(model=nn.Linear(1, 1), score=float(i), probs=dummy_probs)
+        for i in range(4)
+    ]
     probs = sampler._posterior_probs(candidates)
     assert abs(probs.sum().item() - 1.0) < 1e-5
     assert (probs >= 0).all()

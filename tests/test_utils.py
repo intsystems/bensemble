@@ -1,7 +1,7 @@
 import math
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 from bensemble.layers import BayesianLinear
 from bensemble.utils import (
@@ -29,7 +29,9 @@ def test_enable_dropout():
     x = torch.ones(100, 10)
     out1 = model(x)
     out2 = model(x)
-    assert not torch.allclose(out1, out2), "Dropout must produce different outputs across forward passes"
+    assert not torch.allclose(out1, out2), (
+        "Dropout must produce different outputs across forward passes"
+    )
 
 
 def test_standard_normal_pdf_at_zero():

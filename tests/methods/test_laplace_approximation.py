@@ -1,10 +1,10 @@
 import pytest
 import torch
-import torch.nn as nn
-from torch.utils.data import TensorDataset, DataLoader
+from torch import nn
+from torch.utils.data import DataLoader, TensorDataset
 
-from bensemble.methods.laplace_approximation import LaplaceApproximation
 from bensemble.core.ensemble import Ensemble
+from bensemble.methods.laplace_approximation import LaplaceApproximation
 
 
 @pytest.fixture
@@ -90,7 +90,7 @@ def test_compute_curvature_regression(regression_setup):
     assert len(laplace.kronecker_factors) == 2
     assert len(laplace.sampling_factors) == 2
 
-    for name, factors in laplace.sampling_factors.items():
+    for factors in laplace.sampling_factors.values():
         assert "L_U" in factors
         assert "L_V" in factors
         assert "weight_shape" in factors
@@ -107,7 +107,7 @@ def test_compute_curvature_classification(classification_setup):
     laplace.compute_curvature(loader, num_samples=10)
     assert len(laplace.kronecker_factors) > 0
 
-    for name, factors in laplace.kronecker_factors.items():
+    for factors in laplace.kronecker_factors.values():
         assert not torch.isnan(factors["Q"]).any()
         assert not torch.isnan(factors["H"]).any()
 
@@ -116,7 +116,7 @@ def test_ensemble_integration_regression(regression_setup):
     """
     Tests integration for regression.
     """
-    model, loader, X, y = regression_setup
+    model, loader, X, _y = regression_setup
     laplace = LaplaceApproximation(model, likelihood="regression")
     laplace.compute_curvature(loader, num_samples=10)
 
@@ -159,9 +159,9 @@ def test_sample_models_diversity(regression_setup):
     samples = laplace.sample_models(n_models=2)
     assert len(samples) == 2
 
-    original_w = list(model.parameters())[0]
-    sample1_w = list(samples[0].parameters())[0]
-    sample2_w = list(samples[1].parameters())[0]
+    original_w = next(iter(model.parameters()))
+    sample1_w = next(iter(samples[0].parameters()))
+    sample2_w = next(iter(samples[1].parameters()))
 
     assert not torch.equal(original_w, sample1_w)
     assert not torch.equal(sample1_w, sample2_w)

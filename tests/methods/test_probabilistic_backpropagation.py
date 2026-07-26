@@ -1,16 +1,15 @@
 import pytest
 import torch
-import torch.nn as nn
-from torch.utils.data import TensorDataset, DataLoader
+from torch import nn
+from torch.utils.data import DataLoader, TensorDataset
 
+from bensemble.core.ensemble import Ensemble
 from bensemble.methods.probabilistic_backpropagation import (
     PBPEngine,
     PBPNet,
     ProbLinear,
     relu_moments,
 )
-
-from bensemble.core.ensemble import Ensemble
 
 
 @pytest.fixture
@@ -80,7 +79,7 @@ def test_fit_loop(pbp_data, pbp_model_setup):
     Tests the main training loop (ADF updates).
     Checks if parameters update and history is returned.
     """
-    X, y, loader = pbp_data
+    _X, _y, loader = pbp_data
     pbp = PBPEngine(layer_sizes=pbp_model_setup, dtype=torch.float64)
 
     alpha_old = pbp.alpha_g.item()
@@ -105,7 +104,7 @@ def test_prior_refresh(pbp_data, pbp_model_setup):
 
 def test_ensemble_integration(pbp_data, pbp_model_setup):
     """Tests integration with the new Ensemble API."""
-    X, y, loader = pbp_data
+    X, _y, loader = pbp_data
     pbp = PBPEngine(layer_sizes=pbp_model_setup, dtype=torch.float64)
     pbp.fit(loader, num_epochs=1)
 
@@ -150,7 +149,7 @@ def test_state_management(pbp_model_setup):
 
 def test_val_loader(pbp_data, pbp_model_setup):
     """Tests fit with validation loader."""
-    X, y, loader = pbp_data
+    _X, _y, loader = pbp_data
     pbp = PBPEngine(layer_sizes=pbp_model_setup, dtype=torch.float64)
 
     history = pbp.fit(loader, val_loader=loader, num_epochs=1)
@@ -170,7 +169,7 @@ def test_relu_moments_positive_mean():
     """Strongly positive mean: ReLU mostly passes through."""
     mean = torch.tensor([5.0], dtype=torch.float64)
     var = torch.tensor([1.0], dtype=torch.float64)
-    m_out, v_out = relu_moments(mean, var)
+    m_out, _v_out = relu_moments(mean, var)
     assert m_out.item() > 4.0
 
 

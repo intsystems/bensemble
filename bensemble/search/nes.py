@@ -1,9 +1,9 @@
 import random
 from collections import deque
-from typing import Callable, Optional
+from collections.abc import Callable
 
 import torch
-import torch.nn as nn
+from torch import nn
 from torch.utils.data import DataLoader
 
 from bensemble.core.ensemble import Ensemble
@@ -24,11 +24,10 @@ class RandomSearcher:
         space: SearchSpace,
         pool_size: int = 50,
         ensemble_size: int = 5,
-        train_fn: Optional[Callable[[nn.Module], None]] = None,
-        device: Optional[torch.device] = None,
-        criterion: Optional[
-            Callable[[list[nn.Module], DataLoader, torch.device], float]
-        ] = None,
+        train_fn: Callable[[nn.Module], None] | None = None,
+        device: torch.device | None = None,
+        criterion: Callable[[list[nn.Module], DataLoader, torch.device], float]
+        | None = None,
     ) -> None:
         self.space = space
         self.pool_size = pool_size
@@ -44,7 +43,7 @@ class RandomSearcher:
     def search(
         self,
         val_loader: DataLoader,
-        val_loader_shift: Optional[DataLoader] = None,
+        val_loader_shift: DataLoader | None = None,
     ) -> Ensemble:
         """Run NES-RS and return the selected ensemble.
 
@@ -87,11 +86,10 @@ class EvolutionarySearcher:
         ensemble_size: int = 5,
         population_size: int = 10,
         num_parent_candidates: int = 3,
-        train_fn: Optional[Callable[[nn.Module], None]] = None,
-        device: Optional[torch.device] = None,
-        criterion: Optional[
-            Callable[[list[nn.Module], DataLoader, torch.device], float]
-        ] = None,
+        train_fn: Callable[[nn.Module], None] | None = None,
+        device: torch.device | None = None,
+        criterion: Callable[[list[nn.Module], DataLoader, torch.device], float]
+        | None = None,
     ) -> None:
         self.space = space
         self.pool_size = pool_size
@@ -109,7 +107,7 @@ class EvolutionarySearcher:
     def search(
         self,
         val_loader: DataLoader,
-        val_loader_shift: Optional[DataLoader] = None,
+        val_loader_shift: DataLoader | None = None,
     ) -> Ensemble:
         """Run NES-RE and return the selected ensemble.
 

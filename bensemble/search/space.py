@@ -1,6 +1,6 @@
 import abc
 
-import torch.nn as nn
+from torch import nn
 
 
 class SearchSpace(abc.ABC):
