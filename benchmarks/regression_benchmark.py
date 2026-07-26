@@ -8,17 +8,17 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import torch
-import torch.nn as nn
+from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
 from ucimlrepo import fetch_ucirepo
 
 from bensemble.core.ensemble import Ensemble
 from bensemble.layers import BayesianLinear
-from bensemble.losses import VariationalLoss, GaussianLikelihood
-from bensemble.utils import get_total_kl
+from bensemble.losses import GaussianLikelihood, VariationalLoss
 from bensemble.methods.laplace_approximation import LaplaceApproximation
 from bensemble.methods.probabilistic_backpropagation import PBPEngine
+from bensemble.utils import get_total_kl
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(
@@ -37,10 +37,10 @@ RESULTS_DIR = Path("results_regression")
 RESULTS_DIR.mkdir(exist_ok=True)
 
 DATASETS = {
-    "yacht": dict(uci_id=None, target_col=None, direct=True),
-    "energy": dict(uci_id=242, target_col="Y1"),
-    "concrete": dict(uci_id=165, target_col=None),
-    "power_plant": dict(uci_id=294, target_col=None),
+    "yacht": {"uci_id": None, "target_col": None, "direct": True},
+    "energy": {"uci_id": 242, "target_col": "Y1"},
+    "concrete": {"uci_id": 165, "target_col": None},
+    "power_plant": {"uci_id": 294, "target_col": None},
 }
 
 
@@ -69,7 +69,7 @@ def make_split(
     rng = np.random.RandomState(seed)
     n = X.shape[0]
     idx = rng.permutation(n)
-    n_test = max(1, int(round(n * test_fraction)))
+    n_test = max(1, round(n * test_fraction))
     test_idx, train_idx = idx[:n_test], idx[n_test:]
     return X[train_idx], y[train_idx], X[test_idx], y[test_idx]
 

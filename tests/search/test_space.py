@@ -1,4 +1,4 @@
-import torch.nn as nn
+from torch import nn
 
 from bensemble.search.space import SearchSpace
 

@@ -10,4 +10,6 @@ class MCDropoutEnsembler:
         Returns:
             Ensemble: The final ensemble wrapped in bensemble's core abstraction.
         """
-        return Ensemble.from_stochastic(self.model, num_samples=num_samples, mode="dropout")
+        return Ensemble.from_stochastic(
+            self.model, num_samples=num_samples, mode="dropout"
+        )

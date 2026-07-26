@@ -1,6 +1,9 @@
 from abc import abstractmethod
-import torch.nn as nn
+from typing import ClassVar
+
 import torch
+from torch import nn
+
 from bensemble.core.types import MemberPredictions
 from bensemble.layers.base import BaseBayesianLayer
 
@@ -44,7 +47,7 @@ class StochasticMembers(MemberAdapter):
     Wraps a single model whose forward pass is stochastic.
     """
 
-    ACTIVATORS = {
+    ACTIVATORS: ClassVar[dict[str, str]] = {
         "bayesian": "_activate_bayesian",
         "dropout": "_activate_dropout",
         "both": "_activate_both",

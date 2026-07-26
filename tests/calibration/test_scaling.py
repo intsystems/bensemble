@@ -1,8 +1,7 @@
 import torch
 import torch.nn.functional as F
 
-from bensemble.calibration.scaling import TemperatureScaling
-from bensemble.calibration.scaling import VectorScaling
+from bensemble.calibration.scaling import TemperatureScaling, VectorScaling
 
 
 def test_initialization():

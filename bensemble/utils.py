@@ -1,10 +1,11 @@
-from bensemble.layers.conv import BayesianConv2d
-from bensemble.layers import BayesianLinear
-from bensemble.layers.base import BaseBayesianLayer
 import math
 
 import torch
-import torch.nn as nn
+from torch import nn
+
+from bensemble.layers import BayesianLinear
+from bensemble.layers.base import BaseBayesianLayer
+from bensemble.layers.conv import BayesianConv2d
 
 _INV_SQRT_2PI = 1.0 / math.sqrt(2.0 * math.pi)
 
@@ -57,7 +58,7 @@ def predict_with_uncertainty(model: nn.Module, x: torch.Tensor, num_samples: int
 
     for module in model.modules():
         # TODO: implemenet base class so we can just check ifinstance(module, BaseClass)
-        if isinstance(module, BayesianLinear) or isinstance(module, BayesianConv2d):
+        if isinstance(module, (BayesianLinear, BayesianConv2d)):
             module.train()
 
     with torch.no_grad():

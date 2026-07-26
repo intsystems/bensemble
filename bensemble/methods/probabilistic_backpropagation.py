@@ -1,17 +1,18 @@
 import math
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import torch
-import torch.nn as nn
+from torch import nn
 from torch.utils.data import DataLoader
 
 from bensemble.core.ensemble import Ensemble
+
 from ..utils import standard_normal_cdf, standard_normal_pdf
 
 
 def relu_moments(
     m: torch.Tensor, v: torch.Tensor, eps: float = 1e-12
-) -> Tuple[torch.Tensor, torch.Tensor]:
+) -> tuple[torch.Tensor, torch.Tensor]:
     """
     Moment matching for a ReLU applied to a Gaussian random variable.
     """
@@ -36,7 +37,7 @@ class ProbLinear(nn.Module):
         in_features: int,
         out_features: int,
         dtype: torch.dtype = torch.float64,
-        device: Optional[torch.device] = None,
+        device: torch.device | None = None,
     ):
         super().__init__()
         self.in_features = in_features
@@ -56,12 +57,12 @@ class PBPNet(nn.Module):
 
     def __init__(
         self,
-        layer_sizes: List[int],
+        layer_sizes: list[int],
         dtype: torch.dtype = torch.float64,
-        device: Optional[torch.device] = None,
+        device: torch.device | None = None,
     ):
         super().__init__()
-        self.layers: List[ProbLinear] = nn.ModuleList()
+        self.layers: list[ProbLinear] = nn.ModuleList()
         for i in range(len(layer_sizes) - 1):
             self.layers.append(
                 ProbLinear(
@@ -71,7 +72,7 @@ class PBPNet(nn.Module):
         self.dtype = dtype
         self.device = device or torch.device("cpu")
 
-    def forward_moments(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward_moments(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Propagate mean/variance through the network.
 
@@ -126,14 +127,14 @@ class PBPEngine:
 
     def __init__(
         self,
-        model: Optional[nn.Module] = None,
-        layer_sizes: Optional[List[int]] = None,
+        model: nn.Module | None = None,
+        layer_sizes: list[int] | None = None,
         noise_alpha: float = 6.0,
         noise_beta: float = 6.0,
         weight_alpha: float = 6.0,
         weight_beta: float = 6.0,
         dtype: torch.dtype = torch.float64,
-        device: Optional[torch.device] = None,
+        device: torch.device | None = None,
     ):
         if model is None:
             if layer_sizes is None:
@@ -199,7 +200,7 @@ class PBPEngine:
         alpha_old: torch.Tensor,
         beta_old: torch.Tensor,
         clamp_eps: float = 1e-9,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """ADF update for Gamma(alpha, beta) using marginal likelihood ratios."""
         r1 = torch.exp(logZ1 - logZ)
         r2 = torch.exp(logZ2 - logZ)
@@ -218,8 +219,8 @@ class PBPEngine:
         return alpha_new.detach(), beta_new.detach()
 
     def _single_datapoint_adf_step(
-        self, x: torch.Tensor, y: torch.Tensor, step_clip: Optional[float] = 1.0
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        self, x: torch.Tensor, y: torch.Tensor, step_clip: float | None = 1.0
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Perform one ADF update using a single training example.
 
@@ -271,7 +272,7 @@ class PBPEngine:
         return logZ.detach(), logZ1.detach(), logZ2.detach()
 
     def _prior_refresh_epoch(
-        self, n_refresh: int = 1, step_clip: Optional[float] = None
+        self, n_refresh: int = 1, step_clip: float | None = None
     ) -> None:
         """
         Refresh the weight prior hyperparameters (alpha_l, beta_l).
@@ -353,7 +354,7 @@ class PBPEngine:
 
     def _collect_dataset(
         self, loader: torch.utils.data.DataLoader
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         xs = []
         ys = []
         for batch_X, batch_y in loader:
@@ -366,13 +367,13 @@ class PBPEngine:
     def fit(
         self,
         train_loader: DataLoader,
-        val_loader: Optional[DataLoader] = None,
+        val_loader: DataLoader | None = None,
         num_epochs: int = 100,
-        step_clip: Optional[float] = 2.0,
+        step_clip: float | None = 2.0,
         prior_refresh: int = 1,
         **kwargs,
-    ) -> Dict[str, List[float]]:
-        history: Dict[str, List[float]] = {"train_rmse": [], "train_nlpd": []}
+    ) -> dict[str, list[float]]:
+        history: dict[str, list[float]] = {"train_rmse": [], "train_nlpd": []}
         if val_loader is not None:
             history["val_rmse"] = []
             history["val_nlpd"] = []
@@ -417,7 +418,7 @@ class PBPEngine:
 
     def _evaluate_loader(
         self, loader: torch.utils.data.DataLoader
-    ) -> Tuple[float, float]:
+    ) -> tuple[float, float]:
         preds = []
         targets = []
         nlpd_sum = 0.0
@@ -446,7 +447,7 @@ class PBPEngine:
 
     def _predictive_mean_var(
         self, X: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         mz, vz = self.model.forward_moments(X)
         alpha = torch.clamp(self.alpha_g, min=1.0 + 1e-6)
         noise_var = self.beta_g / (alpha - 1.0)
@@ -457,7 +458,7 @@ class PBPEngine:
         alpha = torch.clamp(self.alpha_g, min=1.0 + 1e-6)
         return self.beta_g / (alpha - 1.0)
 
-    def sample_models(self, n_models: int = 10, **kwargs) -> List[nn.Module]:
+    def sample_models(self, n_models: int = 10, **kwargs) -> list[nn.Module]:
         if not self.is_fitted:
             raise RuntimeError("PBPEngine not fitted. Call fit() first.")
 
@@ -468,7 +469,7 @@ class PBPEngine:
         return models
 
     def _sample_single_model(self) -> nn.Module:
-        layers: List[nn.Module] = []
+        layers: list[nn.Module] = []
         for li, layer in enumerate(self.model.layers):
             d = layer.in_features + 1
             scale = 1.0 / math.sqrt(d)
@@ -495,7 +496,7 @@ class PBPEngine:
     def build_ensemble(self, n_members: int = 10) -> Ensemble:
         return Ensemble.from_posterior(self, n_members=n_members)
 
-    def _get_ensemble_state(self) -> Dict[str, Any]:
+    def _get_ensemble_state(self) -> dict[str, Any]:
         return {
             "alpha_g": self.alpha_g,
             "beta_g": self.beta_g,
@@ -504,7 +505,7 @@ class PBPEngine:
             "dtype": self.dtype,
         }
 
-    def _set_ensemble_state(self, state: Dict[str, Any]):
+    def _set_ensemble_state(self, state: dict[str, Any]):
         self.alpha_g = state.get("alpha_g", self.alpha_g).to(self.device)
         self.beta_g = state.get("beta_g", self.beta_g).to(self.device)
         self.alpha_l = state.get("alpha_l", self.alpha_l).to(self.device)

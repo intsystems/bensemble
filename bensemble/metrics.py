@@ -1,4 +1,3 @@
-from typing import Dict
 import torch
 import torch.nn.functional as F
 
@@ -89,7 +88,7 @@ def expected_calibration_error(
 
 def reliability_diagram(
     probs: torch.Tensor, targets: torch.Tensor, n_bins: int = 15
-) -> Dict[str, list]:
+) -> dict[str, list]:
     """
     Computes data points needed to plot a Reliability Diagram.
 

@@ -1,5 +1,5 @@
 import torch
-import torch.nn as nn
+from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
 
 from bensemble.search.selection import (
@@ -84,14 +84,18 @@ def test_regression_mse_criterion_unit_error():
 def test_forward_select_correct_count():
     """Forward selection returns exactly the requested number of members."""
     pool = [_FixedLogitModel(torch.tensor([float(i), 0.0])) for i in range(4)]
-    result = forward_select(pool, _make_clf_loader(), 2, _DEVICE, classification_nll_criterion)
+    result = forward_select(
+        pool, _make_clf_loader(), 2, _DEVICE, classification_nll_criterion
+    )
     assert len(result) == 2
 
 
 def test_forward_select_no_repeats():
     """Forward selection never picks the same model twice."""
     pool = [_FixedLogitModel(torch.tensor([float(i), 0.0])) for i in range(4)]
-    result = forward_select(pool, _make_clf_loader(), 3, _DEVICE, classification_nll_criterion)
+    result = forward_select(
+        pool, _make_clf_loader(), 3, _DEVICE, classification_nll_criterion
+    )
     ids = [id(m) for m in result]
     assert len(set(ids)) == 3
 
@@ -101,5 +105,7 @@ def test_forward_select_picks_best_member():
     good = _FixedLogitModel(torch.tensor([10.0, -10.0]))
     bad = _FixedLogitModel(torch.tensor([-10.0, 10.0]))
     pool = [good, bad]
-    result = forward_select(pool, _make_clf_loader(), 1, _DEVICE, classification_nll_criterion)
+    result = forward_select(
+        pool, _make_clf_loader(), 1, _DEVICE, classification_nll_criterion
+    )
     assert result[0] is good

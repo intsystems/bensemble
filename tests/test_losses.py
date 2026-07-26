@@ -2,6 +2,7 @@ import torch
 
 from bensemble.losses import GaussianLikelihood, VariationalLoss
 
+
 def test_gaussian_likelihood_sigma_positive():
     """Initial sigma is positive."""
     assert GaussianLikelihood().sigma > 0
@@ -9,7 +10,10 @@ def test_gaussian_likelihood_sigma_positive():
 
 def test_gaussian_likelihood_sigma_responds_to_init():
     """Lower init_log_sigma produces a smaller sigma value."""
-    assert GaussianLikelihood(init_log_sigma=-4.0).sigma < GaussianLikelihood(init_log_sigma=2.0).sigma
+    assert (
+        GaussianLikelihood(init_log_sigma=-4.0).sigma
+        < GaussianLikelihood(init_log_sigma=2.0).sigma
+    )
 
 
 def test_gaussian_likelihood_output_shape():

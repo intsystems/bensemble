@@ -1,9 +1,9 @@
 import copy
-from typing import Any, Dict, List
+from typing import Any
 
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
+from torch import nn
 from torch.utils.data import DataLoader
 
 from bensemble.core.ensemble import Ensemble
@@ -38,13 +38,13 @@ class LaplaceApproximation:
         self.regularization = regularization
         self.verbose = verbose
 
-        self.kronecker_factors: Dict[str, Dict[str, torch.Tensor]] = {}
-        self.sampling_factors: Dict[str, Dict[str, Any]] = {}
+        self.kronecker_factors: dict[str, dict[str, torch.Tensor]] = {}
+        self.sampling_factors: dict[str, dict[str, Any]] = {}
         self.dataset_size = 1
 
         self.hook_handles = []
-        self.activations: Dict[str, torch.Tensor] = {}
-        self.pre_activation_hessians: Dict[str, torch.Tensor] = {}
+        self.activations: dict[str, torch.Tensor] = {}
+        self.pre_activation_hessians: dict[str, torch.Tensor] = {}
 
     def toggle_verbose(self):
         self.verbose = not self.verbose
@@ -126,8 +126,8 @@ class LaplaceApproximation:
     def _backward_hessian(
         self,
         hessian_final: torch.Tensor,
-    ) -> Dict[str, torch.Tensor]:
-        hessians: Dict[str, torch.Tensor] = {}
+    ) -> dict[str, torch.Tensor]:
+        hessians: dict[str, torch.Tensor] = {}
 
         linear_layers = [
             (name, module)
@@ -164,7 +164,7 @@ class LaplaceApproximation:
     ) -> None:
         self.model.eval()
 
-        accumulators: Dict[str, Dict[str, Any]] = {}
+        accumulators: dict[str, dict[str, Any]] = {}
         sample_count = 0
 
         for batch_idx, (data, target) in enumerate(train_loader):
@@ -278,7 +278,7 @@ class LaplaceApproximation:
 
     def sample_models(
         self, n_models: int = 10, temperature: float = 1.0
-    ) -> List[nn.Module]:
+    ) -> list[nn.Module]:
         """
         Samples models from the approximated posterior.
         """
@@ -324,7 +324,7 @@ class LaplaceApproximation:
             self, n_members=n_members, temperature=temperature
         )
 
-    def _get_ensemble_state(self) -> Dict[str, Any]:
+    def _get_ensemble_state(self) -> dict[str, Any]:
         return {
             "model_state": self.model.state_dict(),
             "is_fitted": self.is_fitted,
@@ -334,7 +334,7 @@ class LaplaceApproximation:
             "prior_precision": self.prior_precision,
         }
 
-    def _set_ensemble_state(self, state: Dict[str, Any]):
+    def _set_ensemble_state(self, state: dict[str, Any]):
         self.model.load_state_dict(state["model_state"])
         self.is_fitted = state["is_fitted"]
         self.likelihood = state["likelihood"]

@@ -1,6 +1,7 @@
 from typing import Protocol, runtime_checkable
+
 import torch
-import torch.nn as nn
+from torch import nn
 
 
 @runtime_checkable

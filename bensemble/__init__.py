@@ -17,12 +17,12 @@ from .methods import (
     LaplaceApproximation,
     PBPEngine,
 )
-from .search import RandomSearcher, EvolutionarySearcher, SearchSpace
+from .search import EvolutionarySearcher, RandomSearcher, SearchSpace
 
 __all__ = [
+    "EvolutionarySearcher",
     "LaplaceApproximation",
     "PBPEngine",
     "RandomSearcher",
-    "EvolutionarySearcher",
     "SearchSpace",
 ]
