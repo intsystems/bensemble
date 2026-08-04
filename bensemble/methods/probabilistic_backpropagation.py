@@ -328,7 +328,9 @@ class PBPEngine:
                     layer.m.copy_(m_new.detach())
                     layer.v.copy_(v_new.detach())
 
-                def sum_logZ_given_s2(s2_local: torch.Tensor) -> torch.Tensor:
+                def sum_logZ_given_s2(
+                    s2_local: torch.Tensor, m: torch.Tensor = m, v: torch.Tensor = v
+                ) -> torch.Tensor:
                     sigma2_local = s2_local + v
                     lp_local = -0.5 * (m**2) / sigma2_local - 0.5 * torch.log(
                         2.0 * math.pi * sigma2_local
