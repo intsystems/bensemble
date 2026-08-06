@@ -1,6 +1,26 @@
 # Benchmarks
 
-This folder contains reproducible, cross-method validation scripts for `bensemble` that run every supported ensembling/UQ method through the same pipeline under matched conditions.
+This folder contains reproducible, cross-method validation scripts for bensemble that run every supported ensembling/UQ method through the same pipeline under matched conditions.
 
-- `classification_benchmark.py` — 8 methods (Single Net, Deep Ensemble, MC Dropout, VI, Laplace K-FAC, NESBS, NES-RS, NES-RE) on CIFAR-10 (ID), a noise-shifted CIFAR-10 (distribution shift), and SVHN (OOD detection).
-- `regression_benchmark.py` — PBP vs. VI vs. Laplace vs. a plain MAP baseline on UCI regression datasets (Yacht, Energy, Concrete, Power Plant), since PBP only supports regression and can't run in the classification pipeline above.
+## Classification benchmark
+
+`classification_benchmark.py`
+
+Evaluates all classification / uncertainty estimation methods on:
+
+- **In-distribution:** CIFAR-10
+- **Distribution shift:** Gaussian-noised CIFAR-10
+- **Out-of-distribution:** SVHN
+
+Implemented methods:
+
+| Method | ID Acc | ECE ↓ | OOD AUROC ↑ |
+| ------ | -----: | ----: | ----------: |
+| Single Net | 92.72% | 0.0569 | 0.500 |
+| Deep Ensemble | 93.80% | 0.0267 | 0.898 |
+| MC Dropout | 92.90% | 0.0525 | 0.899 |
+| Laplace (K-FAC) | 92.78% | 0.0550 | 0.848 |
+| VI (ELBO) | 92.91% | **0.0197** | 0.749 |
+| NES-BS | 93.73% | 0.0239 | **0.907** |
+| NES-RS | **93.94%** | 0.0237 | **0.907** |
+| NES-RE | 93.82% | 0.0243 | 0.891 |
