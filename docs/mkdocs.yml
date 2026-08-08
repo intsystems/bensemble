@@ -43,6 +43,7 @@ nav:
       - Building Ensembles: user-guide/building-ensembles.md
       - Uncertainty Analysis: user-guide/uncertainty-analysis.md
   - Algorithms:
+      - Deep Ensembles: algorithms/deep-ensembles.md
       - Monte-Carlo Dropout: algorithms/mc-dropout.md
       - Variational Inference: algorithms/variational-inference.md
       - Variational Rényi: algorithms/variational-renyi.md
