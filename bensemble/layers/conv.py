@@ -9,9 +9,7 @@ from .base import BaseBayesianLayer
 
 
 class BayesianConv2d(BaseBayesianLayer):
-    """
-    Bayesian Convolutional Layer (2D) with Local Reparameterization Trick.
-    """
+    """Bayesian 2D Convolutional layer with Local Reparameterization Trick."""
 
     def __init__(
         self,
@@ -25,7 +23,20 @@ class BayesianConv2d(BaseBayesianLayer):
         prior_sigma: float = 1.0,
         init_sigma: float = 0.1,
     ):
-        super().__init__()
+        """Initializes the BayesianConv2d layer.
+
+        Args:
+            in_channels: Number of channels in the input image.
+            out_channels: Number of channels produced by the convolution.
+            kernel_size: Size of the convolving kernel.
+            stride: Stride of the convolution. Defaults to 1.
+            padding: Zero-padding added to both sides of the input. Defaults to 0.
+            dilation: Spacing between kernel elements. Defaults to 1.
+            groups: Number of blocked connections from input to output channels. Defaults to 1.
+            prior_sigma: Standard deviation of the Gaussian prior distribution. Defaults to 1.0.
+            init_sigma: Initial standard deviation for posterior parameters. Defaults to 0.1.
+        """
+        super().__init__(prior_sigma=prior_sigma)
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.init_sigma = init_sigma
@@ -38,7 +49,6 @@ class BayesianConv2d(BaseBayesianLayer):
         self.padding = padding
         self.dilation = dilation
         self.groups = groups
-        self.prior_sigma = prior_sigma
 
         weight_shape = (out_channels, in_channels // groups, *self.kernel_size)
 
@@ -50,7 +60,8 @@ class BayesianConv2d(BaseBayesianLayer):
 
         self.reset_parameters()
 
-    def reset_parameters(self):
+    def reset_parameters(self) -> None:
+        """Initializes layer weights and bias parameters."""
         init.kaiming_normal_(self.w_mu, mode="fan_in", nonlinearity="relu")
         init.zeros_(self.b_mu)
 
@@ -59,6 +70,14 @@ class BayesianConv2d(BaseBayesianLayer):
         self.b_rho.data.fill_(rho_init)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Executes forward pass using deterministic means in eval mode or LRT sampling in train mode.
+
+        Args:
+            x: Input tensor of shape (batch_size, in_channels, height, width).
+
+        Returns:
+            torch.Tensor: Convolved output tensor of shape (batch_size, out_channels, out_height, out_width).
+        """
         if not self.training:
             return F.conv2d(
                 x,

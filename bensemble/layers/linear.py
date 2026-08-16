@@ -9,11 +9,9 @@ from .base import BaseBayesianLayer
 
 
 class BayesianLinear(BaseBayesianLayer):
-    """
-    Bayesian Linear layer implementing Variational Inference with the
-    Local Reparameterization Trick.
+    """Bayesian Linear layer with Local Reparameterization Trick.
 
-    Weights and biases are modeled as Gaussian distributions with learnable
+    Weights and biases are parameterized as Gaussian distributions with learnable
     means and standard deviations (parametrized by rho).
     """
 
@@ -25,13 +23,14 @@ class BayesianLinear(BaseBayesianLayer):
         init_sigma: float = 0.1,
         weight_init: str = "kaiming",
     ):
-        """
+        """Initializes the BayesianLinear layer.
+
         Args:
             in_features: Size of each input sample.
             out_features: Size of each output sample.
-            prior_sigma: Standard deviation of the prior Gaussian distribution.
-            init_sigma: Initial standard deviation for the posterior.
-            weight_init: Initialization method for weight means ('kaiming', 'xavier', or 'normal').
+            prior_sigma: Standard deviation of the prior Gaussian distribution. Defaults to 1.0.
+            init_sigma: Initial standard deviation for posterior distributions. Defaults to 0.1.
+            weight_init: Weight initialization scheme ("kaiming", "xavier", or "normal"). Defaults to "kaiming".
         """
         super().__init__(prior_sigma=prior_sigma)
         self.in_features = in_features
@@ -47,7 +46,8 @@ class BayesianLinear(BaseBayesianLayer):
 
         self.reset_parameters()
 
-    def reset_parameters(self):
+    def reset_parameters(self) -> None:
+        """Initializes layer weights and bias parameters."""
         if self.weight_init == "kaiming":
             init.kaiming_normal_(self.w_mu, nonlinearity="relu")
         elif self.weight_init == "xavier":
@@ -58,13 +58,17 @@ class BayesianLinear(BaseBayesianLayer):
         init.zeros_(self.b_mu)
 
         rho_init_val = math.log(math.exp(self.init_sigma) - 1.0)
-
         self.w_rho.data.fill_(rho_init_val)
         self.b_rho.data.fill_(rho_init_val)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        Forward pass with Local Reparameterization Trick.
+        """Applies linear transformation using deterministic means in eval mode or LRT sampling in train mode.
+
+        Args:
+            x: Input tensor of shape (..., in_features).
+
+        Returns:
+            torch.Tensor: Output tensor of shape (..., out_features).
         """
         if not self.training:
             return F.linear(x, self.w_mu, self.b_mu)

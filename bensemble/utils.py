@@ -11,25 +11,48 @@ _INV_SQRT_2PI = 1.0 / math.sqrt(2.0 * math.pi)
 
 
 def standard_normal_pdf(x: torch.Tensor) -> torch.Tensor:
-    """Standard normal probability density function ϕ(x)"""
+    """Computes the standard normal probability density function phi(x).
+
+    Args:
+        x: Input tensor.
+
+    Returns:
+        torch.Tensor: Probability density evaluated at x.
+    """
     return torch.exp(-0.5 * x * x) * _INV_SQRT_2PI
 
 
 def standard_normal_cdf(x: torch.Tensor) -> torch.Tensor:
-    """Standard normal cumulative distribution function Φ(x)"""
+    """Computes the standard normal cumulative distribution function Phi(x).
+
+    Args:
+        x: Input tensor.
+
+    Returns:
+        torch.Tensor: Cumulative distribution value evaluated at x.
+    """
     return 0.5 * (1.0 + torch.erf(x / math.sqrt(2.0)))
 
 
-def enable_dropout(model: nn.Module):
-    """Activating dropout layers for MC Dropout"""
+def enable_dropout(model: nn.Module) -> None:
+    """Enables dropout layers during evaluation for Monte Carlo Dropout.
+
+    Args:
+        model: Target neural network containing nn.Dropout layers.
+    """
     for module in model.modules():
         if isinstance(module, nn.Dropout):
             module.train()
 
 
 def get_total_kl(model: nn.Module) -> torch.Tensor:
-    """
-    Calculates the sum of KL-divergence of all bayessian layers in the model.
+    """Calculates the sum of KL divergences of all Bayesian layers in the model.
+
+    Args:
+        model: Neural network model containing Bayesian layers.
+
+    Returns:
+        torch.Tensor: Total accumulated KL divergence scalar.
     """
     total_kl = 0.0
 
@@ -40,24 +63,24 @@ def get_total_kl(model: nn.Module) -> torch.Tensor:
     return total_kl
 
 
-def predict_with_uncertainty(model: nn.Module, x: torch.Tensor, num_samples: int = 100):
-    """
-    Estimates prediction mean and uncertainty using MC Dropout.
+def predict_with_uncertainty(
+    model: nn.Module, x: torch.Tensor, num_samples: int = 100
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Estimates predictive mean and standard deviation via Monte Carlo sampling.
 
     Args:
-        model: the model for prediction.
-        x: the input for model.
-        num_samples: number of samples.
+        model: Neural network model containing stochastic layers.
+        x: Input tensor.
+        num_samples: Number of forward Monte Carlo passes. Defaults to 100.
 
     Returns:
-        mean: Predictive mean.
-        std: Predictive standard deviation.
+        tuple[torch.Tensor, torch.Tensor]: A tuple (mean, std) representing
+        the predictive mean and unbiased sample standard deviation.
     """
     was_training = model.training
     model.eval()
 
     for module in model.modules():
-        # TODO: implemenet base class so we can just check ifinstance(module, BaseClass)
         if isinstance(module, (BayesianLinear, BayesianConv2d)):
             module.train()
 
@@ -73,15 +96,14 @@ def predict_with_uncertainty(model: nn.Module, x: torch.Tensor, num_samples: int
 
 
 def prune_model(model: torch.nn.Module, threshold: float = 0.83) -> float:
-    """
-    Applies Graves' SNR-based pruning to all Bayesian layers in the model.
+    """Applies Graves' SNR-based weight pruning to all Bayesian layers in the model.
 
     Args:
-        model (nn.Module): The trained Bayesian model.
-        threshold (float): SNR threshold. Defaults to 0.83.
+        model: Neural network containing BaseBayesianLayer modules.
+        threshold: Signal-to-Noise Ratio (SNR) pruning threshold. Defaults to 0.83.
 
     Returns:
-        float: Overall sparsity of the model (percentage of pruned weights).
+        float: Overall sparsity ratio of pruned weights across all Bayesian layers (0.0 to 1.0).
     """
     total_weights = 0
     total_pruned = 0
