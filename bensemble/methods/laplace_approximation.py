@@ -10,9 +10,7 @@ from bensemble.core.ensemble import Ensemble
 
 
 class LaplaceApproximation:
-    """
-    Kronecker-factored Laplace approximation for neural networks.
-    """
+    """Kronecker-factored Laplace approximation for neural networks."""
 
     def __init__(
         self,
@@ -23,6 +21,19 @@ class LaplaceApproximation:
         regularization: str = "legacy",
         verbose: bool = False,
     ):
+        """Initializes the LaplaceApproximation instance.
+
+        Args:
+            model: PyTorch model to approximate.
+            likelihood: Task likelihood, either "classification" or "regression". Defaults to "regression".
+            prior_precision: Prior precision hyperparameter (scalar tau). Defaults to 1.0.
+            damping: Numerical stabilization term added to diagonals. Defaults to 1e-6.
+            regularization: Regularization formula type ("legacy" or "paper"). Defaults to "legacy".
+            verbose: If True, prints progress details during computation. Defaults to False.
+
+        Raises:
+            ValueError: If likelihood or regularization values are unsupported.
+        """
         if likelihood not in ["classification", "regression"]:
             raise ValueError(f"Unsupported likelihood: {likelihood}")
         if regularization not in ["legacy", "paper"]:
@@ -46,7 +57,8 @@ class LaplaceApproximation:
         self.activations: dict[str, torch.Tensor] = {}
         self.pre_activation_hessians: dict[str, torch.Tensor] = {}
 
-    def toggle_verbose(self):
+    def toggle_verbose(self) -> None:
+        """Toggles verbosity flag."""
         self.verbose = not self.verbose
         print("Verbose:", "on" if self.verbose else "off")
 
@@ -55,9 +67,11 @@ class LaplaceApproximation:
         train_loader: DataLoader,
         num_samples: int = 1000,
     ) -> None:
-        """
-        Estimates the Kronecker factors of the Hessian using the training data.
-        This must be called before sampling models.
+        """Estimates the Kronecker factors of the Hessian using training data.
+
+        Args:
+            train_loader: DataLoader yielding training data and targets.
+            num_samples: Maximum number of samples to process for curvature estimation. Defaults to 1000.
         """
         self.dataset_size = len(train_loader.dataset)
 
@@ -80,6 +94,7 @@ class LaplaceApproximation:
             print("Curvature computation completed!")
 
     def _register_hooks(self) -> None:
+        """Registers forward hooks on Linear layers to record activations."""
         self._remove_hooks()
         self.activations = {}
         self.pre_activation_hessians = {}
@@ -99,6 +114,7 @@ class LaplaceApproximation:
                 self.hook_handles.append(handle)
 
     def _remove_hooks(self) -> None:
+        """Removes all registered PyTorch hooks."""
         for handle in self.hook_handles:
             handle.remove()
         self.hook_handles.clear()
@@ -108,6 +124,15 @@ class LaplaceApproximation:
         output: torch.Tensor,
         target: torch.Tensor,
     ) -> torch.Tensor:
+        """Computes the loss Hessian with respect to model pre-activations.
+
+        Args:
+            output: Model output logits/predictions of shape (batch_size, output_dim).
+            target: Target labels or values.
+
+        Returns:
+            torch.Tensor: Hessian tensor of shape (batch_size, output_dim, output_dim).
+        """
         batch_size = output.shape[0]
 
         if self.likelihood == "classification":
@@ -127,6 +152,14 @@ class LaplaceApproximation:
         self,
         hessian_final: torch.Tensor,
     ) -> dict[str, torch.Tensor]:
+        """Backpropagates Hessian through linear layers.
+
+        Args:
+            hessian_final: Hessian tensor of the output layer.
+
+        Returns:
+            dict[str, torch.Tensor]: Mapping from layer names to their corresponding Hessian factors.
+        """
         hessians: dict[str, torch.Tensor] = {}
 
         linear_layers = [
@@ -162,6 +195,12 @@ class LaplaceApproximation:
         train_loader: DataLoader,
         num_samples: int,
     ) -> None:
+        """Estimates Kronecker curvature factors and matrix square roots.
+
+        Args:
+            train_loader: DataLoader providing training samples.
+            num_samples: Maximum number of samples to process.
+        """
         self.model.eval()
 
         accumulators: dict[str, dict[str, Any]] = {}
@@ -271,6 +310,14 @@ class LaplaceApproximation:
                 }
 
     def _matrix_sqrt(self, matrix: torch.Tensor) -> torch.Tensor:
+        """Computes the symmetric positive semi-definite matrix square root.
+
+        Args:
+            matrix: Input square matrix tensor.
+
+        Returns:
+            torch.Tensor: Matrix square root.
+        """
         matrix = self._stabilize_spd(self._symmetrize(matrix))
         eigvals, eigvecs = torch.linalg.eigh(matrix)
         eigvals = eigvals.clamp_min(self.damping)
@@ -279,8 +326,17 @@ class LaplaceApproximation:
     def sample_models(
         self, n_models: int = 10, temperature: float = 1.0
     ) -> list[nn.Module]:
-        """
-        Samples models from the approximated posterior.
+        """Samples model parameters from the approximated Gaussian posterior.
+
+        Args:
+            n_models: Number of models to sample. Defaults to 10.
+            temperature: Sampling temperature scaling factor. Defaults to 1.0.
+
+        Returns:
+            list[nn.Module]: Sampled model instances in eval mode.
+
+        Raises:
+            RuntimeError: If curvature has not been computed prior to sampling.
         """
         if not self.is_fitted:
             raise RuntimeError(
@@ -320,11 +376,25 @@ class LaplaceApproximation:
         return samples
 
     def build_ensemble(self, n_members: int = 10, temperature: float = 1.0) -> Ensemble:
+        """Builds an Ensemble module sampled from the Laplace posterior.
+
+        Args:
+            n_members: Number of ensemble members to draw. Defaults to 10.
+            temperature: Sampling temperature for posterior weights. Defaults to 1.0.
+
+        Returns:
+            Ensemble: Ensemble instance wrapping the sampled models.
+        """
         return Ensemble.from_posterior(
             self, n_members=n_members, temperature=temperature
         )
 
     def _get_ensemble_state(self) -> dict[str, Any]:
+        """Serializes current approximation state into a dictionary.
+
+        Returns:
+            dict[str, Any]: Dictionary containing approximation parameters and state.
+        """
         return {
             "model_state": self.model.state_dict(),
             "is_fitted": self.is_fitted,
@@ -334,7 +404,12 @@ class LaplaceApproximation:
             "prior_precision": self.prior_precision,
         }
 
-    def _set_ensemble_state(self, state: dict[str, Any]):
+    def _set_ensemble_state(self, state: dict[str, Any]) -> None:
+        """Restores approximation state from a dictionary.
+
+        Args:
+            state: Dictionary containing previously saved state.
+        """
         self.model.load_state_dict(state["model_state"])
         self.is_fitted = state["is_fitted"]
         self.likelihood = state["likelihood"]
@@ -344,9 +419,25 @@ class LaplaceApproximation:
         self.hook_handles = []
 
     def _stabilize_spd(self, matrix: torch.Tensor) -> torch.Tensor:
+        """Adds damping to diagonal elements to ensure symmetric positive-definiteness.
+
+        Args:
+            matrix: Input square matrix tensor.
+
+        Returns:
+            torch.Tensor: Damped symmetric positive-definite matrix.
+        """
         eye = torch.eye(matrix.shape[0], device=matrix.device, dtype=matrix.dtype)
         return self._symmetrize(matrix) + self.damping * eye
 
     @staticmethod
     def _symmetrize(matrix: torch.Tensor) -> torch.Tensor:
+        """Ensures matrix symmetry: 0.5 * (M + M^T).
+
+        Args:
+            matrix: Input square matrix tensor.
+
+        Returns:
+            torch.Tensor: Symmetrized matrix.
+        """
         return 0.5 * (matrix + matrix.T)

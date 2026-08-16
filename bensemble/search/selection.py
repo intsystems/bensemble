@@ -11,11 +11,17 @@ def classification_nll_criterion(
     val_loader: DataLoader,
     device: torch.device,
 ) -> float:
-    """
-    Default criterion for classification tasks.
-    Ensemble prediction = mean of per-member softmax probabilities.
-    Score = mean NLL over val_loader.
-    members: list of trained nn.Module in eval() mode.
+    """Evaluates classification Negative Log-Likelihood of an ensemble candidate set.
+
+    Predictions from all members are converted to softmax probabilities and averaged.
+
+    Args:
+        members: List of candidate neural network modules in eval mode.
+        val_loader: DataLoader yielding validation (inputs, labels) batches.
+        device: Device on which to run inference.
+
+    Returns:
+        float: Mean negative log-likelihood score over the validation set.
     """
     with torch.no_grad():
         probs_list: list[torch.Tensor] = []
@@ -38,7 +44,7 @@ def classification_nll_criterion(
                 labels = torch.cat(member_labels, dim=0)
 
         assert labels is not None
-        mean_probs = torch.stack(probs_list, dim=0).mean(dim=0)  # (N, C)
+        mean_probs = torch.stack(probs_list, dim=0).mean(dim=0)
         n = labels.shape[0]
         nll = -torch.log(
             mean_probs[torch.arange(n, device=device), labels] + 1e-8
@@ -51,13 +57,17 @@ def regression_mse_criterion(
     val_loader: DataLoader,
     device: torch.device,
 ) -> float:
-    """
-    Default criterion for regression tasks.
-    Ensemble prediction = mean of per-member raw outputs.
-    Score = mean squared error over val_loader.
-    members: list of trained nn.Module in eval() mode.
-    Assumes model output shape (N, *) and target shape (N, *) are compatible
-    with torch.nn.functional.mse_loss.
+    """Evaluates Mean Squared Error of an ensemble candidate set.
+
+    Predictions from all members are averaged directly.
+
+    Args:
+        members: List of candidate neural network modules in eval mode.
+        val_loader: DataLoader yielding validation (inputs, targets) batches.
+        device: Device on which to run inference.
+
+    Returns:
+        float: Mean squared error score over the validation set.
     """
     with torch.no_grad():
         preds_list: list[torch.Tensor] = []
@@ -80,7 +90,7 @@ def regression_mse_criterion(
                 targets = torch.cat(member_targets, dim=0)
 
         assert targets is not None
-        mean_preds = torch.stack(preds_list, dim=0).mean(dim=0)  # (N, *)
+        mean_preds = torch.stack(preds_list, dim=0).mean(dim=0)
         return F.mse_loss(mean_preds, targets.float()).item()
 
 
@@ -91,22 +101,21 @@ def forward_select(
     device: torch.device,
     criterion: Callable[[list[nn.Module], DataLoader, torch.device], float],
 ) -> list[nn.Module]:
-    """
-    Greedy forward stepwise selection without replacement (Section 4, NES paper).
+    """Performs greedy forward stepwise ensemble selection without replacement.
 
-    Selects `ensemble_size` models from `pool` that minimise the score returned
+    Iteratively selects models from `pool` that minimize the metric returned
     by `criterion` on `val_loader`.
 
     Args:
-        pool: Trained nn.Module instances.
-        val_loader: Validation data loader yielding (inputs, labels/targets) batches.
-        ensemble_size: Number of members to select (M in the paper).
-        device: Device on which to run inference.
-        criterion: Callable(members, val_loader, device) -> float.
-            Must be lower-is-better. Called once per candidate at each greedy step.
+        pool: Candidate neural network modules.
+        val_loader: Validation DataLoader yielding (inputs, targets) batches.
+        ensemble_size: Number of members to select.
+        device: Device on which to execute evaluation.
+        criterion: Evaluation callable `(members, val_loader, device) -> float`
+            where lower values indicate better performance.
 
     Returns:
-        List of `ensemble_size` models selected from `pool`.
+        list[nn.Module]: List of selected model instances of length `ensemble_size`.
     """
     selected: list[nn.Module] = []
 
