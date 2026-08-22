@@ -45,6 +45,37 @@ uv run --extra benchmarks python benchmarks/regression_benchmark.py
    python benchmarks/regression_benchmark.py
    ```
 
+## Requirements
+
+- **Python:** 3.10–3.13
+- **OS:** Linux, Windows, and macOS
+- **Hardware:**
+  - **CPU:** Supported (sufficient for regression, but slow for full classification).
+  - **CUDA:** Recommended for the classification benchmark.
+
+## Runtime
+
+Approximate total runtime on an **NVIDIA RTX A4000**:
+
+| Benchmark      | Total runtime |
+|----------------|--------------:|
+| Classification | 4h 50min      |
+| Regression     | 20min         |
+
+
+## Data
+
+Datasets are downloaded automatically upon running the scripts. No manual preparation is needed.
+
+### Used datasets
+
+- CIFAR-10
+- SVHN
+- Energy Efficiency
+- Concrete Compressive Strength
+- Combined Cycle Power Plant
+- Yacht Hydrodynamics
+
 ## Classification benchmark
 
 `classification_benchmark.py`
