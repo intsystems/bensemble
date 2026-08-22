@@ -2,6 +2,49 @@
 
 This folder contains reproducible, cross-method validation scripts for bensemble that run every supported ensembling/UQ method through the same pipeline under matched conditions.
 
+## Running benchmarks
+
+> **Note:** Run all commands from the **root directory** of the repository.
+
+### Option 1: Using `uv`
+
+Run classification benchmark:
+
+```bash
+uv run --extra benchmarks python benchmarks/classification_benchmark.py
+```
+
+Run regression benchmark:
+
+```bash
+uv run --extra benchmarks python benchmarks/regression_benchmark.py
+```
+
+### Option 2: Using pip and venv
+
+1. Create and activate venv
+
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # on Windows: venv\Scripts\activate
+   ```
+
+2. Install dependencies
+
+   ```bash
+   pip install -e ".[benchmarks]"
+   ```
+
+3. Run classification or regression benchmark:
+
+   ```bash
+   python benchmarks/classification_benchmark.py
+   ```
+
+   ```bash
+   python benchmarks/regression_benchmark.py
+   ```
+
 ## Classification benchmark
 
 `classification_benchmark.py`
