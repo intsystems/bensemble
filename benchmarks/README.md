@@ -2,6 +2,82 @@
 
 This folder contains reproducible, cross-method validation scripts for bensemble that run every supported ensembling/UQ method through the same pipeline under matched conditions.
 
+## Running benchmarks
+
+> **Note:** Run all commands from the **root directory** of the repository.
+
+### Option 1: Using `uv`
+
+Run classification benchmark:
+
+```bash
+uv run --extra benchmarks python benchmarks/classification_benchmark.py
+```
+
+Run regression benchmark:
+
+```bash
+uv run --extra benchmarks python benchmarks/regression_benchmark.py
+```
+
+### Option 2: Using pip and venv
+
+1. Create and activate venv
+
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # on Windows: venv\Scripts\activate
+   ```
+
+2. Install dependencies
+
+   ```bash
+   pip install -e ".[benchmarks]"
+   ```
+
+3. Run classification or regression benchmark:
+
+   ```bash
+   python benchmarks/classification_benchmark.py
+   ```
+
+   ```bash
+   python benchmarks/regression_benchmark.py
+   ```
+
+## Requirements
+
+- **Python:** 3.10–3.13
+- **OS:** Linux, Windows, and macOS
+- **Hardware:**
+  - **CPU:** Supported (sufficient for regression, but slow for full classification).
+  - **CUDA:** Recommended for the classification benchmark.
+
+## Runtime
+
+Approximate total runtime on an **NVIDIA RTX A4000**:
+
+| Benchmark      | Total runtime |
+|----------------|--------------:|
+| Classification | 4h 50min      |
+| Regression     | 20min         |
+
+## Data
+
+Datasets are downloaded automatically upon running the scripts. No manual preparation is needed.
+
+### Datasets Used
+
+- **Classification (via `torchvision.datasets`):**
+  - [CIFAR-10](https://www.cs.toronto.edu/~kriz/cifar.html) — In-Distribution
+  - [SVHN](http://ufldl.stanford.edu/housenumbers/) — Out-of-Distribution
+
+- **Regression (via `ucimlrepo` / UCI Archive):**
+  - [Energy Efficiency](https://archive.ics.uci.edu/dataset/242/energy+efficiency) — UCI ID: 242
+  - [Concrete Compressive Strength](https://archive.ics.uci.edu/dataset/165/concrete+compressive+strength) — UCI ID: 165
+  - [Combined Cycle Power Plant](https://archive.ics.uci.edu/dataset/294/combined+cycle+power+plant) — UCI ID: 294
+  - [Yacht Hydrodynamics](https://archive.ics.uci.edu/ml/machine-learning-databases/00243/yacht_hydrodynamics.data)
+  
 ## Classification benchmark
 
 `classification_benchmark.py`
