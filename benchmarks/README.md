@@ -62,20 +62,22 @@ Approximate total runtime on an **NVIDIA RTX A4000**:
 | Classification | 4h 50min      |
 | Regression     | 20min         |
 
-
 ## Data
 
 Datasets are downloaded automatically upon running the scripts. No manual preparation is needed.
 
-### Used datasets
+### Datasets Used
 
-- CIFAR-10
-- SVHN
-- Energy Efficiency
-- Concrete Compressive Strength
-- Combined Cycle Power Plant
-- Yacht Hydrodynamics
+- **Classification (via `torchvision.datasets`):**
+  - [CIFAR-10](https://www.cs.toronto.edu/~kriz/cifar.html) — In-Distribution
+  - [SVHN](http://ufldl.stanford.edu/housenumbers/) — Out-of-Distribution
 
+- **Regression (via `ucimlrepo` / UCI Archive):**
+  - [Energy Efficiency](https://archive.ics.uci.edu/dataset/242/energy+efficiency) — UCI ID: 242
+  - [Concrete Compressive Strength](https://archive.ics.uci.edu/dataset/165/concrete+compressive+strength) — UCI ID: 165
+  - [Combined Cycle Power Plant](https://archive.ics.uci.edu/dataset/294/combined+cycle+power+plant) — UCI ID: 294
+  - [Yacht Hydrodynamics](https://archive.ics.uci.edu/ml/machine-learning-databases/00243/yacht_hydrodynamics.data)
+  
 ## Classification benchmark
 
 `classification_benchmark.py`
