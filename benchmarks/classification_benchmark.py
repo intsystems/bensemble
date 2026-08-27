@@ -370,7 +370,8 @@ def main():
             np.concatenate([id_u.numpy(), ood_u.numpy()]),
         )
 
-        plot_ood_histogram(id_u, ood_u, name)
+        if name != "Single Net":
+            plot_ood_histogram(id_u, ood_u, name)
 
         results.append(
             {
