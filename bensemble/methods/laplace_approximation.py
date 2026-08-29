@@ -362,10 +362,12 @@ class LaplaceApproximation:
                 )
 
                 sampled_weight = mean_weight + temperature * (l_h @ z @ l_q.T)
-                sampled_state[f"{name}.weight"] = sampled_weight.detach().cpu()
+
+                prefix = f"{name}." if name else ""
+                sampled_state[f"{prefix}weight"] = sampled_weight.detach().cpu()
 
                 if module.bias is not None:
-                    sampled_state[f"{name}.bias"] = module.bias.detach().cpu()
+                    sampled_state[f"{prefix}bias"] = module.bias.detach().cpu()
 
             model_sample = copy.deepcopy(self.model)
             model_sample.load_state_dict(sampled_state, strict=True)
