@@ -167,6 +167,29 @@ def test_sample_models_diversity(regression_setup):
     assert not torch.equal(sample1_w, sample2_w)
 
 
+def test_sample_models_bare_module(classification_setup):
+    """
+    Ensures that a model which is itself a single nn.Linear can be sampled.
+    """
+    _, loader, X, _ = classification_setup
+    model = nn.Linear(5, 3)
+
+    laplace = LaplaceApproximation(model, likelihood="classification")
+    laplace.compute_curvature(loader, num_samples=10)
+
+    samples = laplace.sample_models(n_models=2)
+    assert len(samples) == 2
+
+    assert not torch.equal(model.weight, samples[0].weight)
+    assert not torch.equal(samples[0].weight, samples[1].weight)
+
+    ensemble = laplace.build_ensemble(n_members=3)
+    with torch.no_grad():
+        member_preds = ensemble.predict_members(X)
+
+    assert member_preds.shape == (3, 20, 3)
+
+
 def test_hooks_cleanup(regression_setup):
     """
     Ensures that PyTorch forward hooks are removed after computing curvature.
