@@ -1,3 +1,4 @@
+import pytest
 import torch
 import torch.nn.functional as F
 
@@ -64,6 +65,47 @@ def test_fit_optimization():
     )
 
 
+def test_fit_recovers_known_temperature():
+    """
+    'fit' converges to the temperature that actually minimizes the NLL,
+    regardless of how far it is from the initial value.
+    """
+    torch.manual_seed(42)
+
+    for true_temp in [1.0, 2.0, 3.0]:
+        base_logits = torch.randn(5000, 2) * 2.0
+        labels = torch.distributions.Categorical(logits=base_logits).sample()
+        logits = base_logits * true_temp
+
+        grid = torch.linspace(0.2, 6.0, 2000)
+        losses = torch.stack([F.cross_entropy(logits / t, labels) for t in grid])
+        optimal_temp = grid[losses.argmin()].item()
+
+        scaler = TemperatureScaling().fit(logits, labels)
+
+        assert scaler.temperature.item() == pytest.approx(optimal_temp, rel=0.05), (
+            f"fit() stopped at {scaler.temperature.item():.3f} "
+            f"instead of the optimum {optimal_temp:.3f}."
+        )
+
+
+def test_fit_does_not_degrade_calibrated_logits():
+    """
+    'fit' does not make an already well-calibrated model worse.
+    """
+    torch.manual_seed(0)
+
+    logits = torch.randn(5000, 2) * 2.0
+    labels = torch.distributions.Categorical(logits=logits).sample()
+
+    initial_loss = F.cross_entropy(logits, labels).item()
+
+    scaler = TemperatureScaling().fit(logits, labels)
+    final_loss = F.cross_entropy(scaler(logits), labels).item()
+
+    assert final_loss <= initial_loss + 1e-4
+
+
 def test_vector_scaling_initialization():
     """Vector Scaling initializes vectors correctly."""
     num_classes = 3
@@ -127,6 +169,22 @@ def test_vector_scaling_fit_optimization():
     assert final_loss < initial_loss, (
         "Vector Scaling failed to improve the Negative Log-Likelihood."
     )
+
+
+def test_vector_scaling_fit_recovers_known_scaling():
+    """
+    Vector Scaling converges to the affine transform that undoes a known
+    distortion of the logits.
+    """
+    torch.manual_seed(42)
+
+    base_logits = torch.randn(5000, 3) * 2.0
+    labels = torch.distributions.Categorical(logits=base_logits).sample()
+    logits = base_logits * 2.0
+
+    scaler = VectorScaling(num_classes=3).fit(logits, labels)
+
+    assert torch.allclose(scaler.a, torch.full((3,), 0.5), atol=0.05)
 
 
 def test_temperature_scaling_single_sample():
