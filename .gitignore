@@ -67,6 +67,8 @@ dmypy.json
 # --- Datasets & Big Files ---
 *.csv
 !.dvc
-data/housing.data
+data/
+results/
+results_regression/
 notebooks/adversarial_rmse.ipynb
 /blog/.obsidian
