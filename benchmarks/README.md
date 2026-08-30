@@ -45,6 +45,20 @@ uv run --extra benchmarks python benchmarks/regression_benchmark.py
    python benchmarks/regression_benchmark.py
    ```
 
+## Reproducibility
+
+Both scripts fix every random seed and restrict PyTorch to deterministic kernels, so repeated runs on the same machine and software stack produce identical results.
+
+On CUDA, one more setting is needed and has to come from the environment:
+
+```bash
+export CUBLAS_WORKSPACE_CONFIG=:4096:8
+```
+
+Without it, `torch.use_deterministic_algorithms(True)` raises as soon as a cuBLAS reduction runs.
+
+Results still differ across GPU architectures, CUDA/cuDNN versions and PyTorch releases: floating-point addition is not associative, so a different kernel sums in a different order. The numbers reported here were produced on the hardware listed under [Runtime](#runtime); expect small deviations elsewhere.
+
 ## Requirements
 
 - **Python:** 3.10–3.13
