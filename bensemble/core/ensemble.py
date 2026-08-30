@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from typing import Any
 
 import torch
 from torch import nn
@@ -88,7 +89,7 @@ class Ensemble(nn.Module):
 
     @classmethod
     def from_posterior(
-        cls, source: PosteriorSource, n_members: int = 10, **kwargs
+        cls, source: PosteriorSource, n_members: int = 10, **kwargs: Any
     ) -> "Ensemble":
         """Creates an explicit ensemble by sampling from an approximated posterior.
 
