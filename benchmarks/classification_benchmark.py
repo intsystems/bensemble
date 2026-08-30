@@ -48,6 +48,13 @@ def set_seed(seed=42):
         torch.cuda.manual_seed_all(seed)
 
 
+def enable_determinism():
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    torch.use_deterministic_algorithms(True)
+
+
+enable_determinism()
 set_seed(42)
 print(f"Running Bensemble Benchmark on {DEVICE}")
 

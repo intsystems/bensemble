@@ -2,6 +2,7 @@
 Regression benchmark: PBP vs VI (ELBO) vs Laplace (K-FAC) vs MAP baseline on UCI datasets.
 """
 
+import random
 import time
 from pathlib import Path
 
@@ -25,6 +26,7 @@ print(
     f"Running Bensemble Regression Benchmark on {DEVICE} (PBP itself always runs on CPU — see run_pbp)"
 )
 
+SEED = 42
 HIDDEN = 50
 N_SPLITS = 5
 TEST_FRACTION = 0.1
@@ -35,6 +37,23 @@ MAP_VAL_FRACTION = 0.1  # fraction of training data held out for noise estimatio
 
 RESULTS_DIR = Path("results_regression")
 RESULTS_DIR.mkdir(exist_ok=True)
+
+
+def set_seed(seed=SEED):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+
+
+def enable_determinism():
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    torch.use_deterministic_algorithms(True)
+
+
+enable_determinism()
 
 DATASETS = {
     "yacht": {"uci_id": None, "target_col": None, "direct": True},
@@ -314,6 +333,7 @@ def main():
                     Xtr_raw, ytr_raw, Xte_raw, yte_raw
                 )
 
+                set_seed(SEED + split_idx)
                 mean, var, elapsed = runner(Xtr, ytr, Xte, yte, epochs=NUM_EPOCHS)
                 rmse, nlpd = regression_metrics(mean, var, yte, y_mean, y_std)
 
