@@ -64,7 +64,7 @@ benchmarks = [
 [project.urls]
 Homepage = "https://github.com/intsystems/bensemble"
 "Bug_Tracker" = "https://github.com/intsystems/bensemble/issues"
-Documentation = "https://github.com/intsystems/bensemble#readme"
+Documentation = "https://intsystems.github.io/bensemble/"
 Source = "https://github.com/intsystems/bensemble"
 
 [tool.setuptools.packages.find]
