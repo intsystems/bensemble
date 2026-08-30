@@ -106,6 +106,65 @@ def test_fit_does_not_degrade_calibrated_logits():
     assert final_loss <= initial_loss + 1e-4
 
 
+def test_fit_with_custom_optimizer():
+    """
+    A user-supplied optimizer reaches the same optimum as the default L-BFGS.
+    """
+    torch.manual_seed(42)
+
+    base_logits = torch.randn(5000, 2) * 2.0
+    labels = torch.distributions.Categorical(logits=base_logits).sample()
+    logits = base_logits * 2.5
+
+    default_scaler = TemperatureScaling().fit(logits, labels)
+
+    custom_scaler = TemperatureScaling()
+    adam = torch.optim.Adam([custom_scaler.temperature], lr=0.05)
+    custom_scaler.fit(logits, labels, max_iter=500, optimizer=adam)
+
+    assert custom_scaler.temperature.item() == pytest.approx(
+        default_scaler.temperature.item(), rel=0.05
+    )
+
+
+def test_fit_with_explicit_lbfgs():
+    """
+    An explicitly supplied L-BFGS is stepped once and still converges.
+    """
+    torch.manual_seed(42)
+
+    base_logits = torch.randn(5000, 2) * 2.0
+    labels = torch.distributions.Categorical(logits=base_logits).sample()
+    logits = base_logits * 2.5
+
+    default_scaler = TemperatureScaling().fit(logits, labels)
+
+    custom_scaler = TemperatureScaling()
+    lbfgs = torch.optim.LBFGS(
+        [custom_scaler.temperature], lr=1.0, max_iter=50, line_search_fn="strong_wolfe"
+    )
+    custom_scaler.fit(logits, labels, optimizer=lbfgs)
+
+    assert custom_scaler.temperature.item() == pytest.approx(
+        default_scaler.temperature.item(), rel=0.01
+    )
+
+
+def test_fit_does_not_touch_upstream_graph():
+    """
+    Fitting does not backpropagate into the model that produced the logits.
+    """
+    torch.manual_seed(0)
+
+    net = torch.nn.Linear(4, 3)
+    inputs = torch.randn(200, 4)
+    labels = torch.randint(0, 3, (200,))
+
+    TemperatureScaling().fit(net(inputs), labels)
+
+    assert all(p.grad is None for p in net.parameters())
+
+
 def test_vector_scaling_initialization():
     """Vector Scaling initializes vectors correctly."""
     num_classes = 3
@@ -185,6 +244,26 @@ def test_vector_scaling_fit_recovers_known_scaling():
     scaler = VectorScaling(num_classes=3).fit(logits, labels)
 
     assert torch.allclose(scaler.a, torch.full((3,), 0.5), atol=0.05)
+
+
+def test_vector_scaling_fit_with_custom_optimizer():
+    """
+    Vector Scaling accepts a user-supplied optimizer and still lowers the NLL.
+    """
+    torch.manual_seed(42)
+
+    base_logits = torch.randn(2000, 3) * 2.0
+    labels = torch.distributions.Categorical(logits=base_logits).sample()
+    logits = base_logits * 2.0
+
+    scaler = VectorScaling(num_classes=3)
+    sgd = torch.optim.SGD([scaler.a, scaler.b], lr=0.05)
+
+    initial_loss = F.cross_entropy(logits, labels).item()
+    scaler.fit(logits, labels, max_iter=300, optimizer=sgd)
+    final_loss = F.cross_entropy(scaler(logits), labels).item()
+
+    assert final_loss < initial_loss
 
 
 def test_temperature_scaling_single_sample():
