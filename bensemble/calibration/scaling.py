@@ -48,7 +48,12 @@ class TemperatureScaling(nn.Module):
             TemperatureScaling: The fitted instance itself.
         """
         logits = logits.detach()
-        optimizer = optim.LBFGS([self.temperature], lr=0.01, max_iter=max_iter)
+        optimizer = optim.LBFGS(
+            [self.temperature],
+            lr=1.0,
+            max_iter=max_iter,
+            line_search_fn="strong_wolfe",
+        )
 
         def eval_loss():
             optimizer.zero_grad()
@@ -106,7 +111,12 @@ class VectorScaling(nn.Module):
             VectorScaling: The fitted instance itself.
         """
         logits = logits.detach()
-        optimizer = optim.LBFGS([self.a, self.b], lr=0.01, max_iter=max_iter)
+        optimizer = optim.LBFGS(
+            [self.a, self.b],
+            lr=1.0,
+            max_iter=max_iter,
+            line_search_fn="strong_wolfe",
+        )
 
         def eval_loss():
             optimizer.zero_grad()
