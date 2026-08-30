@@ -2,7 +2,7 @@ site_name: bensemble
 site_url: https://intsystems.github.io/bensemble/
 repo_url: https://github.com/intsystems/bensemble
 repo_name: intsystems/bensemble
-edit_uri: edit/main/docs/
+edit_uri: edit/master/docs/docs/
 
 theme:
   name: material
