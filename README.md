@@ -224,7 +224,7 @@ Developed by:
 - [**Dmitrii Vasilenko**](https://github.com/Dimundel)
 - [**Muhammadsharif Nabiev**](https://github.com/mikhmed-nabiev)
 - [**Fedor Sobolevsky**](https://github.com/TeoSable)
-- [**Vadim Kasyuk**](https://github.com/KasiukVadim)
+- [**Vadim Kasiuk**](https://github.com/KasiukVadim)
 
 ---
 

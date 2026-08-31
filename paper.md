@@ -15,7 +15,7 @@ authors:
     affiliation: '1'
   - name: Fedor Sobolevsky
     affiliation: '1'
-  - name: Vadim Kasyuk
+  - name: Vadim Kasiuk
     affiliation: '1'
   - name: Oleg Bakhteev
     affiliation: '2'
