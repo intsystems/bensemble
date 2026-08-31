@@ -74,7 +74,7 @@ Approximate total runtime on an **NVIDIA RTX A4000**:
 | Benchmark      | Total runtime |
 |----------------|--------------:|
 | Classification | 4h 50min      |
-| Regression     | 20min         |
+| Regression     | 1h 15min      |
 
 ## Data
 
@@ -114,3 +114,32 @@ Implemented methods:
 | NES-BS | 93.73% | 0.0239 | **0.907** |
 | NES-RS | **93.94%** | 0.0237 | **0.907** |
 | NES-RE | 93.82% | 0.0243 | 0.891 |
+
+## Regression benchmark
+
+`regression_benchmark.py`
+
+Evaluates all regression / uncertainty estimation methods on:
+
+- **UCI datasets:** Yacht (N=308), Energy (N=768), Concrete (N=1030), Power Plant (N=9568)
+- **Protocol:** five random train/test splits per dataset, reported as mean ± std
+
+Implemented methods:
+
+RMSE ↓
+
+| Method | Yacht | Energy | Concrete | Power Plant |
+| ------ | -----------: | -----------: | -----------: | -----------: |
+| PBP | 1.931 ± 0.427 | 2.880 ± 0.228 | 6.561 ± 0.518 | 4.142 ± 0.163 |
+| VI (ELBO) | 2.955 ± 0.886 | 2.698 ± 0.263 | 6.066 ± 0.385 | 4.149 ± 0.142 |
+| Laplace (K-FAC) | 1.036 ± 0.172 | 0.975 ± 0.086 | 5.607 ± 0.448 | **4.026 ± 0.151** |
+| MAP (baseline) | **0.929 ± 0.161** | **0.844 ± 0.101** | **5.554 ± 0.438** | 4.027 ± 0.148 |
+
+NLPD ↓
+
+| Method | Yacht | Energy | Concrete | Power Plant |
+| ------ | -----------: | -----------: | -----------: | -----------: |
+| PBP | 3.068 ± 0.006 | 2.776 ± 0.022 | 3.448 ± 0.031 | 3.240 ± 0.009 |
+| VI (ELBO) | 2.708 ± 0.130 | 2.476 ± 0.069 | 3.225 ± 0.056 | 2.847 ± 0.028 |
+| Laplace (K-FAC) | 1.651 ± 0.112 | 1.439 ± 0.124 | 3.145 ± 0.083 | 2.818 ± 0.034 |
+| MAP (baseline) | **1.410 ± 0.203** | **1.267 ± 0.128** | **3.138 ± 0.082** | **2.818 ± 0.033** |

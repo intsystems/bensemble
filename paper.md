@@ -214,8 +214,23 @@ metrics including calibration and out-of-distribution detection results,
 and for the regression benchmark). \label{tab:sanity}
 
 All four regression methods likewise completed successfully across all
-four UCI datasets; per-dataset RMSE and NLPD for every method, along with
-a written discussion of methodology and several caveats we encountered
+four UCI datasets, as \autoref{tab:regression} shows.
+
+| Method | Yacht | Energy | Concrete | Power Plant |
+|---|---|---|---|---|
+| PBP | 1.93 | 2.88 | 6.56 | 4.14 |
+| VI (ELBO) | 2.95 | 2.70 | 6.07 | 4.15 |
+| Laplace (K-FAC) | 1.04 | 0.97 | 5.61 | 4.03 |
+| MAP (baseline) | 0.93 | 0.84 | 5.55 | 4.03 |
+
+: Test RMSE on four UCI regression datasets, averaged over five random
+train/test splits. As with the classification table, this is a sanity
+check that every method trains and predicts sensibly under a shared
+architecture and training budget, not a tuned comparison.
+\label{tab:regression}
+
+Per-dataset NLPD and split-level standard deviations for every method,
+along with a written discussion of methodology and several caveats we encountered
 while building this benchmark (matched-budget fairness across search-based
 and non-search methods, a train/eval-mode handling bug that leaked
 BatchNorm statistics between ensemble members, and differing rates of
