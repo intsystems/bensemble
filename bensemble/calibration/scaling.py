@@ -1,3 +1,9 @@
+"""Post-hoc calibration for classifiers.
+
+Both scalers recalibrate class logits against integer class labels; neither
+has a regression counterpart.
+"""
+
 import torch
 import torch.nn.functional as F
 from torch import nn, optim
@@ -45,7 +51,7 @@ def _fit_calibrator(
 
 
 class TemperatureScaling(nn.Module):
-    """Temperature Scaling for model calibration.
+    """Temperature Scaling for classifier calibration.
 
     Divides logits by a single learnable scalar parameter T (temperature).
     This softens probabilities and calibrates confidence without changing
