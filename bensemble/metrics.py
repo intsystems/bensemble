@@ -1,3 +1,9 @@
+"""Probabilistic metrics for classification.
+
+Every metric here expects predicted class probabilities and integer class
+labels; none of them has a regression counterpart.
+"""
+
 import torch
 import torch.nn.functional as F
 
@@ -8,7 +14,7 @@ def negative_log_likelihood(
     """
     Computes the Negative Log-Likelihood (NLL) for predicted probabilities.
 
-    This is a strictly proper scoring rule. Lower is better.
+    This is a strictly proper scoring rule for classification. Lower is better.
 
     Args:
         probs (torch.Tensor): Predicted probabilities of shape [Batch, Num_classes].
@@ -51,7 +57,7 @@ def expected_calibration_error(
     probs: torch.Tensor, targets: torch.Tensor, n_bins: int = 15
 ) -> float:
     """
-    Computes the Expected Calibration Error (ECE).
+    Computes the Expected Calibration Error (ECE) of a classifier.
 
     Divides the confidence space into `n_bins` and measures the weighted
     absolute difference between the model's accuracy and confidence in each bin.
@@ -90,7 +96,7 @@ def reliability_diagram(
     probs: torch.Tensor, targets: torch.Tensor, n_bins: int = 15
 ) -> dict[str, list]:
     """
-    Computes data points needed to plot a Reliability Diagram.
+    Computes data points needed to plot a Reliability Diagram for a classifier.
 
     Args:
         probs (torch.Tensor): Predicted probabilities of shape [Batch, Num_classes].
