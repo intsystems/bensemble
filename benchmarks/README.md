@@ -143,3 +143,5 @@ NLPD ↓
 | VI (ELBO) | 2.708 ± 0.130 | 2.476 ± 0.069 | 3.225 ± 0.056 | 2.847 ± 0.028 |
 | Laplace (K-FAC) | 1.651 ± 0.112 | 1.439 ± 0.124 | 3.145 ± 0.083 | 2.818 ± 0.034 |
 | MAP (baseline) | **1.410 ± 0.203** | **1.267 ± 0.128** | **3.138 ± 0.082** | **2.818 ± 0.033** |
+
+NLPD is not directly comparable across methods: MAP and Laplace fit the noise on a validation split, VI and PBP infer it themselves. Laplace adds epistemic variance on top of that fitted noise, so it trails MAP on the smaller datasets.
