@@ -1,3 +1,4 @@
+import os
 import random
 import time
 from pathlib import Path
@@ -31,16 +32,18 @@ BATCH_SIZE = 256
 EPOCHS = 75
 
 MC_DROPOUT_SAMPLES = 30
-LAPLACE_SAMPLES = 10
-VI_SAMPLES = 10
+LAPLACE_SAMPLES = 30
+VI_SAMPLES = 30
 NES_ENSEMBLE_SIZE = 3
 NES_POOL_SIZE = 9
+SHIFT_NOISE_STD = 0.1
 
-RESULTS_DIR = Path("results")
-RESULTS_DIR.mkdir(exist_ok=True)
+SEED = int(os.environ.get("BENSEMBLE_SEED", "42"))
+RESULTS_DIR = Path(os.environ.get("BENSEMBLE_RESULTS_DIR", "results"))
+RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def set_seed(seed=42):
+def set_seed(seed=SEED):
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -55,7 +58,7 @@ def enable_determinism():
 
 
 enable_determinism()
-set_seed(42)
+set_seed(SEED)
 print(f"Running Bensemble Benchmark on {DEVICE}")
 
 # --- 2. DATASETS ---
@@ -79,15 +82,15 @@ transform = transforms.Compose(
 )
 
 
-def add_noise(x, std=0.7):
-    return x + torch.randn_like(x) * std
+def add_noise(x, std=SHIFT_NOISE_STD):
+    return (x + torch.randn_like(x) * std).clamp(0.0, 1.0)
 
 
 transform_noisy = transforms.Compose(
     [
         transforms.ToTensor(),
+        transforms.Lambda(lambda x: add_noise(x, SHIFT_NOISE_STD)),
         transforms.Normalize(CIFAR_MEAN, CIFAR_STD),
-        transforms.Lambda(lambda x: add_noise(x, 0.7)),
     ]
 )
 
@@ -358,7 +361,7 @@ def main():
 
     for name, fn in METHODS.items():
         print(f"\n=== Running {name} ===")
-        set_seed(42)
+        set_seed(SEED)
 
         start_time = time.time()
         ens = fn()
