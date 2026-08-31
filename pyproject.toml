@@ -26,7 +26,7 @@ authors =[
   {name = "Dmitrii Vasilenko"},
   {name = "Fedor Sobolevsky"},
   {name = "Muhammadsharif Nabiev"},
-  {name = "Vadim Kasyuk"}
+  {name = "Vadim Kasiuk"}
 ]
 
 dependencies = [
