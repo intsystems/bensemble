@@ -61,13 +61,24 @@ adopting a new training framework.
 # Statement of need
 
 Uncertainty quantification (UQ) for deep learning is an active and
-fragmented research area. Individual methods like Deep Ensembles
-[@lakshminarayanan2017simple], MC Dropout [@gal2016dropout], variational
-inference with the local reparameterization trick [@kingma2015variational],
-Laplace approximations [@ritter2018scalable], and Neural Ensemble Search
-[@zaidi2021neural] are each associated with their own reference
-implementation, typically released as a standalone research artifact tied to
-a single paper, with inconsistent APIs, inconsistent assumptions about
+fragmented research area, and the methods `bensemble` covers reach the same
+goal by very different routes. Deep Ensembles [@lakshminarayanan2017simple]
+train several independently initialized networks and read uncertainty off the
+spread of their predictions. MC Dropout [@gal2016dropout] leaves dropout
+active at test time, so repeated forward passes through a single network act
+as samples from an approximate posterior. Variational inference with the
+local reparameterization trick [@kingma2015variational] replaces
+point-valued weights with learned distributions and optimizes a bound on the
+marginal likelihood. Laplace approximations [@ritter2018scalable] fit a
+Gaussian around the loss minimum of an already-trained network, turning a
+standard model into a Bayesian one after the fact. Probabilistic
+Backpropagation [@hernandez2015probabilistic] propagates distributions over
+activations analytically rather than by sampling. Neural Ensemble Search
+[@zaidi2021neural] searches architecture space for members that are strong
+as a group rather than individually.
+
+Each of these is typically released as a standalone research artifact tied
+to a single paper, with inconsistent APIs, inconsistent assumptions about
 training loops, and little support for combining or comparing methods
 side-by-side. A researcher who wants to ask a simple applied question
 "which UQ method gives the best calibrated, best-separated in-distribution
