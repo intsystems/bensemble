@@ -36,20 +36,29 @@ research and decision-making settings — medical imaging, autonomous systems,
 scientific measurement — knowing how uncertain a model is matters as much as
 the prediction itself. `bensemble` is a Python library, built directly on top
 of PyTorch, that provides a unified interface for quantifying and using this
-uncertainty. It brings together several distinct families of methods:
-explicit ensembling (Deep Ensembles [@lakshminarayanan2017simple]),
-implicit/stochastic ensembling (Monte Carlo Dropout [@gal2016dropout],
-variational Bayesian layers optimized via the standard evidence lower bound
-or its Rényi-divergence generalization [@kingma2015variational;
-@li2016renyi]), post-hoc posterior
-approximations (Laplace approximation with Kronecker-factored curvature
-[@ritter2018scalable], Probabilistic Backpropagation
-[@hernandez2015probabilistic]), and ensemble/architecture search (Neural
-Ensemble Search [@zaidi2021neural] via random search, regularized evolution,
-and a discrete, pool-based sampler inspired by Neural
-Ensemble Search via Bayesian Sampling [@shu2022neural] and Stein
-Variational Gradient Descent [@liu2016stein]) behind a single `Ensemble`
-abstraction. On top of this,
+uncertainty. It brings together four families of methods behind a single
+`Ensemble` abstraction.
+
+*Explicit ensembling* trains several independent networks and reads
+uncertainty off how much they disagree (Deep Ensembles
+[@lakshminarayanan2017simple]). *Implicit, or stochastic, ensembling* draws
+many predictions from one network instead, either by leaving dropout active
+at prediction time (Monte Carlo Dropout [@gal2016dropout]) or by replacing
+fixed weights with learned distributions, fitted through the standard
+evidence lower bound or its Rényi-divergence generalization
+[@kingma2015variational; @li2016renyi]. *Post-hoc posterior approximations*
+make an already-trained network Bayesian after the fact, by fitting a
+Gaussian around the minimum it settled into (Laplace approximation with
+Kronecker-factored curvature [@ritter2018scalable]) or by propagating
+distributions through the network analytically rather than by sampling
+(Probabilistic Backpropagation [@hernandez2015probabilistic]).
+*Ensemble and architecture search* looks for members that are strong as a
+group rather than individually, using random search, regularized evolution,
+or a discrete, pool-based sampler inspired by Neural Ensemble Search
+[@zaidi2021neural] via Bayesian Sampling [@shu2022neural] and Stein
+Variational Gradient Descent [@liu2016stein].
+
+On top of this,
 `bensemble` provides tools to decompose predictive uncertainty into
 aleatoric and epistemic components [@kendall2017uncertainties], calibrate probabilistic predictions
 (temperature and vector scaling [@guo2017calibration]), and evaluate
@@ -61,24 +70,13 @@ adopting a new training framework.
 # Statement of need
 
 Uncertainty quantification (UQ) for deep learning is an active and
-fragmented research area, and the methods `bensemble` covers reach the same
-goal by very different routes. Deep Ensembles [@lakshminarayanan2017simple]
-train several independently initialized networks and read uncertainty off the
-spread of their predictions. MC Dropout [@gal2016dropout] leaves dropout
-active at test time, so repeated forward passes through a single network act
-as samples from an approximate posterior. Variational inference with the
-local reparameterization trick [@kingma2015variational] replaces
-point-valued weights with learned distributions and optimizes a bound on the
-marginal likelihood. Laplace approximations [@ritter2018scalable] fit a
-Gaussian around the loss minimum of an already-trained network, turning a
-standard model into a Bayesian one after the fact. Probabilistic
-Backpropagation [@hernandez2015probabilistic] propagates distributions over
-activations analytically rather than by sampling. Neural Ensemble Search
-[@zaidi2021neural] searches architecture space for members that are strong
-as a group rather than individually.
-
-Each of these is typically released as a standalone research artifact tied
-to a single paper, with inconsistent APIs, inconsistent assumptions about
+fragmented research area. Individual methods like Deep Ensembles
+[@lakshminarayanan2017simple], MC Dropout [@gal2016dropout], variational
+inference with the local reparameterization trick [@kingma2015variational],
+Laplace approximations [@ritter2018scalable], and Neural Ensemble Search
+[@zaidi2021neural] are each associated with their own reference
+implementation, typically released as a standalone research artifact tied to
+a single paper, with inconsistent APIs, inconsistent assumptions about
 training loops, and little support for combining or comparing methods
 side-by-side. A researcher who wants to ask a simple applied question
 "which UQ method gives the best calibrated, best-separated in-distribution
