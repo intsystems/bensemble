@@ -73,7 +73,7 @@ Approximate total runtime on an **NVIDIA RTX A4000**:
 
 | Benchmark      | Total runtime |
 |----------------|--------------:|
-| Classification | 4h 50min      |
+| Classification | 5h 20min      |
 | Regression     | 1h 15min      |
 
 ## Data
@@ -99,21 +99,22 @@ Datasets are downloaded automatically upon running the scripts. No manual prepar
 Evaluates all classification / uncertainty estimation methods on:
 
 - **In-distribution:** CIFAR-10
-- **Distribution shift:** Gaussian-noised CIFAR-10
+- **Distribution shift:** CIFAR-10 with Gaussian noise, σ = 0.1 in `[0, 1]` pixel space
 - **Out-of-distribution:** SVHN
+- **Protocol:** five seeds, reported as mean ± std
 
 Implemented methods:
 
-| Method | ID Acc | ECE ↓ | OOD AUROC ↑ |
-| ------ | -----: | ----: | ----------: |
-| Single Net | 92.72% | 0.0569 | 0.500 |
-| Deep Ensemble | 93.80% | 0.0267 | 0.898 |
-| MC Dropout | 92.90% | 0.0525 | 0.899 |
-| Laplace (K-FAC) | 92.78% | 0.0550 | 0.848 |
-| VI (ELBO) | 92.91% | **0.0197** | 0.749 |
-| NES-BS | 93.73% | 0.0239 | **0.907** |
-| NES-RS | **93.94%** | 0.0237 | **0.907** |
-| NES-RE | 93.82% | 0.0243 | 0.891 |
+| Method | ID Acc ↑ | ECE ↓ | Shift Acc ↑ | OOD AUROC ↑ |
+| ------ | -----------: | -----------: | -----------: | -----------: |
+| Single Net | 92.74 ± 0.15% | 0.0566 ± 0.0014 | 29.25 ± 2.54% | 0.5000 ± 0.0000 |
+| Deep Ensemble | 93.68 ± 0.04% | 0.0256 ± 0.0005 | 27.43 ± 1.00% | 0.9015 ± 0.0074 |
+| MC Dropout | 92.65 ± 0.14% | 0.0552 ± 0.0011 | 27.28 ± 1.04% | 0.8734 ± 0.0148 |
+| Laplace (K-FAC) | 92.74 ± 0.15% | 0.0565 ± 0.0014 | **29.30 ± 2.15%** | 0.8634 ± 0.0237 |
+| VI (ELBO) | 92.87 ± 0.08% | **0.0139 ± 0.0015** | 26.85 ± 1.60% | 0.7533 ± 0.0267 |
+| NES-BS | **93.77 ± 0.17%** | 0.0249 ± 0.0015 | 27.55 ± 0.97% | 0.8926 ± 0.0078 |
+| NES-RS | 93.77 ± 0.09% | 0.0254 ± 0.0011 | 29.20 ± 0.28% | 0.8879 ± 0.0088 |
+| NES-RE | 93.76 ± 0.06% | 0.0253 ± 0.0007 | 29.21 ± 2.87% | **0.9062 ± 0.0082** |
 
 ## Regression benchmark
 
