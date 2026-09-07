@@ -8,23 +8,20 @@ on:
       - bensemble/**
       - README.md
       - .github/workflows/docs.yml
+  pull_request:
+    branches: [master, main]
+    paths:
+      - docs/**
+      - bensemble/**
+      - README.md
+      - .github/workflows/docs.yml
   workflow_dispatch:
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: false
-
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout
@@ -38,16 +35,32 @@ jobs:
           uv venv
           uv pip install -e ".[docs]"
 
-      - name: Configure Pages
-        uses: actions/configure-pages@v5
-
       - name: Build docs
         run: uv run mkdocs build --strict -f docs/mkdocs.yml
 
       - name: Upload artifact
+        if: github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v3
         with:
           path: docs/site
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
 
       - name: Deploy to GitHub Pages
         id: deployment
