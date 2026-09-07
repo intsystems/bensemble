@@ -373,8 +373,28 @@ class PBPEngine:
         num_epochs: int = 100,
         step_clip: float | None = 2.0,
         prior_refresh: int = 1,
-        **kwargs,
+        **kwargs: Any,
     ) -> dict[str, list[float]]:
+        """Runs assumed-density filtering over the training data.
+
+        Each epoch visits every training point once in random order, updates
+        the weight posteriors, then refreshes the noise and prior
+        hyperparameters.
+
+        Args:
+            train_loader: DataLoader yielding (inputs, targets) pairs.
+            val_loader: Optional DataLoader evaluated after every epoch.
+            num_epochs: Number of passes over the training data. Defaults to 100.
+            step_clip: Clipping threshold for each ADF update, or None to
+                disable clipping. Defaults to 2.0.
+            prior_refresh: Number of prior-refresh iterations per epoch, or 0
+                to skip. Defaults to 1.
+            **kwargs: Ignored, accepted for interface compatibility.
+
+        Returns:
+            dict[str, list[float]]: Per-epoch RMSE and NLPD on the training
+            data, plus validation values when `val_loader` is given.
+        """
         history: dict[str, list[float]] = {"train_rmse": [], "train_nlpd": []}
         if val_loader is not None:
             history["val_rmse"] = []
@@ -457,10 +477,27 @@ class PBPEngine:
         return mz, var
 
     def noise_variance(self) -> torch.Tensor:
+        """Returns the posterior mean of the observation noise variance.
+
+        Returns:
+            torch.Tensor: Scalar noise variance under the current Gamma posterior.
+        """
         alpha = torch.clamp(self.alpha_g, min=1.0 + 1e-6)
         return self.beta_g / (alpha - 1.0)
 
-    def sample_models(self, n_models: int = 10, **kwargs) -> list[nn.Module]:
+    def sample_models(self, n_models: int = 10, **kwargs: Any) -> list[nn.Module]:
+        """Draws deterministic networks from the fitted weight posterior.
+
+        Args:
+            n_models: Number of networks to sample. Defaults to 10.
+            **kwargs: Ignored, accepted for interface compatibility.
+
+        Returns:
+            list[nn.Module]: Sampled networks in eval mode.
+
+        Raises:
+            RuntimeError: If `fit` has not been called.
+        """
         if not self.is_fitted:
             raise RuntimeError("PBPEngine not fitted. Call fit() first.")
 
@@ -496,6 +533,14 @@ class PBPEngine:
         return model
 
     def build_ensemble(self, n_members: int = 10) -> Ensemble:
+        """Builds an Ensemble of networks sampled from the posterior.
+
+        Args:
+            n_members: Number of sampled members. Defaults to 10.
+
+        Returns:
+            Ensemble: Ensemble wrapping the sampled networks.
+        """
         return Ensemble.from_posterior(self, n_members=n_members)
 
     def _get_ensemble_state(self) -> dict[str, Any]:

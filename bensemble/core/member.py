@@ -12,7 +12,15 @@ class MemberAdapter(nn.Module):
     """Adapts different prediction sources into a uniform (M, batch, *) interface."""
 
     @abstractmethod
-    def predict_all(self, x: torch.Tensor) -> MemberPredictions: ...
+    def predict_all(self, x: torch.Tensor) -> MemberPredictions:
+        """Produces one prediction per member.
+
+        Args:
+            x: Input batch.
+
+        Returns:
+            MemberPredictions: Tensor of shape (num_members, batch, ...).
+        """
 
     @property
     @abstractmethod
@@ -31,6 +39,7 @@ class ExplicitMembers(MemberAdapter):
         self.models = nn.ModuleList(models)
 
     def predict_all(self, x):
+        """Runs every wrapped model on the batch in eval mode."""
         was_training = [m.training for m in self.models]
         for m in self.models:
             m.eval()
@@ -66,6 +75,7 @@ class StochasticMembers(MemberAdapter):
         self.mode = mode if mode != "auto" else self._detect_mode()
 
     def predict_all(self, x):
+        """Draws `num_samples` stochastic forward passes from the model."""
         was_training = self.model.training
         self._activate()
         with torch.no_grad():
