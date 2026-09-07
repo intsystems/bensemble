@@ -10,3 +10,11 @@ Algorithms for searching diverse and high-performing architectures.
 
 ## Bayesian Sampling (SVGD)
 ::: bensemble.search.bayesian.NESBayesianSampler
+
+## Search Space
+
+::: bensemble.search.space.SearchSpace
+
+## Member Selection
+
+::: bensemble.search.selection

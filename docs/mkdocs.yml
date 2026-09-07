@@ -54,10 +54,14 @@ nav:
   - API Reference:
       - Core & Ensemble: api/core.md
       - Layers: api/layers.md
+      - Losses: api/losses.md
+      - Posterior Methods: api/methods.md
+      - Diversity: api/diversity.md
       - Search Algorithms: api/search.md
       - Metrics: api/metrics.md
       - Uncertainty Utils: api/uncertainty.md
       - Calibration: api/calibration.md
+      - Utilities: api/utils.md
   - References: references.md
 
 plugins:
