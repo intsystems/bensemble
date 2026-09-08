@@ -42,6 +42,7 @@ nav:
       - Basic Concepts: user-guide/basic-concepts.md
       - Building Ensembles: user-guide/building-ensembles.md
       - Uncertainty Analysis: user-guide/uncertainty-analysis.md
+      - Calibration & Metrics: user-guide/calibration-and-metrics.md
   - Algorithms:
       - Deep Ensembles: algorithms/deep-ensembles.md
       - Monte-Carlo Dropout: algorithms/mc-dropout.md
