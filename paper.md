@@ -185,8 +185,8 @@ method under matched compute budgets. This process surfaced and fixed
 several subtle correctness issues that are easy to miss in a UQ library,
 most notably, that our `ExplicitMembers` adapter did not itself manage
 train/eval mode, causing BatchNorm statistics to leak between ensemble
-members at inference time, issues we have since covered with regression
-tests. We view this kind of methodologically careful, cross-method
+members at inference time, an issue we have since fixed. We view this
+kind of methodologically careful, cross-method
 validation as useful for researchers who want to compare UQ methods
 rather than reimplement one in isolation.
 
@@ -209,18 +209,20 @@ producing degenerate predictions.
 | Method | ID Accuracy |
 |---|---|
 | Single Net | 92.7% |
-| Deep Ensemble | 93.8% |
-| MC Dropout | 92.9% |
+| Deep Ensemble | 93.7% |
+| MC Dropout | 92.7% |
 | VI | 92.9% |
-| Laplace (K-FAC) | 92.8% |
-| NESBS (SVGD) | 93.7% |
-| NES-RS | 93.9% |
+| Laplace (K-FAC) | 92.7% |
+| NESBS (SVGD) | 93.8% |
+| NES-RS | 93.8% |
 | NES-RE | 93.8% |
 
 : In-distribution accuracy on CIFAR-10 for all eight classification
-methods, from a single training run each (see `benchmarks/` for full
-metrics including calibration and out-of-distribution detection results,
-and for the regression benchmark). \label{tab:sanity}
+methods, averaged over five training seeds; the seed-to-seed standard
+deviation is at most 0.2 percentage points for every method (see
+`benchmarks/` for the full table with spread, calibration and
+out-of-distribution detection results, and for the regression
+benchmark). \label{tab:sanity}
 
 All four regression methods likewise completed successfully across all
 four UCI datasets, as \autoref{tab:regression} shows.
@@ -238,13 +240,11 @@ check that every method trains and predicts sensibly under a shared
 architecture and training budget, not a tuned comparison.
 \label{tab:regression}
 
-Per-dataset NLPD and split-level standard deviations for every method,
-along with a written discussion of methodology and several caveats we encountered
-while building this benchmark (matched-budget fairness across search-based
-and non-search methods, a train/eval-mode handling bug that leaked
-BatchNorm statistics between ensemble members, and differing rates of
-noise-hyperparameter recalibration across the regression methods), are
-reported in the `benchmarks/` directory.
+Per-dataset NLPD and split-level standard deviations for every method are
+reported in the `benchmarks/` directory, together with a note on why NLPD
+is not directly comparable across the regression methods: MAP and Laplace
+fit the observation noise on a held-out split, while VI and PBP infer it
+as part of their own objectives.
 
 # AI usage disclosure
 
