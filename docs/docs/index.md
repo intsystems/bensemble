@@ -51,6 +51,6 @@ hide:
 
     ---
 
-    Algorithms to automatically search for diverse architectures using NNI and Stein Variational Gradient Descent.
+    Algorithms to automatically search for diverse architectures, including random search, regularized evolution and SVGD-inspired Bayesian sampling.
 
 </div>

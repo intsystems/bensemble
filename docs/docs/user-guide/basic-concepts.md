@@ -9,4 +9,4 @@ Everything revolves around the `Ensemble` class. It acts as a manager for multip
 - **Explicit Ensembles**: A collection of different models (e.g., from NAS or Deep Ensembles).
 - **Implicit Ensembles**: A single model that behaves like an ensemble (e.g., MC Dropout or Bayesian layers).
 
-Regardless of the source, an `Ensemble` always returns a tensor of shape `[M, Batch, Output]`, where `M` is the number of ensemble members.
+Regardless of the source, `ensemble.predict_members(x)` returns a tensor of shape `[M, Batch, Output]`, where `M` is the number of ensemble members, and calling `ensemble(x)` returns the combined prediction of shape `[Batch, Output]` (the mean by default).

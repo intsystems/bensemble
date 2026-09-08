@@ -2,7 +2,7 @@
 
 This method generalizes the standard ELBO using $\alpha$-Rényi divergence.
 
-Unlike VI implementation with LRT, here explicit weights $w \sim \mathcal{N}(\mu, \text{softplus}(\rho))$ are sampled using weight perturbation during the forward pass. The objective is defined as:
+It uses the same Bayesian layers as [Variational Inference](variational-inference.md), so weights are still sampled with the Local Reparameterization Trick; only the objective changes. Pass `alpha` to `VariationalLoss` and feed it $K$ stochastic forward passes stacked along the first dimension. The objective is defined as:
 
 $$
 \mathcal{L}_{\text{VR}}(\theta, \alpha) = -\frac{1}{1-\alpha} \log \frac{1}{K} \sum_{k=1}^K \left( \frac{p(\mathcal{D}, w_k)}{q_\theta(w_k)} \right)^{1-\alpha}
