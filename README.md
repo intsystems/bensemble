@@ -128,14 +128,14 @@ print(f"Prediction: {mean[0].item():.2f} ± {std[0].item():.2f}")
 
 ## Algorithms & Demos
 
-We implement a wide range of Bayesian and Ensembling approaches. Check out the interactive demos in the `notebooks/` directory:
+We implement a wide range of Bayesian and Ensembling approaches. Check out the interactive demos in the `examples/` directory:
 
 | Method | Description |
 | :--- | :--- |
 | **Deep Ensembles** | Naive yet powerful ensembling of independent networks with explicit uncertainty decomposition. |
 | **Monte Carlo Dropout** | Implicit ensembling by keeping dropout active at test time. |
 | **Neural Ensemble Search (NES)** | Automatically searches for diverse architectures (NES-RS/NES-RE). |
-| **NES via Bayesian Sampling** | Extracts diverse subnetworks from a Supernet using Stein Variational Gradient Descent (SVGD). |
+| **NES via Bayesian Sampling** | Selects a diverse ensemble from a pool of trained candidates using a validation-loss posterior and SVGD-inspired repulsion. |
 | **Variational Inference** | Approximates posterior using Gaussian distributions with the *Local Reparameterization Trick*. |
 | **Variational Rényi** | Generalization of VI minimizing $\alpha$-divergence (VR-VI) for better robustness. |
 | **Laplace Approximation** | Fits a Gaussian around the MAP estimate using Kronecker-Factored Curvature (K-FAC). |

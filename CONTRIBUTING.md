@@ -41,7 +41,7 @@ source .venv/bin/activate
 Install the project together with development dependencies:
 
 ```bash
-uv sync --all-groups
+uv sync --all-extras
 ```
 
 ---
@@ -63,8 +63,8 @@ We use **Ruff** for linting and formatting.
 Before committing, run:
 
 ```bash
-ruff check .
-ruff format .
+ruff check bensemble/ tests/ benchmarks/
+ruff format bensemble/ tests/ benchmarks/
 ```
 
 ---

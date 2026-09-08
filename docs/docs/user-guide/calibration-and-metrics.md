@@ -27,7 +27,7 @@ scaler = VectorScaling(num_classes=3).fit(val_logits, val_labels)
 probs = torch.softmax(scaler(test_logits), dim=-1)
 ```
 
-For an ensemble, fit the scaler on the logits you actually evaluate, whether that is the per-member output of `predict_members` or its mean.
+Both scalers expect a 2-D `[N, num_classes]` tensor. For an ensemble, fit the scaler on the logits you actually evaluate — typically the member average, `ensemble.predict_members(x).mean(0)` or simply `ensemble(x)` — rather than on the stacked `[M, N, num_classes]` member outputs.
 
 ## Scoring rules
 

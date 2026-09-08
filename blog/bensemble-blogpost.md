@@ -265,7 +265,7 @@ This is approximated by Monte Carlo using samples $\boldsymbol{\theta}^{(k)}$ dr
 
 Qualitatively, this gives a knob that controls how aggressive or conservative the variational approximation is. Once trained, sampling networks is as simple as drawing from the Gaussian $q(\boldsymbol{\theta})$ and plugging the sampled weights into the base model, just as in PVI.
 
-Variational Rényi inference is implemented in the `VariationalRenyi` class in Bensemble. Visit our [variational Rényi demo](https://github.com/intsystems/bensemble/blob/master/notebooks/variatinal_renyi_demo.ipynb) for an example on how to use it.
+Variational Rényi inference is available in Bensemble by passing `alpha` to `VariationalLoss` on top of the same Bayesian layers. See the [Variational Rényi page](https://intsystems.github.io/bensemble/algorithms/variational-renyi/) for details.
 ### Laplace approximation
 
 [Laplace approximation (LA)](https://openreview.net/pdf?id=Skdvd2xAZ) starts from a different point. Instead of designing a Bayesian method from scratch, you begin with a network that has already been trained in the usual deterministic way, with weight decay capturing the prior. Let
@@ -329,7 +329,7 @@ $$
 
 The end result is a factorized Gaussian over weights plus Gamma distributions over hyperparameters. From that, sampling full networks is straightforward: draw weights from the Gaussians, plug them into a standard multilayer perceptron, and you have a concrete ensemble member.
 
-PBP is implemented in the `ProbabilisticBackpropagation` class in Bensemble. For an example on how to use it, check out our [probabilistic backpropagation demo](https://github.com/intsystems/bensemble/blob/master/notebooks/pbp_probabilistic_backpropagation_test.ipynb).
+PBP is implemented in the `PBPEngine` class in Bensemble. For an example on how to use it, see the [Probabilistic Backpropagation page](https://intsystems.github.io/bensemble/algorithms/pbp/).
 
 ### Neural Ensemble Search
 
