@@ -1,3 +1,4 @@
+import pytest
 import torch
 from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
@@ -109,3 +110,48 @@ def test_forward_select_picks_best_member():
         pool, _make_clf_loader(), 1, _DEVICE, classification_nll_criterion
     )
     assert result[0] is good
+
+
+def _shuffled_loader(x, y, seed=0):
+    generator = torch.Generator().manual_seed(seed)
+    return DataLoader(
+        TensorDataset(x, y), batch_size=16, shuffle=True, generator=generator
+    )
+
+
+def test_classification_nll_criterion_is_order_invariant():
+    """
+    Two copies of one model must score exactly like that model alone, even when
+    the validation loader reshuffles between passes over the members.
+    """
+    torch.manual_seed(0)
+    x, y = torch.randn(64, 4), torch.randint(0, 2, (64,))
+    model = nn.Linear(4, 2).eval()
+
+    single = classification_nll_criterion([model], _shuffled_loader(x, y), _DEVICE)
+    duplicated = classification_nll_criterion(
+        [model, model], _shuffled_loader(x, y, seed=1), _DEVICE
+    )
+    ordered = classification_nll_criterion(
+        [model], DataLoader(TensorDataset(x, y), batch_size=16), _DEVICE
+    )
+
+    assert duplicated == pytest.approx(single)
+    assert single == pytest.approx(ordered)
+
+
+def test_regression_mse_criterion_is_order_invariant():
+    """
+    Two copies of one regressor must score exactly like the regressor alone under
+    a shuffling validation loader.
+    """
+    torch.manual_seed(0)
+    x, y = torch.randn(64, 4), torch.randn(64, 1)
+    model = nn.Linear(4, 1).eval()
+
+    single = regression_mse_criterion([model], _shuffled_loader(x, y), _DEVICE)
+    duplicated = regression_mse_criterion(
+        [model, model], _shuffled_loader(x, y, seed=1), _DEVICE
+    )
+
+    assert duplicated == pytest.approx(single)

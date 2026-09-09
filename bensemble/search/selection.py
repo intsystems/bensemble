@@ -23,33 +23,23 @@ def classification_nll_criterion(
     Returns:
         float: Mean negative log-likelihood score over the validation set.
     """
+    for model in members:
+        model.to(device)
+        model.eval()
+
+    total_nll = 0.0
+    count = 0
     with torch.no_grad():
-        probs_list: list[torch.Tensor] = []
-        labels: torch.Tensor | None = None
+        for batch in val_loader:
+            x, y = batch[0].to(device), batch[1].to(device)
+            mean_probs = torch.stack(
+                [F.softmax(model(x), dim=-1) for model in members], dim=0
+            ).mean(dim=0)
+            picked = mean_probs[torch.arange(y.shape[0], device=device), y]
+            total_nll += -torch.log(picked + 1e-8).sum().item()
+            count += y.shape[0]
 
-        for model in members:
-            model.to(device)
-            model.eval()
-            member_probs: list[torch.Tensor] = []
-            member_labels: list[torch.Tensor] = []
-
-            for batch in val_loader:
-                x, y = batch[0].to(device), batch[1].to(device)
-                member_probs.append(F.softmax(model(x), dim=-1))
-                if labels is None:
-                    member_labels.append(y)
-
-            probs_list.append(torch.cat(member_probs, dim=0))
-            if labels is None:
-                labels = torch.cat(member_labels, dim=0)
-
-        assert labels is not None
-        mean_probs = torch.stack(probs_list, dim=0).mean(dim=0)
-        n = labels.shape[0]
-        nll = -torch.log(
-            mean_probs[torch.arange(n, device=device), labels] + 1e-8
-        ).mean()
-        return nll.item()
+    return total_nll / count
 
 
 def regression_mse_criterion(
@@ -69,29 +59,20 @@ def regression_mse_criterion(
     Returns:
         float: Mean squared error score over the validation set.
     """
+    for model in members:
+        model.to(device)
+        model.eval()
+
+    total_se = 0.0
+    count = 0
     with torch.no_grad():
-        preds_list: list[torch.Tensor] = []
-        targets: torch.Tensor | None = None
+        for batch in val_loader:
+            x, y = batch[0].to(device), batch[1].to(device).float()
+            mean_preds = torch.stack([model(x) for model in members], dim=0).mean(dim=0)
+            total_se += F.mse_loss(mean_preds, y, reduction="sum").item()
+            count += y.numel()
 
-        for model in members:
-            model.to(device)
-            model.eval()
-            member_preds: list[torch.Tensor] = []
-            member_targets: list[torch.Tensor] = []
-
-            for batch in val_loader:
-                x, y = batch[0].to(device), batch[1].to(device)
-                member_preds.append(model(x))
-                if targets is None:
-                    member_targets.append(y)
-
-            preds_list.append(torch.cat(member_preds, dim=0))
-            if targets is None:
-                targets = torch.cat(member_targets, dim=0)
-
-        assert targets is not None
-        mean_preds = torch.stack(preds_list, dim=0).mean(dim=0)
-        return F.mse_loss(mean_preds, targets.float()).item()
+    return total_se / count
 
 
 def forward_select(
