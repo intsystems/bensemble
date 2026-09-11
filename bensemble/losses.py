@@ -81,15 +81,26 @@ class VariationalLoss(nn.Module):
         Returns:
             torch.Tensor: Scalar loss value.
         """
-        if preds.ndim == target.ndim:
-            preds = preds.unsqueeze(0)
+        class_indices = not torch.is_floating_point(target)
+
+        if class_indices:
+            if preds.ndim == target.ndim + 1:
+                preds = preds.unsqueeze(0)
+            log_likelihoods = -torch.stack(
+                [self.likelihood_model(sample, target) for sample in preds]
+            )
+        else:
+            if preds.ndim == target.ndim:
+                preds = preds.unsqueeze(0)
+            elif target.shape == preds.shape[:-1]:
+                target = target.unsqueeze(-1)
+                preds = preds.unsqueeze(0)
+            while target.ndim < preds.ndim - 1:
+                target = target.unsqueeze(-1)
+            log_likelihoods = -self.likelihood_model(preds, target)
 
         k_samples = preds.size(0)
-
-        log_likelihoods = -self.likelihood_model(preds, target)
-        log_likelihoods = (
-            log_likelihoods.sum(dim=1) if log_likelihoods.ndim > 1 else log_likelihoods
-        )
+        log_likelihoods = log_likelihoods.reshape(k_samples, -1).sum(dim=1)
 
         kl_scaled = (kl_divergence / self.num_batches) * self.kl_weight
         log_weights = log_likelihoods - kl_scaled
