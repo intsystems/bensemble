@@ -86,15 +86,15 @@ def test_variational_loss_grad_flows():
 
 
 def test_variational_loss_flat_target_matches_column_target():
-    """A (B,) target scores exactly like the same target shaped (B, 1)."""
+    """A (B,) target scores exactly like the same target shaped (B, 1), with and without a sample axis."""
     torch.manual_seed(0)
     vl = VariationalLoss(GaussianLikelihood())
-    preds, target, kl = torch.randn(8, 1), torch.randn(8), torch.tensor(0.0)
+    target, kl = torch.randn(8), torch.tensor(0.0)
 
-    flat = vl(preds, target, kl)
-    column = vl(preds, target.unsqueeze(1), kl)
-
-    torch.testing.assert_close(flat, column)
+    for preds in (torch.randn(8, 1), torch.randn(4, 8, 1)):
+        flat = vl(preds, target, kl)
+        column = vl(preds, target.unsqueeze(1), kl)
+        torch.testing.assert_close(flat, column)
 
 
 def test_variational_loss_multi_output_is_scalar_and_differentiable():
