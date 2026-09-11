@@ -98,21 +98,20 @@ class StochasticMembers(MemberAdapter):
 
     def _activate_bayesian(self):
         """Matches existing predict_with_uncertainty() pattern."""
-        self.model.eval()
-        for module in self.model.modules():
-            if isinstance(module, BaseBayesianLayer):
-                module.train()
+        self._activate_layers((BaseBayesianLayer,))
 
     def _activate_dropout(self):
         """Matches existing enable_dropout() pattern."""
-        self.model.eval()
-        for module in self.model.modules():
-            if isinstance(module, nn.Dropout):
-                module.train()
+        self._activate_layers((nn.Dropout,))
 
     def _activate_both(self):
-        self._activate_bayesian()
-        self._activate_dropout()
+        self._activate_layers((BaseBayesianLayer, nn.Dropout))
+
+    def _activate_layers(self, kinds: tuple[type, ...]):
+        self.model.eval()
+        for module in self.model.modules():
+            if isinstance(module, kinds):
+                module.train()
 
     def _detect_mode(self):
         has_bayesian = any(

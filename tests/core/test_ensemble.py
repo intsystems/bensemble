@@ -60,6 +60,35 @@ def test_stochastic_members_produces_variance():
     assert preds.var(dim=0).sum() > 0
 
 
+def test_stochastic_members_both_mode_samples_bayesian_layers():
+    """
+    In 'both' mode the Bayesian layers must stay stochastic. With dropout at
+    p=0 they are the only source of variance, so frozen weights give exactly 0.
+    """
+    torch.manual_seed(0)
+    model = nn.Sequential(BayesianLinear(4, 8), nn.Dropout(0.0), nn.Linear(8, 2))
+    x = torch.randn(4, 4)
+
+    both = StochasticMembers(model, num_samples=10, mode="both").predict_all(x)
+    bayesian = StochasticMembers(model, num_samples=10, mode="bayesian").predict_all(x)
+
+    assert bayesian.var(dim=0).sum() > 0
+    assert both.var(dim=0).sum() > 0
+
+
+def test_stochastic_members_both_mode_activates_every_layer_kind():
+    """After activation in 'both' mode, Bayesian and Dropout layers are both in train mode."""
+    model = nn.Sequential(BayesianLinear(4, 8), nn.Dropout(0.5), nn.Linear(8, 2))
+    sm = StochasticMembers(model, mode="both")
+    model.eval()
+
+    sm._activate()
+
+    assert model[0].training
+    assert model[1].training
+    assert not model[2].training
+
+
 def test_ensemble_on_device(device):
     """Ensemble runs correctly and output is on the given device."""
     models = [nn.Linear(4, 2).to(device) for _ in range(2)]
