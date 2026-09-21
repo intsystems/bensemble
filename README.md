@@ -6,6 +6,7 @@
 [![Docs](https://img.shields.io/badge/docs-online-blue.svg)](https://intsystems.github.io/bensemble/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![JOSS](https://joss.theoj.org/papers/0d7c1f90dc95cc1a9c913a29e7922a4d/status.svg)](https://joss.theoj.org/papers/0d7c1f90dc95cc1a9c913a29e7922a4d)
 
 **Bensemble** is a production-ready, lightweight library for Bayesian Deep Learning and Neural Network Ensembling.
 
