@@ -1,3 +1,4 @@
+import pytest
 import torch
 from torch import nn
 
@@ -50,6 +51,20 @@ def test_stochastic_members_fallback_to_dropout():
     """Plain model with no stochastic layers falls back to dropout mode."""
     sm = StochasticMembers(nn.Sequential(nn.Linear(4, 2)), mode="auto")
     assert sm.mode == "dropout"
+
+
+@pytest.mark.parametrize("factory", [StochasticMembers, Ensemble.from_stochastic])
+@pytest.mark.parametrize("mode", ["dropuot", ""])
+def test_stochastic_members_rejects_unknown_mode(factory, mode):
+    model = nn.Sequential(nn.Linear(4, 2), nn.Dropout(0.5)).eval()
+
+    with pytest.raises(ValueError, match="Unknown stochastic mode") as exc_info:
+        factory(model, mode=mode)
+
+    message = str(exc_info.value)
+    assert repr(mode) in message
+    for valid_mode in ("auto", "bayesian", "dropout", "both"):
+        assert valid_mode in message
 
 
 def test_stochastic_members_produces_variance():

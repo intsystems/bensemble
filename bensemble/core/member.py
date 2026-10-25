@@ -70,6 +70,11 @@ class StochasticMembers(MemberAdapter):
 
     def __init__(self, model: nn.Module, num_samples: int = 30, mode: str = "auto"):
         super().__init__()
+        if mode != "auto" and mode not in self.ACTIVATORS:
+            valid_modes = ", ".join(("auto", *self.ACTIVATORS))
+            raise ValueError(
+                f"Unknown stochastic mode {mode!r}. Expected one of: {valid_modes}."
+            )
         self.model = model
         self.num_samples = num_samples
         self.mode = mode if mode != "auto" else self._detect_mode()

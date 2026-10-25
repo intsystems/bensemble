@@ -80,10 +80,14 @@ class Ensemble(nn.Module):
         Args:
             model: Stochastic neural network module.
             num_samples: Number of stochastic forward samples. Defaults to 30.
-            mode: Stochastic mode ("dropout", "bayesian", or "auto"). Defaults to "auto".
+            mode: Stochastic mode ("dropout", "bayesian", "both", or "auto").
+                Defaults to "auto".
 
         Returns:
             Ensemble: Configured Ensemble instance.
+
+        Raises:
+            ValueError: If the stochastic mode is unknown.
         """
         return cls(members=StochasticMembers(model, num_samples, mode))
 
