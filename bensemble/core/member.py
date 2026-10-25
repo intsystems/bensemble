@@ -6,6 +6,7 @@ from torch import nn
 
 from bensemble.core.types import MemberPredictions
 from bensemble.layers.base import BaseBayesianLayer
+from bensemble.utils import _DROPOUT_TYPES
 
 
 class MemberAdapter(nn.Module):
@@ -107,10 +108,10 @@ class StochasticMembers(MemberAdapter):
 
     def _activate_dropout(self):
         """Matches existing enable_dropout() pattern."""
-        self._activate_layers((nn.Dropout,))
+        self._activate_layers(_DROPOUT_TYPES)
 
     def _activate_both(self):
-        self._activate_layers((BaseBayesianLayer, nn.Dropout))
+        self._activate_layers((BaseBayesianLayer, *_DROPOUT_TYPES))
 
     def _activate_layers(self, kinds: tuple[type, ...]):
         self.model.eval()
@@ -122,7 +123,7 @@ class StochasticMembers(MemberAdapter):
         has_bayesian = any(
             isinstance(m, BaseBayesianLayer) for m in self.model.modules()
         )
-        has_dropout = any(isinstance(m, nn.Dropout) for m in self.model.modules())
+        has_dropout = any(isinstance(m, _DROPOUT_TYPES) for m in self.model.modules())
         if has_bayesian and has_dropout:
             return "both"
         elif has_bayesian:

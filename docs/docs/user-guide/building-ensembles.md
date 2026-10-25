@@ -33,7 +33,7 @@ Implicit ensembles use a single model that produces different outputs for the sa
 
 ### MC Dropout
 
-If your model contains `nn.Dropout` layers, you can treat it as an ensemble by keeping dropout active during inference.
+If your model contains dropout layers, you can treat it as an ensemble by keeping dropout active during inference. Supported types are `nn.Dropout`, `nn.Dropout1d`, `nn.Dropout2d`, `nn.Dropout3d`, `nn.AlphaDropout`, and `nn.FeatureAlphaDropout`.
 
 ```python
 from bensemble.core.ensemble import Ensemble
@@ -45,7 +45,7 @@ model = MyDropoutModel()
 ensemble = Ensemble.from_stochastic(model, num_samples=30, mode="dropout")
 ```
 
-`Ensemble.from_stochastic` switches dropout on for you. To do the same by hand, for instance inside a custom evaluation loop, use `enable_dropout`: it puts every `nn.Dropout` back into training mode while the rest of the model stays in eval mode.
+`Ensemble.from_stochastic` switches dropout on for you. To do the same by hand, for instance inside a custom evaluation loop, call `model.eval()` followed by `enable_dropout(model)`: it puts the supported dropout layers back into training mode while the rest of the model stays in eval mode.
 
 ```python
 import torch

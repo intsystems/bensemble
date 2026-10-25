@@ -8,6 +8,14 @@ from bensemble.layers.base import BaseBayesianLayer
 from bensemble.layers.conv import BayesianConv2d
 
 _INV_SQRT_2PI = 1.0 / math.sqrt(2.0 * math.pi)
+_DROPOUT_TYPES = (
+    nn.Dropout,
+    nn.Dropout1d,
+    nn.Dropout2d,
+    nn.Dropout3d,
+    nn.AlphaDropout,
+    nn.FeatureAlphaDropout,
+)
 
 
 def standard_normal_pdf(x: torch.Tensor) -> torch.Tensor:
@@ -38,10 +46,10 @@ def enable_dropout(model: nn.Module) -> None:
     """Enables dropout layers during evaluation for Monte Carlo Dropout.
 
     Args:
-        model: Target neural network containing nn.Dropout layers.
+        model: Target neural network containing PyTorch dropout layers.
     """
     for module in model.modules():
-        if isinstance(module, nn.Dropout):
+        if isinstance(module, _DROPOUT_TYPES):
             module.train()
 
 
