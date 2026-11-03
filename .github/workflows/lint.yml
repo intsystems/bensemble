@@ -22,7 +22,7 @@ jobs:
         run: pip install ruff
 
       - name: Run ruff check (linting)
-        run: ruff check bensemble/ tests/ benchmarks/
+        run: ruff check bensemble/ tests/ benchmarks/ examples/
 
       - name: Run ruff format --check (formatting)
-        run: ruff format --check bensemble/ tests/ benchmarks/
+        run: ruff format --check bensemble/ tests/ benchmarks/ examples/

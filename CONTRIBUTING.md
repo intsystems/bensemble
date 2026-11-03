@@ -63,8 +63,8 @@ We use **Ruff** for linting and formatting.
 Before committing, run:
 
 ```bash
-ruff check bensemble/ tests/ benchmarks/
-ruff format bensemble/ tests/ benchmarks/
+ruff check bensemble/ tests/ benchmarks/ examples/
+ruff format bensemble/ tests/ benchmarks/ examples/
 ```
 
 ---
@@ -84,6 +84,11 @@ Small Pull Requests are generally easier to review than very large ones.
 ---
 
 ## Documentation
+
+The [examples guide](examples/README.md) describes the notebook learning path and
+conventions. Run `pytest tests/test_examples.py` after changing a notebook, and
+clear its outputs and execution counts before committing. These smoke checks are
+also included in the full test suite.
 
 Documentation is an important part of the project.
 

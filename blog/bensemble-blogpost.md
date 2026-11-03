@@ -164,7 +164,7 @@ ece = expected_calibration_error(ensemble_probs, y_test, n_bins=15)
 print(f"Expected Calibration Error: {ece:.4f}")
 ```
 
-A more detailed demo of all of Bensemble's core methods and utilities can be found [here](https://github.com/intsystems/bensemble/blob/master/notebooks/deep_ensembles_tutorial.ipynb).
+A more detailed demo of all of Bensemble's core methods and utilities can be found [here](../examples/01_ensemble_basics.ipynb).
 
 ---
 ## Methods
@@ -191,7 +191,7 @@ $$
 
 The key idea is simple: after training a neural network with dropout, why don't we leave dropout on during evaluation? When sampling predictions multiple times, we effectively get predictions of an ensemble of models, each with its own weights activated or deactivated. Each model of the ensemble uses different combinations of features, which in practice creates the diversity required for effective uncertainty estimation. Therefore, despite its simplicity, Monte-Carlo dropout proves to be at least a strong baseline for uncertainty estimation tasks.
 
-Monte-Carlo dropout is implemented in the `MCDropoutEnsembler` class in Bensemble. Visit our [MC dropout demo](https://github.com/intsystems/bensemble/blob/master/notebooks/mc_dropout_demo.ipynb) for an example on how to use it.
+Monte-Carlo dropout is implemented in the `MCDropoutEnsembler` class in Bensemble. Visit our [MC dropout demo](../examples/02_mc_dropout.ipynb) for an example on how to use it.
 
 ### Practical variational inference
 The [practical variational inference (PVI)](https://papers.nips.cc/paper_files/paper/2011/file/7eb3c8be3d411e8ebfab08eba5f49632-Paper.pdf) component in the project follows the “Bayesian layers’’ approach: instead of treating the whole network as a single variational object, it replaces ordinary linear layers by Bayesian linear layers and adds a simple Gaussian likelihood on top.
@@ -229,7 +229,7 @@ where $p(\mathcal{D} \mid \boldsymbol{\theta})$ is a Gaussian likelihood with le
 
 After training, one can either keep sampling activations on the fly to get predictive distributions or freeze individual weight samples to obtain a more classical ensemble of deterministic networks.
 
-Practical variational inference is implemented via the `BayesianLinear` layer class in Bensemble. Visit our [variational inference demo](https://github.com/intsystems/bensemble/blob/master/notebooks/intro_to_variational_inference.ipynb) for an example on how to use it.
+Practical variational inference is implemented via the `BayesianLinear` layer class in Bensemble. Visit our [variational inference demo](../examples/03_variational_inference.ipynb) for an example on how to use it.
 
 ### Variational Rényi inference
 
@@ -300,7 +300,7 @@ a Kronecker product of two much smaller matrices. This structure makes it feasib
 
 The attractive part is that no special training procedure is required: you can take any existing MLP, fit a Laplace approximation around its optimum, and immediately turn it into a Bayesian ensemble by drawing curvature-aware perturbations of its weights.
 
-Laplace approximation is implemented in the `LaplaceApproximation` class in Bensemble. For an example on how to use it, visit our [Laplace demo](https://github.com/intsystems/bensemble/blob/master/notebooks/laplace_demo.ipynb).
+Laplace approximation is implemented in the `LaplaceApproximation` class in Bensemble. For an example on how to use it, visit our [Laplace demo](../examples/04_laplace.ipynb).
 
 ### Probabilistic Backpropagation
 
@@ -342,7 +342,7 @@ $$$$
 \text{s.t.} \quad \theta_i \in \operatorname*{arg\,min}_{\theta}\, \mathcal{L}(f_{\theta,\alpha_i}, \mathcal{D}_{\mathrm{train}}), \quad i = 1, \dots, M
 $$The strategies for architecture searching and selection may vary. Standard NES offers two methods: random search (NES-RS) and regularized evolution (NES-RE). The first strategy simply selects $M$ best architectures to add to the ensemble from a pool of $K$ randomly sampled ones, while the second method applies mutations to selected architectures in order to update the population from which the ensemble is selected. Both methods are parallelizable and allow for highly diverse architecture selection, which can noticeably improve results obtainable by fixed architecture methods.
 
-NES-RS and NES-RE are implemented in the `RandomSearcher` and `EvolutionarySearcher` classes correspondingly in Bensemble. For examples on how to use them, visit our [NES-RS](http://github.com/intsystems/bensemble/blob/master/notebooks/nes_rs_demo.ipynb) and [NES-RE demos](https://github.com/intsystems/bensemble/blob/master/notebooks/nes_re_demo.ipynb).
+NES-RS and NES-RE are implemented in the `RandomSearcher` and `EvolutionarySearcher` classes correspondingly in Bensemble. For examples on how to use them, visit our [NES-RS](../examples/search/nes_rs.ipynb) and [NES-RE demos](../examples/search/nes_re.ipynb).
 
 ### NES via Bayesian Sampling
 
@@ -371,13 +371,13 @@ q^* = \arg\min_{q\in\mathcal{Q}} \text{KL}(q\|p) + n\delta\mathbb{E}_{x, x' \sim
 $$
 Applying all of these tricks in practice helps NESBS become a more efficient alternative to standard NES while achieving comparable performance.
 
-NESBS is implemented in the `NESBayesianSampler` class in Bensemble. Visit our [NESBS demo](https://github.com/intsystems/bensemble/blob/master/notebooks/NESBS_demo.ipynb) for an example on how to use it.
+NESBS is implemented in the `NESBayesianSampler` class in Bensemble. Visit our [NESBS demo](../examples/search/nes_bayesian_sampling.ipynb) for an example on how to use it.
 
 ---
 
 ## Seeing the methods in action
 
-The math above is intentionally light; the interesting part is how these methods actually behave on real data. The project notebooks are easiest way to see that. You can try out our [demos](https://github.com/intsystems/bensemble/tree/master/notebooks), which demonstrate each method's interface and capabilities, or check out our [benchmark notebook](https://github.com/intsystems/bensemble/blob/master/notebooks/benchmarks_new_methods.ipynb), where all of Bensemble's methods are compared on the same data. Here is a figure summarizing our benchmark test for all of Bensemble's methods.
+The math above is intentionally light; the interesting part is how these methods actually behave on real data. The project notebooks are easiest way to see that. You can try out our [demos](../examples/README.md), which demonstrate each method's interface and capabilities, or check out our [benchmark scripts](../benchmarks/README.md), where all of Bensemble's methods are compared on the same data. Here is a figure summarizing our benchmark test for all of Bensemble's methods.
 
 ![Reported Metrics](figures/benchmark_results.png "Reported metrics")
 
