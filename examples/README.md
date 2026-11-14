@@ -53,6 +53,9 @@ PyTorch seeds are fixed, but exact results can differ between software versions.
 - Classification mixtures average each member's softmax probabilities.
   `Ensemble` averages raw outputs by default, so use `predict_members` explicitly
   when your models return logits. Regression ensembles can average outputs directly.
+- Rényi training (`alpha != 1`) uses `sample_with_log_probs` to pair predictions
+  with weight log densities. A scalar KL is supported only for the ordinary ELBO.
+  Notebook 3 handles both paths; change `ALPHA` and rerun all cells.
 - Regression bands show model variation, or model variation plus learned noise
   where stated. They do not establish calibrated 95% coverage. OOD uncertainty
   growth and calibration improvements are observations to investigate, not promises.

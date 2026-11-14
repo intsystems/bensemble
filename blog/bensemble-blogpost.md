@@ -254,7 +254,7 @@ $$
 and the Rényi-style objective
 
 $$
-\mathcal{L}*\alpha(q)
+\mathcal{L}_\alpha(q)
 = \frac{1}{1-\alpha}
 \log \mathbb{E}_{q(\boldsymbol{\theta})} \bigl[
 w(\boldsymbol{\theta})^{1-\alpha}
@@ -265,7 +265,15 @@ This is approximated by Monte Carlo using samples $\boldsymbol{\theta}^{(k)}$ dr
 
 Qualitatively, this gives a knob that controls how aggressive or conservative the variational approximation is. Once trained, sampling networks is as simple as drawing from the Gaussian $q(\boldsymbol{\theta})$ and plugging the sampled weights into the base model, just as in PVI.
 
-Variational Rényi inference is available in Bensemble by passing `alpha` to `VariationalLoss` on top of the same Bayesian layers. See the [Variational Rényi page](https://intsystems.github.io/bensemble/algorithms/variational-renyi/) for details.
+In Bensemble, call `sample_with_log_probs(model, x, num_samples=K)` to obtain
+predictions and the log prior/posterior densities of the same weight draws.
+Pass these as `log_prior` and `log_posterior` to `VariationalLoss` with the desired
+`alpha`; the loss minimizes the negative bound above. Changing `alpha` alone
+while passing a scalar KL is no longer supported for `alpha != 1`. The ordinary
+ELBO (`alpha=1`) still accepts an analytic KL. See the
+[Variational Rényi page](https://intsystems.github.io/bensemble/algorithms/variational-renyi/)
+for a training example and minibatch scaling.
+
 ### Laplace approximation
 
 [Laplace approximation (LA)](https://openreview.net/pdf?id=Skdvd2xAZ) starts from a different point. Instead of designing a Bayesian method from scratch, you begin with a network that has already been trained in the usual deterministic way, with weight decay capturing the prior. Let

@@ -125,6 +125,23 @@ mean, std = predict_with_uncertainty(model, torch.randn(5, 10), num_samples=100)
 print(f"Prediction: {mean[0].item():.2f} ± {std[0].item():.2f}")
 ```
 
+For Rényi training (`alpha != 1`), use matched weight draws and log densities:
+
+```python
+from bensemble.utils import sample_with_log_probs
+
+criterion = VariationalLoss(likelihood, alpha=0.5)
+optimizer.zero_grad()
+predictions, log_p, log_q = sample_with_log_probs(model, x, num_samples=8)
+loss = criterion(predictions, y, log_prior=log_p, log_posterior=log_q)
+loss.backward()
+optimizer.step()
+```
+
+A scalar KL is accepted only for the ordinary ELBO (`alpha=1`). See the
+[Rényi guide](docs/docs/algorithms/variational-renyi.md) for the objective and
+minibatch scaling.
+
 ---
 
 ## Algorithms & Demos
