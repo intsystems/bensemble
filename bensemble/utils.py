@@ -1,4 +1,6 @@
 import math
+from collections.abc import Iterator
+from contextlib import contextmanager
 
 import torch
 import torch.nn.functional as F
@@ -19,6 +21,17 @@ _DROPOUT_TYPES = (
     nn.AlphaDropout,
     nn.FeatureAlphaDropout,
 )
+
+
+@contextmanager
+def _preserve_training_modes(model: nn.Module) -> Iterator[None]:
+    """Restores every module's training flag, including after an exception."""
+    modes = [(module, module.training) for module in model.modules()]
+    try:
+        yield
+    finally:
+        for module, training in modes:
+            module.training = training
 
 
 def standard_normal_pdf(x: torch.Tensor) -> torch.Tensor:
@@ -183,6 +196,8 @@ def predict_with_uncertainty(
 ) -> tuple[torch.Tensor, torch.Tensor]:
     """Estimates predictive mean and standard deviation via Monte Carlo sampling.
 
+    Restores each layer's original training flag, including on errors.
+
     Args:
         model: Neural network model containing stochastic layers.
         x: Input tensor.
@@ -192,22 +207,19 @@ def predict_with_uncertainty(
         tuple[torch.Tensor, torch.Tensor]: A tuple (mean, std) representing
         the predictive mean and unbiased sample standard deviation.
     """
-    was_training = model.training
-    model.eval()
+    with _preserve_training_modes(model):
+        model.eval()
 
-    for module in model.modules():
-        if isinstance(module, (BayesianLinear, BayesianConv2d)):
-            module.train()
+        for module in model.modules():
+            if isinstance(module, (BayesianLinear, BayesianConv2d)):
+                module.train()
 
-    with torch.no_grad():
-        preds = torch.stack([model(x) for _ in range(num_samples)])
+        with torch.no_grad():
+            preds = torch.stack([model(x) for _ in range(num_samples)])
 
-    mean = preds.mean(dim=0)
-    std = preds.std(dim=0, unbiased=True)
-
-    model.train(was_training)
-
-    return mean, std
+        mean = preds.mean(dim=0)
+        std = preds.std(dim=0, unbiased=True)
+        return mean, std
 
 
 def prune_model(model: torch.nn.Module, threshold: float = 0.83) -> float:

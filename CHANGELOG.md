@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Ensemble prediction and `predict_with_uncertainty` restore each layer's
+  original training flag, including after errors, preserving frozen BatchNorm.
 - Rényi loss now uses a separate prior/posterior log-density ratio for each
   weight draw. Calls with `alpha != 1` must provide `log_prior` and
   `log_posterior`; scalar KL remains supported for the ordinary ELBO.

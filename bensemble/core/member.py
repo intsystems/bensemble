@@ -6,7 +6,7 @@ from torch import nn
 
 from bensemble.core.types import MemberPredictions
 from bensemble.layers.base import BaseBayesianLayer
-from bensemble.utils import _DROPOUT_TYPES
+from bensemble.utils import _DROPOUT_TYPES, _preserve_training_modes
 
 
 class MemberAdapter(nn.Module):
@@ -41,13 +41,10 @@ class ExplicitMembers(MemberAdapter):
 
     def predict_all(self, x):
         """Runs every wrapped model on the batch in eval mode."""
-        was_training = [m.training for m in self.models]
-        for m in self.models:
-            m.eval()
-        preds = torch.stack([m(x) for m in self.models])
-        for m, mode in zip(self.models, was_training):
-            m.train(mode)
-        return preds
+        with _preserve_training_modes(self.models):
+            for m in self.models:
+                m.eval()
+            return torch.stack([m(x) for m in self.models])
 
     @property
     def size(self):
@@ -82,12 +79,10 @@ class StochasticMembers(MemberAdapter):
 
     def predict_all(self, x):
         """Draws `num_samples` stochastic forward passes from the model."""
-        was_training = self.model.training
-        self._activate()
-        with torch.no_grad():
-            preds = torch.stack([self.model(x) for _ in range(self.num_samples)])
-        self.model.train(was_training)
-        return preds
+        with _preserve_training_modes(self.model):
+            self._activate()
+            with torch.no_grad():
+                return torch.stack([self.model(x) for _ in range(self.num_samples)])
 
     @property
     def size(self):

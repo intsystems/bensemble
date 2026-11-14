@@ -171,4 +171,9 @@ Regardless of how you created the `ensemble` object, you now have access to the 
 member_outputs = ensemble.predict_members(x_test)
 ```
 
+The built-in ensemble adapters temporarily select the prediction modes, then
+restore each layer's original `training` flag, including on errors. A BatchNorm
+layer explicitly kept in eval mode therefore stays in eval mode after prediction.
+`predict_with_uncertainty` preserves these flags in the same way.
+
 This output can be passed directly to our [Uncertainty Analysis](uncertainty-analysis.md) and [Metrics](../api/metrics.md) modules.
