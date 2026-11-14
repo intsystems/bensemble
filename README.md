@@ -141,7 +141,7 @@ and include instructions for running them from a fresh kernel.
 | **Neural Ensemble Search ([NES-RS](examples/search/nes_rs.ipynb) / [NES-RE](examples/search/nes_re.ipynb))** | Search architectures and select an ensemble on a separate validation set. |
 | **[NES via Bayesian Sampling](examples/search/nes_bayesian_sampling.ipynb)** | Select from independently trained candidates using a validation-loss posterior and SVGD-inspired refinement. |
 | **[Variational Inference](examples/03_variational_inference.ipynb)** | Learn a Gaussian approximation with the *Local Reparameterization Trick*. |
-| **[Variational Rényi](examples/03_variational_inference.ipynb)** | Use multiple stochastic predictions with the alpha-dependent objective. |
+| **[Variational Rényi](examples/03_variational_inference.ipynb)** | Train with matched weight draws and per-sample prior/posterior log densities. |
 | **[Laplace Approximation](examples/04_laplace.ipynb)** | Estimate curvature around a trained network and sample an ensemble. |
 | **[Probabilistic Backprop](docs/docs/algorithms/pbp.md)** | Propagate moments using Assumed Density Filtering (ADF); see the algorithm guide. |
 

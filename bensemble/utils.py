@@ -1,7 +1,10 @@
 import math
 
 import torch
+import torch.nn.functional as F
 from torch import nn
+from torch.distributions import Normal
+from torch.func import functional_call
 
 from bensemble.layers import BayesianLinear
 from bensemble.layers.base import BaseBayesianLayer
@@ -69,6 +72,110 @@ def get_total_kl(model: nn.Module) -> torch.Tensor:
             total_kl += module.kl_divergence()
 
     return total_kl
+
+
+def sample_with_log_probs(
+    model: nn.Module, x: torch.Tensor, num_samples: int = 10
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Draws model weights and returns predictions with their log densities.
+
+    Each draw uses one set of weights across the batch and every call to a reused
+    layer. Unlike local reparameterization, these predictions have matching
+    parameter-space prior and posterior densities for a Rényi objective.
+    Model parameters, buffers, and training modes are preserved; BatchNorm
+    running statistics are not updated.
+
+    Args:
+        model: Model containing BayesianLinear or BayesianConv2d layers.
+            Other layers retain their training modes; set stochastic layers such
+            as dropout to eval if only Bayesian weight uncertainty is wanted.
+        x: Input batch.
+        num_samples: Positive number of weight draws.
+
+    Returns:
+        Tuple of predictions shaped (K, batch, ...), log prior densities (K,),
+        and log posterior densities (K,). All three retain gradients.
+
+    Raises:
+        ValueError: If the sample count is invalid, no supported layers exist,
+            or distinct layers share posterior means.
+        TypeError: If the model contains an unsupported Bayesian layer.
+    """
+    if (
+        isinstance(num_samples, bool)
+        or not isinstance(num_samples, int)
+        or num_samples < 1
+    ):
+        raise ValueError("num_samples must be a positive integer.")
+
+    layers = []
+    parameters = []
+    sampled_means = set()
+    parameter_uses = {}
+    for layer in model.modules():
+        for parameter in layer.parameters(recurse=False):
+            key = id(parameter)
+            parameter_uses[key] = parameter_uses.get(key, 0) + 1
+    for name, layer in model.named_modules():
+        if not isinstance(layer, BaseBayesianLayer):
+            continue
+        if not isinstance(layer, (BayesianLinear, BayesianConv2d)):
+            raise TypeError(
+                "Weight sampling supports BayesianLinear and BayesianConv2d."
+            )
+        layers.append((layer, layer.training))
+        prefix = f"{name}." if name else ""
+        for stem in ("w", "b"):
+            mu = getattr(layer, f"{stem}_mu")
+            if id(mu) in sampled_means or parameter_uses[id(mu)] > 1:
+                raise ValueError(
+                    "Tied weights across distinct layers are not supported."
+                )
+            sampled_means.add(id(mu))
+            parameters.append(
+                (
+                    f"{prefix}{stem}_mu",
+                    mu,
+                    getattr(layer, f"{stem}_rho"),
+                    layer.prior_sigma,
+                )
+            )
+    if not layers:
+        raise ValueError(
+            "The model must contain BayesianLinear or BayesianConv2d layers."
+        )
+
+    predictions, log_priors, log_posteriors = [], [], []
+    try:
+        for layer, _ in layers:
+            layer.training = False
+        for _ in range(num_samples):
+            sampled_parameters = {}
+            prior_terms, posterior_terms = [], []
+            for name, mu, rho, prior_sigma in parameters:
+                posterior = Normal(mu, F.softplus(rho))
+                sample = posterior.rsample()
+                prior = Normal(mu.new_zeros(()), mu.new_tensor(prior_sigma))
+                sampled_parameters[name] = sample
+                prior_terms.append(prior.log_prob(sample).sum())
+                posterior_terms.append(posterior.log_prob(sample).sum())
+            buffers = {name: value.clone() for name, value in model.named_buffers()}
+            predictions.append(
+                functional_call(
+                    model, (sampled_parameters, buffers), (x,), tie_weights=False
+                )
+            )
+            log_priors.append(torch.stack(prior_terms).sum())
+            log_posteriors.append(torch.stack(posterior_terms).sum())
+    finally:
+        for layer, training in layers:
+            layer.training = training
+
+    return (
+        torch.stack(predictions),
+        torch.stack(log_priors),
+        torch.stack(log_posteriors),
+    )
 
 
 def predict_with_uncertainty(

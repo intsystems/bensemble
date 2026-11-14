@@ -73,7 +73,12 @@ def test_variational_loss_num_batches_scales_kl():
 def test_variational_loss_renyi_path_finite():
     """Rényi-alpha path yields a finite loss."""
     vl = VariationalLoss(GaussianLikelihood(), alpha=0.5)
-    loss = vl(torch.randn(4, 8, 1), torch.randn(8, 1), torch.tensor(0.5))
+    loss = vl(
+        torch.randn(4, 8, 1),
+        torch.randn(8, 1),
+        log_prior=torch.randn(4),
+        log_posterior=torch.randn(4),
+    )
     assert torch.isfinite(loss)
 
 
@@ -104,7 +109,12 @@ def test_variational_loss_multi_output_is_scalar_and_differentiable():
     for alpha in (1.0, 0.5):
         vl = VariationalLoss(GaussianLikelihood(), alpha=alpha)
         preds = torch.randn(4, 8, 3, requires_grad=True)
-        loss = vl(preds, target, torch.tensor(1.0))
+        if alpha == 1:
+            loss = vl(preds, target, torch.tensor(1.0))
+        else:
+            loss = vl(
+                preds, target, log_prior=torch.randn(4), log_posterior=torch.randn(4)
+            )
         assert loss.shape == ()
         loss.backward()
         assert preds.grad is not None

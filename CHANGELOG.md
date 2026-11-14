@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [Unreleased]
+
+### Fixed
+
+- Rényi loss now uses a separate prior/posterior log-density ratio for each
+  weight draw. Calls with `alpha != 1` must provide `log_prior` and
+  `log_posterior`; scalar KL remains supported for the ordinary ELBO.
+- Added `sample_with_log_probs` to produce matched predictions and weight
+  densities for Bayesian linear and convolutional layers.
+
 ## [0.2.2] - 2026-07-03
 
 ### Added
