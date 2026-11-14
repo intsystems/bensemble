@@ -70,27 +70,37 @@ class NESBayesianSampler:
             criterion if criterion is not None else classification_nll_criterion
         )
 
-    def _predict_probs(self, model: nn.Module, val_loader: DataLoader) -> torch.Tensor:
-        model.to(self.device)
-        model.eval()
-        probs_batches: list[torch.Tensor] = []
+    def _predict_probs(
+        self, models: list[nn.Module], val_loader: DataLoader
+    ) -> list[torch.Tensor]:
+        for model in models:
+            model.to(self.device)
+            model.eval()
+        probs_batches: list[list[torch.Tensor]] = [[] for _ in models]
         with torch.no_grad():
             for batch in val_loader:
                 x = batch[0].to(self.device)
-                logits = model(x)
-                probs_batches.append(F.softmax(logits, dim=-1).cpu())
-        return torch.cat(probs_batches, dim=0)
+                # Compare candidates on the same inputs, including random transforms.
+                for model, batches in zip(models, probs_batches):
+                    batches.append(F.softmax(model(x), dim=-1).cpu())
+        return [torch.cat(batches, dim=0) for batches in probs_batches]
 
     def _build_pool(self, val_loader: DataLoader) -> list[_Candidate]:
-        candidates: list[_Candidate] = []
+        models: list[nn.Module] = []
+        scores: list[float] = []
         for _ in range(self.pool_size):
             config = self.space.sample()
             model = self.space.build(config)
             self.train_fn(model)
             score = self.criterion([model], val_loader, self.device)
-            probs = self._predict_probs(model, val_loader)
-            candidates.append(_Candidate(model=model, score=score, probs=probs))
-        return candidates
+            models.append(model)
+            scores.append(score)
+
+        probs = self._predict_probs(models, val_loader)
+        return [
+            _Candidate(model=model, score=score, probs=model_probs)
+            for model, score, model_probs in zip(models, scores, probs)
+        ]
 
     def _posterior_probs(self, candidates: list[_Candidate]) -> torch.Tensor:
         scores = torch.tensor([c.score for c in candidates], dtype=torch.float32)

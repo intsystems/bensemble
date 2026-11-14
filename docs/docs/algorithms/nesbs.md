@@ -15,6 +15,8 @@ Ensemble members are then selected from the pool in one of two ways:
 - **Monte-Carlo Sampling** (`sample_mc`): draw `ensemble_size` candidates from the posterior.
 - **SVGD-inspired sampling** (`sample_svgd`): a greedy, particle-style selection over the pool. Each candidate's posterior probability is traded off against a repulsion term measuring how similar its validation predictions are to those of the members already chosen, so the selected set is pushed towards architectures that disagree with each other.
 
+For the diversity comparison, all candidates predict on the same validation batches in a single pass. This keeps predictions aligned even when the loader uses `shuffle=True` or the dataset applies random transforms. Candidate scores are still computed separately with `criterion`.
+
 $$
 q^* = \arg\min_{q\in\mathcal{Q}} \text{KL}(q\|p) + n\delta\mathbb{E}_{x, x' \sim q}[k(x, x')]
 $$

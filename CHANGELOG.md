@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- NESBS compares candidate predictions on the same validation batches, avoiding
+  incorrect diversity estimates with shuffled loaders or random transforms.
 - Ensemble prediction and `predict_with_uncertainty` restore each layer's
   original training flag, including after errors, preserving frozen BatchNorm.
 - Rényi loss now uses a separate prior/posterior log-density ratio for each
