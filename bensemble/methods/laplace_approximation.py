@@ -55,7 +55,7 @@ class LaplaceApproximation:
 
         self.hook_handles = []
         self.activations: dict[str, torch.Tensor] = {}
-        self.pre_activation_hessians: dict[str, torch.Tensor] = {}
+        self._pre_activations: dict[str, torch.Tensor] = {}
 
     def toggle_verbose(self) -> None:
         """Toggles verbosity flag."""
@@ -67,12 +67,16 @@ class LaplaceApproximation:
         train_loader: DataLoader,
         num_samples: int = 1000,
     ) -> None:
-        """Estimates the Kronecker factors of the Hessian using training data.
+        """Estimates Kronecker factors of generalized Gauss-Newton curvature.
+
+        Linear layers must receive 2D batches and be called once per forward
+        pass. The model must process examples independently in eval mode.
 
         Args:
             train_loader: DataLoader yielding training data and targets.
             num_samples: Maximum number of samples to process for curvature estimation. Defaults to 1000.
         """
+        self.is_fitted = False
         self.dataset_size = len(train_loader.dataset)
 
         if self.verbose:
@@ -94,17 +98,25 @@ class LaplaceApproximation:
             print("Curvature computation completed!")
 
     def _register_hooks(self) -> None:
-        """Registers forward hooks on Linear layers to record activations."""
+        """Records Linear inputs and pre-activations for curvature estimation."""
         self._remove_hooks()
-        self.activations = {}
-        self.pre_activation_hessians = {}
 
         def make_forward_hook(layer_name):
             def forward_hook(module, inputs, output):
-                x = inputs[0] if isinstance(inputs, tuple) else inputs
-                if x.dim() > 2:
-                    x = x.flatten(start_dim=1)
-                self.activations[layer_name] = x.detach()
+                if layer_name in self._pre_activations:
+                    raise ValueError(
+                        "Laplace curvature does not support reused Linear layers."
+                    )
+                x = inputs[0]
+                if x.ndim != 2:
+                    raise ValueError("Laplace curvature requires 2D Linear inputs.")
+                self.activations[layer_name] = x.detach().clone()
+                # Frozen layers still need derivatives with respect to their outputs.
+                if not output.requires_grad:
+                    output.requires_grad_()
+                self._pre_activations[layer_name] = output
+                # Preserve pre-activations when the next operation is in-place.
+                return output.clone()
 
             return forward_hook
 
@@ -118,6 +130,8 @@ class LaplaceApproximation:
         for handle in self.hook_handles:
             handle.remove()
         self.hook_handles.clear()
+        self.activations.clear()
+        self._pre_activations.clear()
 
     def _compute_pre_activation_hessian(
         self,
@@ -150,44 +164,42 @@ class LaplaceApproximation:
 
     def _backward_hessian(
         self,
+        output: torch.Tensor,
         hessian_final: torch.Tensor,
     ) -> dict[str, torch.Tensor]:
-        """Backpropagates Hessian through linear layers.
+        """Computes mean J.T @ H @ J at each Linear pre-activation."""
+        if not self._pre_activations:
+            return {}
 
-        Args:
-            hessian_final: Hessian tensor of the output layer.
+        pre_activations = tuple(self._pre_activations.values())
+        jacobians: dict[str, list[torch.Tensor]] = {
+            name: [] for name in self._pre_activations
+        }
+        for index in range(output.shape[1]):
+            # Eval-mode examples are independent, so a summed output coordinate
+            # gives each example's Jacobian in one backward pass.
+            gradients = torch.autograd.grad(
+                output[:, index].sum(),
+                pre_activations,
+                retain_graph=index < output.shape[1] - 1,
+                allow_unused=True,
+            )
+            for (name, activation), gradient in zip(
+                self._pre_activations.items(), gradients
+            ):
+                jacobians[name].append(
+                    gradient.detach()
+                    if gradient is not None
+                    else torch.zeros_like(activation)
+                )
 
-        Returns:
-            dict[str, torch.Tensor]: Mapping from layer names to their corresponding Hessian factors.
-        """
-        hessians: dict[str, torch.Tensor] = {}
-
-        linear_layers = [
-            (name, module)
-            for name, module in self.model.named_modules()
-            if isinstance(module, nn.Linear)
-        ]
-
-        if len(linear_layers) == 0:
-            return hessians
-
-        current_hessian = (
-            hessian_final.mean(0) if hessian_final.dim() == 3 else hessian_final
-        )
-
-        final_layer_name, _ = linear_layers[-1]
-        hessians[final_layer_name] = current_hessian
-
-        for i in range(len(linear_layers) - 2, -1, -1):
-            current_layer_name, _ = linear_layers[i]
-            _, next_layer = linear_layers[i + 1]
-
-            w_next = next_layer.weight.detach()
-            current_hessian = w_next.T @ current_hessian @ w_next
-            current_hessian = self._symmetrize(current_hessian)
-
-            hessians[current_layer_name] = current_hessian
-
+        hessians = {}
+        for name, gradients in jacobians.items():
+            jacobian = torch.stack(gradients, dim=1)
+            weighted = hessian_final @ jacobian
+            # Sum over examples without allocating a batch of hidden x hidden matrices.
+            curvature = jacobian.flatten(0, 1).T @ weighted.flatten(0, 1)
+            hessians[name] = self._symmetrize(curvature / output.shape[0])
         return hessians
 
     def _estimate_kronecker_factors(
@@ -220,11 +232,17 @@ class LaplaceApproximation:
 
             batch_size = data.shape[0]
 
-            with torch.no_grad():
+            self.activations.clear()
+            self._pre_activations.clear()
+            with torch.inference_mode(False), torch.enable_grad():
+                if data.is_inference():
+                    data = data.clone()
                 output = self.model(data)
-                h_final = self._compute_pre_activation_hessian(output, target)
-                layer_hessians = self._backward_hessian(h_final)
+                h_final = self._compute_pre_activation_hessian(output.detach(), target)
+                layer_hessians = self._backward_hessian(output, h_final)
+            self._pre_activations.clear()
 
+            with torch.no_grad():
                 for name, module in self.model.named_modules():
                     if (
                         isinstance(module, nn.Linear)
