@@ -64,7 +64,7 @@ mean, std = samples.mean(0), samples.std(0)
 
 ### Variational Inference (Bayesian Layers)
 
-If you built your model using `BayesianLinear` or `BayesianConv2d`, it uses weight sampling to represent uncertainty. Both layers are drop-in replacements for their `torch.nn` counterparts, so a Bayesian CNN looks like an ordinary one:
+`BayesianLinear` and `BayesianConv2d` learn distributions over their weights and biases. The CNN below uses local reparameterization during training.
 
 ```python
 import torch
@@ -97,6 +97,11 @@ for _ in range(50):  # Dummy loop
 # Wrap as an ensemble
 ensemble = Ensemble.from_stochastic(model, num_samples=30, mode="bayesian")
 ```
+
+During Bayesian MC prediction, each `BayesianConv2d` draws its kernel and bias
+once per forward pass. Every position in every image in the batch uses that draw.
+For example, averaging over pixels preserves the sampled bias for each output
+channel. `predict_with_uncertainty` uses the same convolution sampling rule.
 
 Once trained, weights whose posterior mean is small relative to its standard deviation carry little information. `prune_model` zeroes them across every Bayesian layer and reports the fraction removed:
 

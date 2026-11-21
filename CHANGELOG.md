@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Bayesian MC prediction now uses one draw of each `BayesianConv2d` kernel and
+  bias per forward pass, preserving spatial correlations through pooling.
 - Laplace now scales the K-FAC curvature by the training dataset size once
   and adds the prior to the resulting precision matrix. Use
   `regularization="legacy"` for the previous sampling scale.

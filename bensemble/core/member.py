@@ -6,7 +6,7 @@ from torch import nn
 
 from bensemble.core.types import MemberPredictions
 from bensemble.layers.base import BaseBayesianLayer
-from bensemble.utils import _DROPOUT_TYPES, _preserve_training_modes
+from bensemble.utils import _DROPOUT_TYPES, _mc_predictions, _preserve_training_modes
 
 
 class MemberAdapter(nn.Module):
@@ -81,8 +81,7 @@ class StochasticMembers(MemberAdapter):
         """Draws `num_samples` stochastic forward passes from the model."""
         with _preserve_training_modes(self.model):
             self._activate()
-            with torch.no_grad():
-                return torch.stack([self.model(x) for _ in range(self.num_samples)])
+            return _mc_predictions(self.model, x, self.num_samples)
 
     @property
     def size(self):

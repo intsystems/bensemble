@@ -191,6 +191,32 @@ def sample_with_log_probs(
     )
 
 
+@torch.no_grad()
+def _mc_predictions(
+    model: nn.Module, x: torch.Tensor, num_samples: int
+) -> torch.Tensor:
+    """Draw one convolution kernel and bias per layer and model forward."""
+    convs = [
+        layer
+        for layer in model.modules()
+        if isinstance(layer, BayesianConv2d) and layer.training
+    ]
+    previous = [
+        (getattr(layer, "_mc_weight", None), getattr(layer, "_mc_bias", None))
+        for layer in convs
+    ]
+    predictions = []
+    try:
+        for _ in range(num_samples):
+            for layer in convs:
+                layer._draw_mc_weights()
+            predictions.append(model(x))
+    finally:
+        for layer, (weight, bias) in zip(convs, previous):
+            layer._mc_weight, layer._mc_bias = weight, bias
+    return torch.stack(predictions)
+
+
 def predict_with_uncertainty(
     model: nn.Module, x: torch.Tensor, num_samples: int = 100
 ) -> tuple[torch.Tensor, torch.Tensor]:
@@ -214,8 +240,7 @@ def predict_with_uncertainty(
             if isinstance(module, (BayesianLinear, BayesianConv2d)):
                 module.train()
 
-        with torch.no_grad():
-            preds = torch.stack([model(x) for _ in range(num_samples)])
+        preds = _mc_predictions(model, x, num_samples)
 
         mean = preds.mean(dim=0)
         std = preds.std(dim=0, unbiased=True)
