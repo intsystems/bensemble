@@ -1,4 +1,5 @@
 import copy
+import math
 from typing import Any
 
 import torch
@@ -18,7 +19,7 @@ class LaplaceApproximation:
         likelihood: str = "regression",
         prior_precision: float = 1.0,
         damping: float = 1e-6,
-        regularization: str = "legacy",
+        regularization: str = "exact",
         verbose: bool = False,
     ):
         """Initializes the LaplaceApproximation instance.
@@ -27,8 +28,11 @@ class LaplaceApproximation:
             model: PyTorch model to approximate.
             likelihood: Task likelihood, either "classification" or "regression". Defaults to "regression".
             prior_precision: Prior precision hyperparameter (scalar tau). Defaults to 1.0.
-            damping: Numerical stabilization term added to diagonals. Defaults to 1e-6.
-            regularization: Regularization formula type ("legacy" or "paper"). Defaults to "legacy".
+            damping: Numerical stabilization term. In exact mode it is added to
+                the posterior precision diagonal. Defaults to 1e-6.
+            regularization: "exact" adds the prior to the Kronecker product
+                of the curvature factors. "paper" and "legacy" regularize
+                each factor separately.
             verbose: If True, prints progress details during computation. Defaults to False.
 
         Raises:
@@ -36,8 +40,12 @@ class LaplaceApproximation:
         """
         if likelihood not in ["classification", "regression"]:
             raise ValueError(f"Unsupported likelihood: {likelihood}")
-        if regularization not in ["legacy", "paper"]:
+        if regularization not in ["exact", "legacy", "paper"]:
             raise ValueError(f"Unsupported regularization: {regularization}")
+        if not math.isfinite(prior_precision) or prior_precision < 0:
+            raise ValueError("prior_precision must be finite and non-negative.")
+        if not math.isfinite(damping) or damping < 0:
+            raise ValueError("damping must be finite and non-negative.")
 
         self.model = model
         self.is_fitted = False
@@ -297,6 +305,29 @@ class LaplaceApproximation:
                 n = float(self.dataset_size)
                 tau = float(self.prior_precision)
 
+                if self.regularization == "exact":
+                    q_eig, q_basis = torch.linalg.eigh(q)
+                    h_eig, h_basis = torch.linalg.eigh(h)
+                    if tau == 0 and self.damping == 0:
+                        for eig in (q_eig, h_eig):
+                            tol = torch.finfo(eig.dtype).eps * eig.numel() * eig[-1]
+                            if eig[0] <= tol:
+                                raise ValueError(
+                                    "Singular Laplace precision. Use positive prior_precision or damping."
+                                )
+                    # Both factors are PSD up to roundoff. In their joint basis
+                    # the precision is diagonal, with one entry per weight.
+                    precision = n * torch.outer(h_eig.clamp_min(0), q_eig.clamp_min(0))
+                    precision += tau + self.damping
+                    self.kronecker_factors[name] = {"Q": q, "H": h}
+                    self.sampling_factors[name] = {
+                        "input_basis": q_basis,
+                        "output_basis": h_basis,
+                        "posterior_std": precision.rsqrt(),
+                        "weight_shape": (acc["out_dim"], acc["in_dim"]),
+                    }
+                    continue
+
                 eye_q = torch.eye(acc["in_dim"], device=self.device, dtype=q.dtype)
                 eye_h = torch.eye(acc["out_dim"], device=self.device, dtype=h.dtype)
 
@@ -371,15 +402,17 @@ class LaplaceApproximation:
                 module = modules[name]
 
                 mean_weight = module.weight.detach()
-                l_q = factors["L_U"].to(device=self.device, dtype=mean_weight.dtype)
-                l_h = factors["L_V"].to(device=self.device, dtype=mean_weight.dtype)
-
                 weight_shape = factors["weight_shape"]
                 z = torch.randn(
                     weight_shape, device=self.device, dtype=mean_weight.dtype
                 )
-
-                sampled_weight = mean_weight + temperature * (l_h @ z @ l_q.T)
+                if "posterior_std" in factors:
+                    z = z * factors["posterior_std"].to(mean_weight)
+                    left, right = factors["output_basis"], factors["input_basis"]
+                else:
+                    left, right = factors["L_V"], factors["L_U"]
+                delta = left.to(mean_weight) @ z @ right.to(mean_weight).T
+                sampled_weight = mean_weight + temperature * delta
 
                 prefix = f"{name}." if name else ""
                 sampled_state[f"{prefix}weight"] = sampled_weight.detach().cpu()
@@ -422,6 +455,8 @@ class LaplaceApproximation:
             "sampling_factors": self.sampling_factors,
             "dataset_size": self.dataset_size,
             "prior_precision": self.prior_precision,
+            "regularization": self.regularization,
+            "damping": self.damping,
         }
 
     def _set_ensemble_state(self, state: dict[str, Any]) -> None:
@@ -436,6 +471,8 @@ class LaplaceApproximation:
         self.sampling_factors = state["sampling_factors"]
         self.dataset_size = state["dataset_size"]
         self.prior_precision = state["prior_precision"]
+        self.regularization = state.get("regularization", self.regularization)
+        self.damping = state.get("damping", self.damping)
         self.hook_handles = []
 
     def _stabilize_spd(self, matrix: torch.Tensor) -> torch.Tensor:

@@ -81,7 +81,9 @@ def test_compute_curvature_regression(regression_setup):
     """
     model, loader, _, _ = regression_setup
 
-    laplace = LaplaceApproximation(model, likelihood="regression", verbose=True)
+    laplace = LaplaceApproximation(
+        model, likelihood="regression", regularization="legacy", verbose=True
+    )
 
     # Use the new method name
     laplace.compute_curvature(loader, num_samples=10)

@@ -20,14 +20,6 @@ def _curvature(model, inputs, likelihood="regression", batch_size=4):
     return laplace
 
 
-def _unregularized_h(laplace, name):
-    factor = laplace.kronecker_factors[name]["H"]
-    identity = torch.eye(len(factor), dtype=factor.dtype, device=factor.device)
-    return (
-        factor - (laplace.prior_precision + laplace.damping) * identity
-    ) / laplace.dataset_size
-
-
 @pytest.mark.parametrize("inplace", [False, True])
 def test_inactive_relu_has_zero_hidden_curvature(inplace):
     model = nn.Sequential(
@@ -42,10 +34,10 @@ def test_inactive_relu_has_zero_hidden_curvature(inplace):
     laplace = _curvature(model, torch.tensor([[-1.0]], dtype=torch.float64))
 
     torch.testing.assert_close(
-        _unregularized_h(laplace, "0"), torch.zeros(1, 1).double()
+        laplace.kronecker_factors["0"]["H"], torch.zeros(1, 1).double()
     )
     torch.testing.assert_close(
-        _unregularized_h(laplace, "2"), torch.ones(1, 1).double()
+        laplace.kronecker_factors["2"]["H"], torch.ones(1, 1).double()
     )
 
 
@@ -86,7 +78,7 @@ def test_hidden_curvature_matches_autograd(activation, likelihood, batch_size):
     laplace = _curvature(model, inputs, likelihood, batch_size)
 
     torch.testing.assert_close(
-        _unregularized_h(laplace, "0"), torch.stack(reference).mean(0)
+        laplace.kronecker_factors["0"]["H"], torch.stack(reference).mean(0)
     )
 
 
@@ -113,7 +105,7 @@ def test_curvature_preserves_parameter_gradients_in_inference_context(frozen, co
     with context():
         laplace = _curvature(model, inputs)
 
-    torch.testing.assert_close(_unregularized_h(laplace, "0"), expected)
+    torch.testing.assert_close(laplace.kronecker_factors["0"]["H"], expected)
     for parameter, before in zip(parameters, gradients):
         assert parameter.requires_grad is not frozen
         if before is None:
@@ -157,10 +149,10 @@ def test_curvature_follows_functional_residual_graph():
     laplace = _curvature(model, inputs)
 
     torch.testing.assert_close(
-        _unregularized_h(laplace, "hidden"), torch.stack(reference).mean(0)
+        laplace.kronecker_factors["hidden"]["H"], torch.stack(reference).mean(0)
     )
     torch.testing.assert_close(
-        _unregularized_h(laplace, "output"), torch.eye(2, dtype=inputs.dtype)
+        laplace.kronecker_factors["output"]["H"], torch.eye(2, dtype=inputs.dtype)
     )
 
 

@@ -16,13 +16,23 @@ per forward pass. Examples must be independent in eval mode. It uses one backwar
 pass per output coordinate and leaves parameter gradients unchanged. Only Linear
 weights are sampled; all biases and other parameters remain fixed.
 
-The posterior for layer $l$ is then approximated as a matrix normal distribution $\mathcal{MN}(W^{\text{MAP}}_l, A_l, G_l)$. Samples are generated from the two Kronecker factors independently:
+By default (`regularization="exact"`), the precision of the layer's weights,
+flattened row by row, is
 
 $$
-W_{\text{sample}} = W_{\text{MAP}} + L_V Z L_U^T
+P_l = N (G_l \otimes A_l) + \tau I,
 $$
 
-where $L_V, L_U$ are symmetric square roots of the inverse regularized covariances, computed by eigendecomposition with the eigenvalues clamped from below for stability, and $Z$ is sampled from the standard matrix normal distribution.
+where $N$ is the training dataset size and $\tau$ is `prior_precision`.
+For numerical stability, `damping` is added to the diagonal of $P_l$ before sampling.
+`num_samples` limits how many examples are used to estimate the per-example
+averages $A_l$ and $G_l$. In their joint eigenbasis, each weight perturbation
+has variance $1/(N\,g_i a_j + \tau)$ at unit temperature and zero damping.
+This adds the prior exactly within the K-FAC approximation.
+
+Use `regularization="legacy"` for the old scaling, which multiplies each
+factor by $N$. The `"paper"` mode regularizes the two factors separately
+using $\sqrt{N}$ and $\sqrt{\tau}$.
 
 ---
 

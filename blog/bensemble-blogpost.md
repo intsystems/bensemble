@@ -297,14 +297,14 @@ $$
 q(\boldsymbol{\theta}) = \mathcal{N}\bigl(\boldsymbol{\theta}^\star, \mathbf{H}^{-1}\bigr).
 $$
 
-For modern neural networks, $\mathbf{H}$ is far too large to store explicitly, so we use a Kronecker-factored approximation layer-wise. Roughly speaking, for a linear layer with input activations $\mathbf{x}$ and pre-activation Hessian $\mathbf{H}_z$, the curvature block is approximated as
+For modern neural networks, $\mathbf{H}$ is far too large to store explicitly, so we use a Kronecker-factored approximation layer-wise. For a linear layer with input activations $\mathbf{x}$ and pre-activation Hessian $\mathbf{H}_z$, the average likelihood curvature per example is approximated as
 
 $$
 \mathbf{H}_{\text{weights}}
-\approx \mathbb{E}[\mathbf{x} \mathbf{x}^\top] \otimes \mathbb{E}[\mathbf{H}_z],
+\approx \mathbb{E}[\mathbf{H}_z] \otimes \mathbb{E}[\mathbf{x} \mathbf{x}^\top],
 $$
 
-a Kronecker product of two much smaller matrices. This structure makes it feasible to invert the covariance and to sample weight matrices for each layer.
+a Kronecker product of two much smaller matrices. The default Laplace sampler multiplies this block by the training dataset size and adds the prior precision before drawing weights.
 
 The attractive part is that no special training procedure is required: you can take any existing MLP, fit a Laplace approximation around its optimum, and immediately turn it into a Bayesian ensemble by drawing curvature-aware perturbations of its weights.
 

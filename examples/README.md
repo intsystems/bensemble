@@ -48,8 +48,8 @@ PyTorch seeds are fixed, but exact results can differ between software versions.
 
 - Train, validation, and test observations are disjoint. Fit preprocessing on train
   only; use validation for calibration or candidate selection; report final
-  metrics on test. Fixed-configuration regression and Laplace demos reserve the
-  validation split for optional tuning.
+  metrics on test. The Laplace demo selects the sampling temperature by validation
+  NLL. The regression demo reserves validation for optional tuning.
 - Classification mixtures average each member's softmax probabilities.
   `Ensemble` averages raw outputs by default, so use `predict_members` explicitly
   when your models return logits. Regression ensembles can average outputs directly.

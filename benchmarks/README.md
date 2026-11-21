@@ -47,6 +47,10 @@ uv run --extra benchmarks python benchmarks/regression_benchmark.py
 
 ## Reproducibility
 
+The Laplace rows in both benchmark tables used `regularization="legacy"`.
+The current scripts use the new default, `"exact"`, which corrects the scale
+of the sampled weights.
+
 Both scripts fix every random seed and restrict PyTorch to deterministic kernels, so repeated runs on the same machine and software stack produce identical results.
 
 On CUDA, one more setting is needed and has to come from the environment:
