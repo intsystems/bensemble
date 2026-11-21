@@ -1,3 +1,4 @@
+import math
 from collections.abc import Callable
 
 import torch
@@ -13,11 +14,12 @@ def classification_nll_criterion(
 ) -> float:
     """Evaluates classification Negative Log-Likelihood of an ensemble candidate set.
 
-    Predictions from all members are converted to softmax probabilities and averaged.
+    Scores the arithmetic mean of the members' class probabilities in log space.
 
     Args:
         members: List of candidate neural network modules in eval mode.
-        val_loader: DataLoader yielding validation (inputs, labels) batches.
+        val_loader: DataLoader yielding validation (inputs, labels) batches,
+            with class indices shaped (batch,) or (batch, 1).
         device: Device on which to run inference.
 
     Returns:
@@ -32,11 +34,19 @@ def classification_nll_criterion(
     with torch.no_grad():
         for batch in val_loader:
             x, y = batch[0].to(device), batch[1].to(device)
-            mean_probs = torch.stack(
-                [F.softmax(model(x), dim=-1) for model in members], dim=0
-            ).mean(dim=0)
-            picked = mean_probs[torch.arange(y.shape[0], device=device), y]
-            total_nll += -torch.log(picked + 1e-8).sum().item()
+            logits = torch.stack([model(x) for model in members])
+            if logits.dtype in (torch.float16, torch.bfloat16):
+                logits = logits.float()
+            if y.ndim == 2:
+                y = y.squeeze(1)
+            if y.shape != (logits.size(1),):
+                raise ValueError("Expected one class index per input.")
+            log_probs = F.log_softmax(logits, dim=-1)
+            target_log_probs = log_probs[:, torch.arange(y.size(0), device=device), y]
+            log_mixture = torch.logsumexp(target_log_probs, dim=0) - math.log(
+                len(members)
+            )
+            total_nll -= log_mixture.sum().item()
             count += y.shape[0]
 
     return total_nll / count

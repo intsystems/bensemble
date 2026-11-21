@@ -1,3 +1,5 @@
+import math
+
 import pytest
 import torch
 from torch import nn
@@ -66,6 +68,38 @@ def test_classification_nll_criterion_multiple_batches():
     result = classification_nll_criterion(members, loader, _DEVICE)
     assert isinstance(result, float)
     assert result > 0
+
+
+def test_forward_select_accounts_for_confident_errors():
+    x = torch.tensor([[100.0, 0.0], [0.0, 100.0]])
+    loader = DataLoader(TensorDataset(x, torch.tensor([0, 0])), batch_size=2)
+    extreme = nn.Identity()  # The two losses are approximately 0 and 100.
+    steady = _FixedLogitModel(torch.tensor([0.0, 12.0]))
+
+    assert forward_select(
+        [extreme, steady], loader, 1, _DEVICE, classification_nll_criterion
+    ) == [steady]
+    assert classification_nll_criterion([extreme], loader, _DEVICE) == pytest.approx(50)
+
+
+def test_mixture_nll_when_member_probabilities_underflow():
+    gaps = (200.0, 202.0)
+    members = [_FixedLogitModel(torch.tensor([gap, 0.0])) for gap in gaps]
+    loader = DataLoader(TensorDataset(torch.zeros(1, 1), torch.tensor([1])))
+    # Each class-1 probability is zero in float32. Compute the reference in double.
+    expected = -math.log(sum(1 / (1 + math.exp(gap)) for gap in gaps) / len(gaps))
+
+    assert classification_nll_criterion(members, loader, _DEVICE) == pytest.approx(
+        expected
+    )
+
+
+def test_half_precision_logits_with_column_labels():
+    # Both logit differences exceed float16 range; only the second prediction is wrong.
+    x = torch.tensor([[60000, -60000], [60000, -60000]], dtype=torch.float16)
+    loader = DataLoader(TensorDataset(x, torch.tensor([[0], [1]])), batch_size=2)
+    score = classification_nll_criterion([nn.Identity()], loader, _DEVICE)
+    assert score == pytest.approx(60000)
 
 
 def test_regression_mse_criterion_zero_error():
