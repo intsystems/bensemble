@@ -8,7 +8,7 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![JOSS](https://joss.theoj.org/papers/0d7c1f90dc95cc1a9c913a29e7922a4d/status.svg)](https://joss.theoj.org/papers/0d7c1f90dc95cc1a9c913a29e7922a4d)
 
-**Bensemble** is a production-ready, lightweight library for Bayesian Deep Learning and Neural Network Ensembling.
+**Bensemble** is a PyTorch library for combining neural networks, estimating predictive uncertainty, and calibrating predictions.
 
 ---
 
@@ -25,84 +25,51 @@
 
 ## Features
 
-- **PyTorch-Native**: No hidden training loops. Use standard PyTorch to train your models, and use Bensemble for inference, ensembling, and analytics.
-- **Unified Ensembling API**: Seamlessly combine explicit models (Deep Ensembles, NAS) and implicit methods (MC Dropout) via a single `Ensemble` interface.
-- **Neural Ensemble Search (NES)**: Algorithms to automatically search for diverse architectures using Stein Variational Gradient Descent (SVGD).
-- **Uncertainty Analytics**: Principled decomposition of predictive uncertainty into *aleatoric* (data noise) and *epistemic* (model ignorance) components.
-- **Model Calibration & Metrics**: Evaluate models using Expected Calibration Error (ECE), Brier Score, and NLL. Fix overconfident networks post-hoc with Temperature and Vector Scaling.
+- Combine independently trained PyTorch models or draw predictions from one model with MC dropout using `Ensemble`.
+- Select ensembles with random search (NES-RS), evolutionary search (NES-RE), or Bayesian sampling (NES-BS).
+- Split predictive uncertainty into aleatoric and epistemic components for classification and regression.
+- Calibrate classifiers with temperature or vector scaling. Evaluate predictions with expected calibration error (ECE), Brier score, and negative log-likelihood.
 
 ---
 
 ## Installation
 
-You can install `bensemble` using pip:
-
 ```bash
 pip install bensemble
 ```
 
-Or, using [uv](https://github.com/astral-sh/uv) for lightning-fast installation:
-
-```bash
-uv pip install bensemble
-```
+With [uv](https://github.com/astral-sh/uv), run `uv pip install bensemble`.
 
 ---
 
 ## Quick Start
 
-### Example 1: Ensembling, Calibration & Uncertainty
+### Combine trained classifiers
 
-Train three classifiers on synthetic data. Fit a temperature to the ensemble's probabilities on the validation split, then compare calibration on the test split.
+`models` is a list of trained PyTorch classifiers that return logits for the same classes in the same order. `x` is a batch of inputs.
 
 ```python
 import torch
-from torch import nn
-from bensemble.calibration.scaling import TemperatureScaling
+
 from bensemble.core.ensemble import Ensemble
-from bensemble.metrics import expected_calibration_error
 from bensemble.uncertainty import decompose_classification_uncertainty
 
-torch.manual_seed(42)
-# Two classes with a noisy linear decision boundary.
-x = torch.randn(768, 2)
-y = (x.sum(dim=1) + 0.5 * torch.randn(len(x)) > 0).long()
-x_train, x_val, x_test = x.split(256)
-y_train, y_val, y_test = y.split(256)
-
-models = [nn.Linear(2, 2) for _ in range(3)]
-for model in models:
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.2)
-    for _ in range(20):
-        optimizer.zero_grad()
-        nn.functional.cross_entropy(model(x_train), y_train).backward()
-        optimizer.step()
 ensemble = Ensemble.from_models(models).eval()
-
-# Average the members' probabilities. Their logarithm gives logits for the mixture.
 with torch.no_grad():
-    val_probs = ensemble.predict_members(x_val).softmax(dim=-1).mean(dim=0)
-scaler = TemperatureScaling().fit(val_probs.log(), y_val)
-
-with torch.no_grad():
-    test_member_probs = ensemble.predict_members(x_test).softmax(dim=-1)
-    test_probs = test_member_probs.mean(dim=0)
-    calibrated_probs = scaler(test_probs.log()).softmax(dim=-1)
-
-print(f"Test ECE before: {expected_calibration_error(test_probs, y_test):.3f}")
-print(f"Test ECE after:  {expected_calibration_error(calibrated_probs, y_test):.3f}")
-_, _, epistemic = decompose_classification_uncertainty(test_member_probs)
-print(f"Mean epistemic uncertainty: {epistemic.mean().item():.4f}")
+    member_probs = ensemble.predict_members(x).softmax(dim=-1)  # [members, batch, classes]
+    probs = member_probs.mean(dim=0)
+    total, aleatoric, epistemic = decompose_classification_uncertainty(member_probs)
 ```
 
-### Example 2: Variational Inference
+For a runnable example with training and calibration, see [Getting Started](https://intsystems.github.io/bensemble/getting-started/).
+
+### Variational inference
 
 Build a Bayesian Neural Network from scratch using our custom layers with the Local Reparameterization Trick.
 
 ```python
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader, TensorDataset
 
 from bensemble.layers import BayesianLinear
 from bensemble.losses import VariationalLoss, GaussianLikelihood
