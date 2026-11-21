@@ -49,7 +49,9 @@ def regression_mse_criterion(
 ) -> float:
     """Evaluates Mean Squared Error of an ensemble candidate set.
 
-    Predictions from all members are averaged directly.
+    Predictions from all members are averaged directly. Scalar predictions
+    and targets can each have shape (batch,) or (batch, 1). For multiple
+    outputs, prediction and target shapes must match.
 
     Args:
         members: List of candidate neural network modules in eval mode.
@@ -69,6 +71,16 @@ def regression_mse_criterion(
         for batch in val_loader:
             x, y = batch[0].to(device), batch[1].to(device).float()
             mean_preds = torch.stack([model(x) for model in members], dim=0).mean(dim=0)
+            if mean_preds.shape != y.shape:
+                if y.ndim == 1 and mean_preds.shape == (y.size(0), 1):
+                    y = y.unsqueeze(-1)
+                elif mean_preds.ndim == 1 and y.shape == (mean_preds.size(0), 1):
+                    y = y.squeeze(-1)
+                else:
+                    raise ValueError(
+                        f"Regression prediction shape {tuple(mean_preds.shape)} "
+                        f"does not match target shape {tuple(y.shape)}."
+                    )
             total_se += F.mse_loss(mean_preds, y, reduction="sum").item()
             count += y.numel()
 

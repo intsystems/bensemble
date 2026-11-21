@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Regression ensemble selection now scores scalar predictions and targets
+  correctly when one is a vector and the other is a column.
 - Bayesian MC prediction now uses one draw of each `BayesianConv2d` kernel and
   bias per forward pass, preserving spatial correlations through pooling.
 - Laplace now scales the K-FAC curvature by the training dataset size once

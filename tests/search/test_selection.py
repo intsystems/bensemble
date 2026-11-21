@@ -82,6 +82,42 @@ def test_regression_mse_criterion_unit_error():
     assert abs(result - 1.0) < 1e-5
 
 
+@pytest.mark.parametrize("batch_size", [1, 2])
+@pytest.mark.parametrize("column_target", [False, True])
+def test_scalar_regression_selection_matches_each_prediction_to_its_target(
+    batch_size, column_target
+):
+    flat = torch.tensor([-1.0, 1.0])
+    column = flat[:, None]
+    x, y = (flat, column) if column_target else (column, flat)
+    loader = DataLoader(TensorDataset(x, y), batch_size=batch_size)
+    exact, zero = nn.Identity(), _FixedRegressionModel(0.0)
+
+    assert forward_select(
+        [zero, exact], loader, 1, _DEVICE, regression_mse_criterion
+    ) == [exact]
+    assert regression_mse_criterion([exact], loader, _DEVICE) == 0
+    assert regression_mse_criterion([zero], loader, _DEVICE) == 1
+
+
+def test_regression_mse_averages_over_all_target_elements():
+    x = torch.tensor([[0.0, 2.0], [1.0, 1.0], [3.0, 1.0]])
+    loader = DataLoader(TensorDataset(x, torch.zeros_like(x)), batch_size=2)
+
+    assert regression_mse_criterion([nn.Identity()], loader, _DEVICE) == pytest.approx(
+        16 / 6
+    )
+
+
+def test_regression_mse_rejects_broadcasting_multioutput_targets():
+    loader = DataLoader(
+        TensorDataset(torch.zeros(3, 2), torch.zeros(3, 1)), batch_size=3
+    )
+
+    with pytest.raises(ValueError):
+        regression_mse_criterion([nn.Identity()], loader, _DEVICE)
+
+
 def test_forward_select_correct_count():
     """Forward selection returns exactly the requested number of members."""
     pool = [_FixedLogitModel(torch.tensor([float(i), 0.0])) for i in range(4)]
