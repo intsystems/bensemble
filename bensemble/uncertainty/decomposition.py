@@ -1,8 +1,14 @@
 import torch
 
 
+def _entropy(probs: torch.Tensor, eps: float | None) -> torch.Tensor:
+    if eps is None:
+        return torch.special.entr(probs).sum(dim=-1)
+    return -(probs * torch.log(probs + eps)).sum(dim=-1)
+
+
 def decompose_classification_uncertainty(
-    probs: torch.Tensor, eps: float = 1e-8
+    probs: torch.Tensor, eps: float | None = None
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """
     Decomposes total predictive uncertainty for classification into aleatoric and epistemic components.
@@ -10,8 +16,10 @@ def decompose_classification_uncertainty(
     Args:
         probs (torch.Tensor): Predicted probabilities from the ensemble.
             Expected shape:[M_models, Batch_size, Num_classes].
-        eps (float, optional): Small epsilon for numerical stability in torch.log().
-            Defaults to 1e-8.
+        eps (float, optional): By default, compute entropy with zero contribution
+            from zero probabilities. Passing a value uses the previous formula
+            `-p * log(p + eps)`. A representable positive eps smooths the
+            entropy derivative at zero.
 
     Returns:
         Tuple[torch.Tensor, torch.Tensor, torch.Tensor]: A tuple containing:
@@ -20,9 +28,8 @@ def decompose_classification_uncertainty(
             - epistemic_unc (torch.Tensor): Epistemic uncertainty (mutual information). Shape: [Batch].
     """
     mean_probs = probs.mean(dim=0)
-    total_unc = -torch.sum(mean_probs * torch.log(mean_probs + eps), dim=-1)
-    entropies = -torch.sum(probs * torch.log(probs + eps), dim=-1)
-    aleatoric_unc = entropies.mean(dim=0)
+    total_unc = _entropy(mean_probs, eps)
+    aleatoric_unc = _entropy(probs, eps).mean(dim=0)
     epistemic_unc = total_unc - aleatoric_unc
 
     return total_unc, aleatoric_unc, epistemic_unc

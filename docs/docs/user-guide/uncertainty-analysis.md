@@ -19,6 +19,9 @@ from bensemble.uncertainty import decompose_classification_uncertainty
 total, aleatoric, epistemic = decompose_classification_uncertainty(probs)
 ```
 
+By default, zero probabilities contribute zero to entropy, including for
+`float16` inputs. Pass `eps=1e-8` to reproduce the previous formula.
+
 With $M$ members and $\bar p = \frac{1}{M}\sum_m p_m$ the averaged prediction, total uncertainty is the entropy of the average, aleatoric is the average entropy, and epistemic is their difference, the mutual information between the prediction and the model:
 
 $$

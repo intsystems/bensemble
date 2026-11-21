@@ -1,5 +1,6 @@
 import math
 
+import pytest
 import torch
 
 from bensemble.uncertainty.decomposition import (
@@ -17,26 +18,37 @@ def test_uncertainty_decomposition_shapes(ensemble_probs, ensemble_size):
         assert tensor.shape == (batch_size,)
 
 
-def test_perfect_disagreement():
+@pytest.mark.parametrize("dtype", [torch.float16, torch.float32])
+def test_perfect_disagreement(dtype):
     """
     Epistemic uncertainty is maximal when ensemble models confidently
     predict different classes for the same sample.
     """
     probs = torch.tensor(
         [
-            [[1.0, 0.0]],
-            [[0.0, 1.0]],
-        ]
+            [[1.0, 0.0, 0.0]],
+            [[0.0, 1.0, 0.0]],
+        ],
+        dtype=dtype,
     )
 
     total, aleatoric, epistemic = decompose_classification_uncertainty(probs)
 
-    assert torch.isclose(aleatoric, torch.tensor([0.0]), atol=1e-5).all()
+    expected_total = probs.new_tensor([math.log(2)])
+    torch.testing.assert_close(total, expected_total)
+    torch.testing.assert_close(aleatoric, probs.new_zeros(1))
+    torch.testing.assert_close(epistemic, expected_total)
 
-    expected_total = -(0.5 * math.log(0.5) + 0.5 * math.log(0.5))
-    assert torch.isclose(total, torch.tensor([expected_total]), atol=1e-5).all()
 
-    assert torch.isclose(epistemic, total, atol=1e-5).all()
+def test_classification_explicit_eps_preserves_log_offset():
+    probs = torch.tensor([[[0.25, 0.75]], [[0.75, 0.25]]], dtype=torch.float64)
+    total, aleatoric, epistemic = decompose_classification_uncertainty(probs, eps=0.25)
+
+    expected_total = probs.new_tensor([-math.log(0.75)])
+    expected_aleatoric = probs.new_tensor([-0.25 * math.log(0.5)])
+    torch.testing.assert_close(total, expected_total)
+    torch.testing.assert_close(aleatoric, expected_aleatoric)
+    torch.testing.assert_close(epistemic, expected_total - expected_aleatoric)
 
 
 def test_regression_decomposition():

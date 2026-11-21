@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Classification uncertainty now treats zero probabilities as zero entropy
+  contributions in float16. An explicit `eps` keeps the previous formula.
 - Classification ensemble search computes mixture NLL in log space so confident
   errors receive their full penalty during model selection.
 - Regression ensemble selection now scores scalar predictions and targets
