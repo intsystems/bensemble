@@ -53,36 +53,46 @@ uv pip install bensemble
 
 ### Example 1: Ensembling, Calibration & Uncertainty
 
-Easily ensemble standard PyTorch models, calibrate them, and decompose their uncertainty to detect Out-Of-Distribution data.
+Train three classifiers on synthetic data. Fit a temperature to the ensemble's probabilities on the validation split, then compare calibration on the test split.
 
 ```python
 import torch
-import torch.nn as nn
-from bensemble.core.ensemble import Ensemble
+from torch import nn
 from bensemble.calibration.scaling import TemperatureScaling
-from bensemble.uncertainty import decompose_classification_uncertainty
+from bensemble.core.ensemble import Ensemble
 from bensemble.metrics import expected_calibration_error
+from bensemble.uncertainty import decompose_classification_uncertainty
 
-# 1. Create a Deep Ensemble from standard trained PyTorch models
-models = [nn.Sequential(nn.Linear(10, 20), nn.ReLU(), nn.Linear(20, 3)) for _ in range(5)]
-ensemble = Ensemble.from_models(models)
+torch.manual_seed(42)
+# Two classes with a noisy linear decision boundary.
+x = torch.randn(768, 2)
+y = (x.sum(dim=1) + 0.5 * torch.randn(len(x)) > 0).long()
+x_train, x_val, x_test = x.split(256)
+y_train, y_val, y_test = y.split(256)
 
-# 2. Calibrate the ensemble using a hold-out validation set
-val_logits, val_labels = torch.randn(100, 3), torch.randint(0, 3, (100,))
-scaler = TemperatureScaling(init_temp=1.5).fit(val_logits, val_labels)
+models = [nn.Linear(2, 2) for _ in range(3)]
+for model in models:
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.2)
+    for _ in range(20):
+        optimizer.zero_grad()
+        nn.functional.cross_entropy(model(x_train), y_train).backward()
+        optimizer.step()
+ensemble = Ensemble.from_models(models).eval()
 
-# 3. Predict on test data
-test_x = torch.randn(10, 10)
-# Returns shape: [5 models, 10 batch_size, 3 classes]
-logits = scaler(ensemble.predict_members(test_x)) 
-probs = torch.softmax(logits, dim=-1)
+# Average the members' probabilities. Their logarithm gives logits for the mixture.
+with torch.no_grad():
+    val_probs = ensemble.predict_members(x_val).softmax(dim=-1).mean(dim=0)
+scaler = TemperatureScaling().fit(val_probs.log(), y_val)
 
-# 4. Decompose Uncertainty & Evaluate
-total, aleatoric, epistemic = decompose_classification_uncertainty(probs)
-ece = expected_calibration_error(probs.mean(dim=0), val_labels[:10])
+with torch.no_grad():
+    test_member_probs = ensemble.predict_members(x_test).softmax(dim=-1)
+    test_probs = test_member_probs.mean(dim=0)
+    calibrated_probs = scaler(test_probs.log()).softmax(dim=-1)
 
-print(f"Calibration Error (ECE): {ece:.4f}")
-print(f"Epistemic Uncertainty (OOD awareness): {epistemic.mean().item():.4f}")
+print(f"Test ECE before: {expected_calibration_error(test_probs, y_test):.3f}")
+print(f"Test ECE after:  {expected_calibration_error(calibrated_probs, y_test):.3f}")
+_, _, epistemic = decompose_classification_uncertainty(test_member_probs)
+print(f"Mean epistemic uncertainty: {epistemic.mean().item():.4f}")
 ```
 
 ### Example 2: Variational Inference
