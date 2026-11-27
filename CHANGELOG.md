@@ -8,28 +8,52 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-27
+
+### Changed
+
+- **Rényi loss.** For `VariationalLoss` with `alpha != 1`, replace the scalar
+  KL argument with the keyword arguments `log_prior` and `log_posterior`.
+  Use `bensemble.utils.sample_with_log_probs` to obtain predictions and both
+  log densities from the same Bayesian linear or convolutional weight draws.
+  The ordinary ELBO (`alpha == 1`) still accepts a scalar KL.
+- **Laplace posterior.** `LaplaceApproximation` now defaults to
+  `regularization="exact"`. It scales K-FAC curvature by the training dataset
+  size once, then adds the prior precision. For the previous scaling, pass
+  `regularization="legacy"`.
+
+### Added
+
+- `TemperatureScaling.fit` and `VectorScaling.fit` accept a custom optimizer.
+- Added reproducible classification and regression benchmarks. Install their
+  dependencies from the repository root with `pip install -e ".[benchmarks]"`.
+- Published the documentation site with API references and refreshed the
+  runnable examples for ensemble prediction, inference and search.
+
 ### Fixed
 
-- Classification uncertainty now treats zero probabilities as zero entropy
-  contributions in float16. An explicit `eps` keeps the previous formula.
-- Classification ensemble search computes mixture NLL in log space so confident
-  errors receive their full penalty during model selection.
-- Regression ensemble selection now scores scalar predictions and targets
-  correctly when one is a vector and the other is a column.
-- Bayesian MC prediction now uses one draw of each `BayesianConv2d` kernel and
-  bias per forward pass, preserving spatial correlations through pooling.
-- Laplace now scales the K-FAC curvature by the training dataset size once
-  and adds the prior to the resulting precision matrix. Use
-  `regularization="legacy"` for the previous sampling scale.
-- NESBS compares candidate predictions on the same validation batches, avoiding
-  incorrect diversity estimates with shuffled loaders or random transforms.
-- Ensemble prediction and `predict_with_uncertainty` restore each layer's
-  original training flag, including after errors, preserving frozen BatchNorm.
-- Rényi loss now uses a separate prior/posterior log-density ratio for each
-  weight draw. Calls with `alpha != 1` must provide `log_prior` and
-  `log_posterior`; scalar KL remains supported for the ordinary ELBO.
-- Added `sample_with_log_probs` to produce matched predictions and weight
-  densities for Bayesian linear and convolutional layers.
+- Laplace curvature accounts for nonlinear activations and branches. Laplace
+  ensemble sampling also works with a plain `nn.Module`.
+- Ensemble prediction and `predict_with_uncertainty` preserve each layer's
+  training mode, including after errors. Frozen BatchNorm statistics stay
+  fixed. Stochastic ensembles support dropout variants, keep Bayesian layers
+  stochastic in `mode="both"` and reject unknown modes.
+- Bayesian Monte Carlo prediction draws one `BayesianConv2d` kernel and bias
+  per forward pass, preserving spatial correlations through pooling.
+- Ensemble selection aligns predictions with labels under shuffled validation.
+  NESBS compares candidates on the same batches, including when validation
+  applies random transforms.
+- Classification search scores mixture NLL in log space so confident errors
+  receive their full penalty. Regression selection aligns scalar targets and
+  predictions supplied as vectors or columns.
+- `VariationalLoss` reduces likelihoods consistently across Monte Carlo
+  samples for classification labels and regression targets.
+- Temperature and vector scaling use a strong Wolfe line search to improve
+  convergence with the default L-BFGS optimizer.
+- Classification entropy treats zero probabilities as zero contributions in
+  float16. Passing an explicit `eps` retains the previous formula.
+- Fixed package-level imports for `bensemble.uncertainty` decomposition
+  functions and `bensemble.diversity.MCDropoutEnsembler`.
 
 ## [0.2.2] - 2026-07-03
 
